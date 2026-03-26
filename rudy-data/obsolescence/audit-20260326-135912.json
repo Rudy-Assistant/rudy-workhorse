@@ -1,0 +1,796 @@
+{
+  "timestamp": "2026-03-26T13:58:30.844500",
+  "type": "full_audit",
+  "module_health": {
+    "timestamp": "2026-03-26T13:58:30.844500",
+    "modules": {
+      "rudy.presence": {
+        "status": "ok",
+        "file": "C:\\Users\\C\\Desktop\\rudy\\presence.py"
+      },
+      "rudy.presence_analytics": {
+        "status": "ok",
+        "file": "C:\\Users\\C\\Desktop\\rudy\\presence_analytics.py"
+      },
+      "rudy.network_defense": {
+        "status": "ok",
+        "file": "C:\\Users\\C\\Desktop\\rudy\\network_defense.py"
+      },
+      "rudy.intruder_profiler": {
+        "status": "ok",
+        "file": "C:\\Users\\C\\Desktop\\rudy\\intruder_profiler.py"
+      },
+      "rudy.travel_mode": {
+        "status": "ok",
+        "file": "C:\\Users\\C\\Desktop\\rudy\\travel_mode.py"
+      },
+      "rudy.movement_feed": {
+        "status": "ok",
+        "file": "C:\\Users\\C\\Desktop\\rudy\\movement_feed.py"
+      },
+      "rudy.wellness": {
+        "status": "ok",
+        "file": "C:\\Users\\C\\Desktop\\rudy\\wellness.py"
+      },
+      "rudy.human_simulation": {
+        "status": "ok",
+        "file": "C:\\Users\\C\\Desktop\\rudy\\human_simulation.py"
+      },
+      "rudy.email_multi": {
+        "status": "ok",
+        "file": "C:\\Users\\C\\Desktop\\rudy\\email_multi.py"
+      },
+      "rudy.knowledge_base": {
+        "status": "ok",
+        "file": "C:\\Users\\C\\Desktop\\rudy\\knowledge_base.py"
+      },
+      "rudy.web_intelligence": {
+        "status": "ok",
+        "file": "C:\\Users\\C\\Desktop\\rudy\\web_intelligence.py"
+      },
+      "rudy.voice": {
+        "status": "ok",
+        "file": "C:\\Users\\C\\Desktop\\rudy\\voice.py"
+      },
+      "rudy.ocr": {
+        "status": "ok",
+        "file": "C:\\Users\\C\\Desktop\\rudy\\ocr.py"
+      },
+      "rudy.financial": {
+        "status": "ok",
+        "file": "C:\\Users\\C\\Desktop\\rudy\\financial.py"
+      },
+      "rudy.nlp": {
+        "status": "ok",
+        "file": "C:\\Users\\C\\Desktop\\rudy\\nlp.py"
+      },
+      "rudy.api_server": {
+        "status": "ok",
+        "file": "C:\\Users\\C\\Desktop\\rudy\\api_server.py"
+      },
+      "rudy.local_ai": {
+        "status": "ok",
+        "file": "C:\\Users\\C\\Desktop\\rudy\\local_ai.py"
+      },
+      "rudy.offline_ops": {
+        "status": "ok",
+        "file": "C:\\Users\\C\\Desktop\\rudy\\offline_ops.py"
+      },
+      "rudy.phone_check": {
+        "status": "ok",
+        "file": "C:\\Users\\C\\Desktop\\rudy\\phone_check.py"
+      },
+      "rudy.photo_intel": {
+        "status": "ok",
+        "file": "C:\\Users\\C\\Desktop\\rudy\\photo_intel.py"
+      },
+      "rudy.voice_clone": {
+        "status": "ok",
+        "file": "C:\\Users\\C\\Desktop\\rudy\\voice_clone.py"
+      },
+      "rudy.avatar": {
+        "status": "ok",
+        "file": "C:\\Users\\C\\Desktop\\rudy\\avatar.py"
+      },
+      "rudy.admin": {
+        "status": "ok",
+        "file": "C:\\Users\\C\\Desktop\\rudy\\admin.py"
+      }
+    },
+    "summary": {
+      "ok": 23,
+      "total": 23,
+      "health_pct": 100.0
+    }
+  },
+  "outdated_packages": {
+    "count": 20,
+    "critical": [],
+    "all": [
+      {
+        "name": "chardet",
+        "version": "7.3.0",
+        "latest_version": "7.4.0.post1",
+        "latest_filetype": "wheel"
+      },
+      {
+        "name": "click",
+        "version": "8.3.0",
+        "latest_version": "8.3.1",
+        "latest_filetype": "wheel"
+      },
+      {
+        "name": "cryptography",
+        "version": "46.0.3",
+        "latest_version": "46.0.6",
+        "latest_filetype": "wheel"
+      },
+      {
+        "name": "importlib_metadata",
+        "version": "8.7.1",
+        "latest_version": "9.0.0",
+        "latest_filetype": "wheel"
+      },
+      {
+        "name": "marshmallow",
+        "version": "3.26.2",
+        "latest_version": "4.2.3",
+        "latest_filetype": "wheel"
+      },
+      {
+        "name": "mpmath",
+        "version": "1.3.0",
+        "latest_version": "1.4.1",
+        "latest_filetype": "wheel"
+      },
+      {
+        "name": "packaging",
+        "version": "25.0",
+        "latest_version": "26.0",
+        "latest_filetype": "wheel"
+      },
+      {
+        "name": "pillow",
+        "version": "11.3.0",
+        "latest_version": "12.1.1",
+        "latest_filetype": "wheel"
+      },
+      {
+        "name": "pip",
+        "version": "25.0.1",
+        "latest_version": "26.0.1",
+        "latest_filetype": "wheel"
+      },
+      {
+        "name": "protobuf",
+        "version": "6.33.6",
+        "latest_version": "7.34.1",
+        "latest_filetype": "wheel"
+      },
+      {
+        "name": "pyahocorasick",
+        "version": "2.2.0",
+        "latest_version": "2.3.0",
+        "latest_filetype": "wheel"
+      },
+      {
+        "name": "pydantic",
+        "version": "2.12.3",
+        "latest_version": "2.12.5",
+        "latest_filetype": "wheel"
+      },
+      {
+        "name": "pydantic_core",
+        "version": "2.41.4",
+        "latest_version": "2.42.0",
+        "latest_filetype": "wheel"
+      },
+      {
+        "name": "pydantic-settings",
+        "version": "2.10.1",
+        "latest_version": "2.13.1",
+        "latest_filetype": "wheel"
+      },
+      {
+        "name": "requests",
+        "version": "2.32.5",
+        "latest_version": "2.33.0",
+        "latest_filetype": "wheel"
+      },
+      {
+        "name": "rich",
+        "version": "14.1.0",
+        "latest_version": "14.3.3",
+        "latest_filetype": "wheel"
+      },
+      {
+        "name": "ruff",
+        "version": "0.15.7",
+        "latest_version": "0.15.8",
+        "latest_filetype": "wheel"
+      },
+      {
+        "name": "setuptools",
+        "version": "81.0.0",
+        "latest_version": "82.0.1",
+        "latest_filetype": "wheel"
+      },
+      {
+        "name": "tld",
+        "version": "0.13.1",
+        "latest_version": "0.13.2",
+        "latest_filetype": "wheel"
+      },
+      {
+        "name": "tzdata",
+        "version": "2025.2",
+        "latest_version": "2025.3",
+        "latest_filetype": "wheel"
+      }
+    ]
+  },
+  "landscape": {
+    "timestamp": "2026-03-26T13:59:01.601479",
+    "domains": {
+      "voice_cloning": {
+        "current_tools": [
+          "TTS (Coqui)",
+          "bark",
+          "openvoice"
+        ],
+        "best_of_breed": "Coqui XTTS v2",
+        "watch_list": [
+          "fish-speech",
+          "cosyvoice",
+          "metavoice",
+          "parler-tts"
+        ],
+        "installed": [],
+        "missing": [
+          "TTS",
+          "bark",
+          "openvoice-cli",
+          "fish-speech"
+        ],
+        "upgradeable": []
+      },
+      "talking_head": {
+        "current_tools": [
+          "sadtalker",
+          "wav2lip"
+        ],
+        "best_of_breed": "SadTalker",
+        "watch_list": [
+          "MuseTalk",
+          "AniPortrait",
+          "V-Express",
+          "EchoMimic"
+        ],
+        "installed": [],
+        "missing": [
+          "sadtalker"
+        ],
+        "upgradeable": []
+      },
+      "face_swap": {
+        "current_tools": [
+          "insightface",
+          "roop"
+        ],
+        "best_of_breed": "InsightFace inswapper",
+        "watch_list": [
+          "facefusion",
+          "ghost",
+          "simswap"
+        ],
+        "installed": [],
+        "missing": [
+          "insightface",
+          "roop",
+          "facefusion"
+        ],
+        "upgradeable": []
+      },
+      "ocr": {
+        "current_tools": [
+          "easyocr",
+          "pdfplumber"
+        ],
+        "best_of_breed": "EasyOCR / Surya",
+        "watch_list": [
+          "surya-ocr",
+          "doctr",
+          "paddleocr",
+          "marker-pdf"
+        ],
+        "installed": [],
+        "missing": [
+          "easyocr",
+          "surya-ocr",
+          "python-doctr"
+        ],
+        "upgradeable": []
+      },
+      "local_llm": {
+        "current_tools": [
+          "llama-cpp-python"
+        ],
+        "best_of_breed": "llama-cpp-python",
+        "watch_list": [
+          "mlc-llm",
+          "ollama",
+          "exllamav2",
+          "vllm"
+        ],
+        "installed": [],
+        "missing": [
+          "llama-cpp-python"
+        ],
+        "upgradeable": []
+      },
+      "web_scraping": {
+        "current_tools": [
+          "trafilatura",
+          "newspaper3k",
+          "beautifulsoup4"
+        ],
+        "best_of_breed": "Trafilatura",
+        "watch_list": [
+          "crawl4ai",
+          "firecrawl",
+          "jina-reader"
+        ],
+        "installed": [],
+        "missing": [
+          "trafilatura",
+          "newspaper4k",
+          "crawl4ai"
+        ],
+        "upgradeable": []
+      },
+      "browser_automation": {
+        "current_tools": [
+          "playwright",
+          "selenium",
+          "undetected-chromedriver"
+        ],
+        "best_of_breed": "Playwright",
+        "watch_list": [
+          "browser-use",
+          "lavague",
+          "skyvern"
+        ],
+        "installed": [
+          {
+            "package": "playwright",
+            "version": "1.58.0"
+          }
+        ],
+        "missing": [
+          "selenium"
+        ],
+        "upgradeable": []
+      },
+      "embeddings": {
+        "current_tools": [
+          "sentence-transformers",
+          "chromadb"
+        ],
+        "best_of_breed": "sentence-transformers + ChromaDB",
+        "watch_list": [
+          "fastembed",
+          "lancedb",
+          "qdrant-client",
+          "milvus-lite"
+        ],
+        "installed": [
+          {
+            "package": "sentence-transformers",
+            "version": "5.3.0"
+          },
+          {
+            "package": "chromadb",
+            "version": "1.5.5"
+          }
+        ],
+        "missing": [
+          "fastembed"
+        ],
+        "upgradeable": []
+      },
+      "phone_security": {
+        "current_tools": [
+          "mvt"
+        ],
+        "best_of_breed": "MVT (Amnesty International)",
+        "watch_list": [
+          "iverify",
+          "lookout"
+        ],
+        "installed": [
+          {
+            "package": "mvt",
+            "version": "2.7.0"
+          }
+        ],
+        "missing": [],
+        "upgradeable": []
+      },
+      "image_generation": {
+        "current_tools": [],
+        "best_of_breed": "Stable Diffusion XL (via API)",
+        "watch_list": [
+          "flux",
+          "sdxl-turbo",
+          "playground-v2.5"
+        ],
+        "installed": [],
+        "missing": [
+          "diffusers",
+          "stability-sdk"
+        ],
+        "upgradeable": []
+      },
+      "nlp": {
+        "current_tools": [
+          "spacy",
+          "textblob",
+          "nltk",
+          "sumy"
+        ],
+        "best_of_breed": "spaCy + transformers",
+        "watch_list": [
+          "stanza",
+          "flair",
+          "spark-nlp"
+        ],
+        "installed": [],
+        "missing": [
+          "spacy",
+          "textblob"
+        ],
+        "upgradeable": []
+      },
+      "financial": {
+        "current_tools": [
+          "yfinance"
+        ],
+        "best_of_breed": "yfinance",
+        "watch_list": [
+          "openbb",
+          "alpaca-trade-api",
+          "ccxt"
+        ],
+        "installed": [],
+        "missing": [
+          "yfinance",
+          "openbb"
+        ],
+        "upgradeable": []
+      }
+    }
+  },
+  "usage": {
+    "total_modules": 23,
+    "tracked_modules": 0,
+    "stats": {
+      "modules": {},
+      "last_reset": "2026-03-26T13:58:30.844500"
+    }
+  },
+  "unused_modules": [
+    "rudy.presence",
+    "rudy.presence_analytics",
+    "rudy.network_defense",
+    "rudy.intruder_profiler",
+    "rudy.travel_mode",
+    "rudy.movement_feed",
+    "rudy.wellness",
+    "rudy.human_simulation",
+    "rudy.email_multi",
+    "rudy.knowledge_base",
+    "rudy.web_intelligence",
+    "rudy.voice",
+    "rudy.ocr",
+    "rudy.financial",
+    "rudy.nlp",
+    "rudy.api_server",
+    "rudy.local_ai",
+    "rudy.offline_ops",
+    "rudy.phone_check",
+    "rudy.photo_intel",
+    "rudy.voice_clone",
+    "rudy.avatar",
+    "rudy.admin"
+  ],
+  "recommendations": [
+    {
+      "priority": "high",
+      "domain": "voice_cloning",
+      "action": "install",
+      "detail": "No tools installed for voice_cloning. Recommended: TTS"
+    },
+    {
+      "priority": "high",
+      "domain": "talking_head",
+      "action": "install",
+      "detail": "No tools installed for talking_head. Recommended: sadtalker"
+    },
+    {
+      "priority": "high",
+      "domain": "face_swap",
+      "action": "install",
+      "detail": "No tools installed for face_swap. Recommended: insightface"
+    },
+    {
+      "priority": "high",
+      "domain": "ocr",
+      "action": "install",
+      "detail": "No tools installed for ocr. Recommended: easyocr"
+    },
+    {
+      "priority": "high",
+      "domain": "local_llm",
+      "action": "install",
+      "detail": "No tools installed for local_llm. Recommended: llama-cpp-python"
+    },
+    {
+      "priority": "high",
+      "domain": "web_scraping",
+      "action": "install",
+      "detail": "No tools installed for web_scraping. Recommended: trafilatura"
+    },
+    {
+      "priority": "high",
+      "domain": "nlp",
+      "action": "install",
+      "detail": "No tools installed for nlp. Recommended: spacy"
+    },
+    {
+      "priority": "high",
+      "domain": "financial",
+      "action": "install",
+      "detail": "No tools installed for financial. Recommended: yfinance"
+    },
+    {
+      "priority": "low",
+      "domain": "voice_cloning",
+      "action": "evaluate",
+      "detail": "Consider evaluating 'fish-speech' as potential upgrade for voice_cloning"
+    },
+    {
+      "priority": "low",
+      "domain": "voice_cloning",
+      "action": "evaluate",
+      "detail": "Consider evaluating 'cosyvoice' as potential upgrade for voice_cloning"
+    },
+    {
+      "priority": "low",
+      "domain": "voice_cloning",
+      "action": "evaluate",
+      "detail": "Consider evaluating 'metavoice' as potential upgrade for voice_cloning"
+    },
+    {
+      "priority": "low",
+      "domain": "voice_cloning",
+      "action": "evaluate",
+      "detail": "Consider evaluating 'parler-tts' as potential upgrade for voice_cloning"
+    },
+    {
+      "priority": "low",
+      "domain": "talking_head",
+      "action": "evaluate",
+      "detail": "Consider evaluating 'MuseTalk' as potential upgrade for talking_head"
+    },
+    {
+      "priority": "low",
+      "domain": "talking_head",
+      "action": "evaluate",
+      "detail": "Consider evaluating 'AniPortrait' as potential upgrade for talking_head"
+    },
+    {
+      "priority": "low",
+      "domain": "talking_head",
+      "action": "evaluate",
+      "detail": "Consider evaluating 'V-Express' as potential upgrade for talking_head"
+    },
+    {
+      "priority": "low",
+      "domain": "talking_head",
+      "action": "evaluate",
+      "detail": "Consider evaluating 'EchoMimic' as potential upgrade for talking_head"
+    },
+    {
+      "priority": "low",
+      "domain": "face_swap",
+      "action": "evaluate",
+      "detail": "Consider evaluating 'facefusion' as potential upgrade for face_swap"
+    },
+    {
+      "priority": "low",
+      "domain": "face_swap",
+      "action": "evaluate",
+      "detail": "Consider evaluating 'ghost' as potential upgrade for face_swap"
+    },
+    {
+      "priority": "low",
+      "domain": "face_swap",
+      "action": "evaluate",
+      "detail": "Consider evaluating 'simswap' as potential upgrade for face_swap"
+    },
+    {
+      "priority": "low",
+      "domain": "ocr",
+      "action": "evaluate",
+      "detail": "Consider evaluating 'surya-ocr' as potential upgrade for ocr"
+    },
+    {
+      "priority": "low",
+      "domain": "ocr",
+      "action": "evaluate",
+      "detail": "Consider evaluating 'doctr' as potential upgrade for ocr"
+    },
+    {
+      "priority": "low",
+      "domain": "ocr",
+      "action": "evaluate",
+      "detail": "Consider evaluating 'paddleocr' as potential upgrade for ocr"
+    },
+    {
+      "priority": "low",
+      "domain": "ocr",
+      "action": "evaluate",
+      "detail": "Consider evaluating 'marker-pdf' as potential upgrade for ocr"
+    },
+    {
+      "priority": "low",
+      "domain": "local_llm",
+      "action": "evaluate",
+      "detail": "Consider evaluating 'mlc-llm' as potential upgrade for local_llm"
+    },
+    {
+      "priority": "low",
+      "domain": "local_llm",
+      "action": "evaluate",
+      "detail": "Consider evaluating 'ollama' as potential upgrade for local_llm"
+    },
+    {
+      "priority": "low",
+      "domain": "local_llm",
+      "action": "evaluate",
+      "detail": "Consider evaluating 'exllamav2' as potential upgrade for local_llm"
+    },
+    {
+      "priority": "low",
+      "domain": "local_llm",
+      "action": "evaluate",
+      "detail": "Consider evaluating 'vllm' as potential upgrade for local_llm"
+    },
+    {
+      "priority": "low",
+      "domain": "web_scraping",
+      "action": "evaluate",
+      "detail": "Consider evaluating 'crawl4ai' as potential upgrade for web_scraping"
+    },
+    {
+      "priority": "low",
+      "domain": "web_scraping",
+      "action": "evaluate",
+      "detail": "Consider evaluating 'firecrawl' as potential upgrade for web_scraping"
+    },
+    {
+      "priority": "low",
+      "domain": "web_scraping",
+      "action": "evaluate",
+      "detail": "Consider evaluating 'jina-reader' as potential upgrade for web_scraping"
+    },
+    {
+      "priority": "low",
+      "domain": "browser_automation",
+      "action": "evaluate",
+      "detail": "Consider evaluating 'browser-use' as potential upgrade for browser_automation"
+    },
+    {
+      "priority": "low",
+      "domain": "browser_automation",
+      "action": "evaluate",
+      "detail": "Consider evaluating 'lavague' as potential upgrade for browser_automation"
+    },
+    {
+      "priority": "low",
+      "domain": "browser_automation",
+      "action": "evaluate",
+      "detail": "Consider evaluating 'skyvern' as potential upgrade for browser_automation"
+    },
+    {
+      "priority": "low",
+      "domain": "embeddings",
+      "action": "evaluate",
+      "detail": "Consider evaluating 'fastembed' as potential upgrade for embeddings"
+    },
+    {
+      "priority": "low",
+      "domain": "embeddings",
+      "action": "evaluate",
+      "detail": "Consider evaluating 'lancedb' as potential upgrade for embeddings"
+    },
+    {
+      "priority": "low",
+      "domain": "embeddings",
+      "action": "evaluate",
+      "detail": "Consider evaluating 'qdrant-client' as potential upgrade for embeddings"
+    },
+    {
+      "priority": "low",
+      "domain": "embeddings",
+      "action": "evaluate",
+      "detail": "Consider evaluating 'milvus-lite' as potential upgrade for embeddings"
+    },
+    {
+      "priority": "low",
+      "domain": "phone_security",
+      "action": "evaluate",
+      "detail": "Consider evaluating 'iverify' as potential upgrade for phone_security"
+    },
+    {
+      "priority": "low",
+      "domain": "phone_security",
+      "action": "evaluate",
+      "detail": "Consider evaluating 'lookout' as potential upgrade for phone_security"
+    },
+    {
+      "priority": "low",
+      "domain": "image_generation",
+      "action": "evaluate",
+      "detail": "Consider evaluating 'flux' as potential upgrade for image_generation"
+    },
+    {
+      "priority": "low",
+      "domain": "image_generation",
+      "action": "evaluate",
+      "detail": "Consider evaluating 'sdxl-turbo' as potential upgrade for image_generation"
+    },
+    {
+      "priority": "low",
+      "domain": "image_generation",
+      "action": "evaluate",
+      "detail": "Consider evaluating 'playground-v2.5' as potential upgrade for image_generation"
+    },
+    {
+      "priority": "low",
+      "domain": "nlp",
+      "action": "evaluate",
+      "detail": "Consider evaluating 'stanza' as potential upgrade for nlp"
+    },
+    {
+      "priority": "low",
+      "domain": "nlp",
+      "action": "evaluate",
+      "detail": "Consider evaluating 'flair' as potential upgrade for nlp"
+    },
+    {
+      "priority": "low",
+      "domain": "nlp",
+      "action": "evaluate",
+      "detail": "Consider evaluating 'spark-nlp' as potential upgrade for nlp"
+    },
+    {
+      "priority": "low",
+      "domain": "financial",
+      "action": "evaluate",
+      "detail": "Consider evaluating 'openbb' as potential upgrade for financial"
+    },
+    {
+      "priority": "low",
+      "domain": "financial",
+      "action": "evaluate",
+      "detail": "Consider evaluating 'alpaca-trade-api' as potential upgrade for financial"
+    },
+    {
+      "priority": "low",
+      "domain": "financial",
+      "action": "evaluate",
+      "detail": "Consider evaluating 'ccxt' as potential upgrade for financial"
+    }
+  ]
+}
