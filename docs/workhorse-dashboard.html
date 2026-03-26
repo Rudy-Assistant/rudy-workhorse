@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Workhorse Command Center</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: #0a0a0f; color: #e0e0e0; min-height: 100vh; }
+  .header { background: linear-gradient(135deg, #1a1a2e, #16213e); padding: 20px 30px; border-bottom: 1px solid #2a2a4a; display: flex; justify-content: space-between; align-items: center; }
+  .header h1 { font-size: 1.4em; color: #00d4ff; letter-spacing: 1px; }
+  .header .status-badge { padding: 6px 16px; border-radius: 20px; font-size: 0.85em; font-weight: 600; }
+  .badge-online { background: #0a3d2a; color: #00ff88; border: 1px solid #00ff88; }
+  .badge-offline { background: #3d0a0a; color: #ff4444; border: 1px solid #ff4444; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; padding: 20px; }
+  .card { background: #12121f; border: 1px solid #2a2a4a; border-radius: 10px; padding: 18px; transition: border-color 0.2s; }
+  .card:hover { border-color: #00d4ff44; }
+  .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .card-title { font-size: 1em; font-weight: 600; color: #ffffff; }
+  .card-status { width: 10px; height: 10px; border-radius: 50%; }
+  .status-ok { background: #00ff88; box-shadow: 0 0 6px #00ff8866; }
+  .status-warn { background: #ffaa00; box-shadow: 0 0 6px #ffaa0066; }
+  .status-err { background: #ff4444; box-shadow: 0 0 6px #ff444466; }
+  .status-unknown { background: #666; }
+  .metric { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #1a1a2f; font-size: 0.88em; }
+  .metric:last-child { border: none; }
+  .metric-label { color: #8888aa; }
+  .metric-value { color: #ffffff; font-weight: 500; }
+  .metric-value.good { color: #00ff88; }
+  .metric-value.warn { color: #ffaa00; }
+  .metric-value.bad { color: #ff4444; }
+  .section-title { padding: 16px 20px 8px; font-size: 0.9em; color: #6666aa; text-transform: uppercase; letter-spacing: 2px; }
+  .module-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; padding: 0 20px 20px; }
+  .module-chip { background: #12121f; border: 1px solid #2a2a4a; border-radius: 6px; padding: 8px 12px; font-size: 0.82em; display: flex; align-items: center; gap: 8px; }
+  .module-chip .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .footer { text-align: center; padding: 20px; color: #444; font-size: 0.8em; border-top: 1px solid #1a1a2f; }
+  .stats-bar { display: flex; gap: 24px; padding: 12px 20px; background: #0d0d18; flex-wrap: wrap; }
+  .stat { text-align: center; }
+  .stat-num { font-size: 1.6em; font-weight: 700; color: #00d4ff; }
+  .stat-label { font-size: 0.75em; color: #6666aa; margin-top: 2px; }
+  .timeline { padding: 0 20px 20px; max-height: 300px; overflow-y: auto; }
+  .timeline-item { display: flex; gap: 12px; padding: 8px 0; border-bottom: 1px solid #1a1a2f; font-size: 0.85em; }
+  .timeline-time { color: #6666aa; white-space: nowrap; min-width: 60px; }
+  .timeline-msg { color: #ccc; }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>WORKHORSE COMMAND CENTER</h1>
+  <span class="status-badge badge-online" id="systemStatus">ONLINE</span>
+</div>
+
+<div class="stats-bar">
+  <div class="stat"><div class="stat-num" id="moduleCount">27</div><div class="stat-label">Modules</div></div>
+  <div class="stat"><div class="stat-num" id="agentCount">6</div><div class="stat-label">Agents</div></div>
+  <div class="stat"><div class="stat-num" id="scheduleCount">10</div><div class="stat-label">Scheduled Tasks</div></div>
+  <div class="stat"><div class="stat-num" id="dnsBlocked">87,419</div><div class="stat-label">DNS Blocked</div></div>
+  <div class="stat"><div class="stat-num" id="uptimeHours">--</div><div class="stat-label">Uptime (hrs)</div></div>
+</div>
+
+<div class="grid">
+  <!-- System Health -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">System Health</span>
+      <span class="card-status status-ok" id="sysHealthDot"></span>
+    </div>
+    <div class="metric"><span class="metric-label">RustDesk</span><span class="metric-value good">Active</span></div>
+    <div class="metric"><span class="metric-label">Tailscale</span><span class="metric-value good">100.83.49.9</span></div>
+    <div class="metric"><span class="metric-label">Command Runner</span><span class="metric-value good">Watching</span></div>
+    <div class="metric"><span class="metric-label">Health Check</span><span class="metric-value good">Every 5 min</span></div>
+    <div class="metric"><span class="metric-label">Git Repo</span><span class="metric-value good">rudy-workhorse (private)</span></div>
+  </div>
+
+  <!-- Agents -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Autonomous Agents</span>
+      <span class="card-status status-ok"></span>
+    </div>
+    <div class="metric"><span class="metric-label">SystemMaster</span><span class="metric-value">Every 5 min</span></div>
+    <div class="metric"><span class="metric-label">SecurityAgent</span><span class="metric-value">Every 30 min</span></div>
+    <div class="metric"><span class="metric-label">Sentinel</span><span class="metric-value">Every 15 min</span></div>
+    <div class="metric"><span class="metric-label">TaskMaster</span><span class="metric-value">Daily 7:30 AM</span></div>
+    <div class="metric"><span class="metric-label">ResearchIntel</span><span class="metric-value">Daily + M/W/F</span></div>
+    <div class="metric"><span class="metric-label">OperationsMonitor</span><span class="metric-value">Weekly Sun 4 AM</span></div>
+  </div>
+
+  <!-- Security -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Security Posture</span>
+      <span class="card-status status-ok"></span>
+    </div>
+    <div class="metric"><span class="metric-label">DNS Blocking</span><span class="metric-value good">87,419 domains</span></div>
+    <div class="metric"><span class="metric-label">Breach Monitoring</span><span class="metric-value good">3 emails tracked</span></div>
+    <div class="metric"><span class="metric-label">File Integrity</span><span class="metric-value good">SHA-256 checks</span></div>
+    <div class="metric"><span class="metric-label">Network Defense</span><span class="metric-value good">7-check suite</span></div>
+    <div class="metric"><span class="metric-label">ARP Spoofing</span><span class="metric-value good">Monitored</span></div>
+    <div class="metric"><span class="metric-label">Rogue Devices</span><span class="metric-value good">Alert-on-new</span></div>
+  </div>
+
+  <!-- Email -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Email Backend</span>
+      <span class="card-status status-warn"></span>
+    </div>
+    <div class="metric"><span class="metric-label">Gmail (primary)</span><span class="metric-value bad">Locked out</span></div>
+    <div class="metric"><span class="metric-label">Zoho (backup)</span><span class="metric-value good">Active</span></div>
+    <div class="metric"><span class="metric-label">Outlook</span><span class="metric-value">Not configured</span></div>
+    <div class="metric"><span class="metric-label">Failover</span><span class="metric-value good">Auto-chain</span></div>
+  </div>
+
+  <!-- GitHub -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">GitHub Integration</span>
+      <span class="card-status status-ok"></span>
+    </div>
+    <div class="metric"><span class="metric-label">Repo</span><span class="metric-value good">rudy-workhorse (private)</span></div>
+    <div class="metric"><span class="metric-label">PAT</span><span class="metric-value good">Expires 2026-04-25</span></div>
+    <div class="metric"><span class="metric-label">MCP Server</span><span class="metric-value good">Configured</span></div>
+    <div class="metric"><span class="metric-label">CI/CD</span><span class="metric-value good">3 workflows</span></div>
+    <div class="metric"><span class="metric-label">gh CLI</span><span class="metric-value warn">Installing</span></div>
+  </div>
+
+  <!-- Obsolescence -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Capability Audit</span>
+      <span class="card-status status-ok"></span>
+    </div>
+    <div class="metric"><span class="metric-label">Module Health</span><span class="metric-value good">23/23 (100%)</span></div>
+    <div class="metric"><span class="metric-label">Outdated Packages</span><span class="metric-value warn">20 (0 critical)</span></div>
+    <div class="metric"><span class="metric-label">Recommendations</span><span class="metric-value">48</span></div>
+    <div class="metric"><span class="metric-label">High Priority</span><span class="metric-value warn">8 installs needed</span></div>
+    <div class="metric"><span class="metric-label">Last Audit</span><span class="metric-value">2026-03-26 13:59</span></div>
+  </div>
+</div>
+
+<div class="section-title">Modules (27)</div>
+<div class="module-grid">
+  <div class="module-chip"><span class="dot status-ok"></span>presence</div>
+  <div class="module-chip"><span class="dot status-ok"></span>presence_analytics</div>
+  <div class="module-chip"><span class="dot status-ok"></span>network_defense</div>
+  <div class="module-chip"><span class="dot status-ok"></span>intruder_profiler</div>
+  <div class="module-chip"><span class="dot status-ok"></span>travel_mode</div>
+  <div class="module-chip"><span class="dot status-ok"></span>movement_feed</div>
+  <div class="module-chip"><span class="dot status-ok"></span>wellness</div>
+  <div class="module-chip"><span class="dot status-ok"></span>human_simulation</div>
+  <div class="module-chip"><span class="dot status-ok"></span>email_multi</div>
+  <div class="module-chip"><span class="dot status-ok"></span>knowledge_base</div>
+  <div class="module-chip"><span class="dot status-ok"></span>web_intelligence</div>
+  <div class="module-chip"><span class="dot status-ok"></span>voice</div>
+  <div class="module-chip"><span class="dot status-ok"></span>ocr</div>
+  <div class="module-chip"><span class="dot status-ok"></span>financial</div>
+  <div class="module-chip"><span class="dot status-ok"></span>nlp</div>
+  <div class="module-chip"><span class="dot status-ok"></span>api_server</div>
+  <div class="module-chip"><span class="dot status-ok"></span>local_ai</div>
+  <div class="module-chip"><span class="dot status-ok"></span>offline_ops</div>
+  <div class="module-chip"><span class="dot status-ok"></span>phone_check</div>
+  <div class="module-chip"><span class="dot status-ok"></span>photo_intel</div>
+  <div class="module-chip"><span class="dot status-ok"></span>voice_clone</div>
+  <div class="module-chip"><span class="dot status-ok"></span>avatar</div>
+  <div class="module-chip"><span class="dot status-ok"></span>obsolescence_monitor</div>
+  <div class="module-chip"><span class="dot status-ok"></span>admin</div>
+  <div class="module-chip"><span class="dot status-ok"></span>paths</div>
+  <div class="module-chip"><span class="dot status-ok"></span>integrations.github_ops</div>
+  <div class="module-chip"><span class="dot status-warn"></span>agents.security_agent</div>
+</div>
+
+<div class="section-title">Service Accounts</div>
+<div class="module-grid">
+  <div class="module-chip"><span class="dot status-ok"></span>GitHub</div>
+  <div class="module-chip"><span class="dot status-ok"></span>HuggingFace</div>
+  <div class="module-chip"><span class="dot status-ok"></span>Docker Hub</div>
+  <div class="module-chip"><span class="dot status-ok"></span>Zoho Mail</div>
+  <div class="module-chip"><span class="dot status-ok"></span>PyPI</div>
+  <div class="module-chip"><span class="dot status-warn"></span>Gmail (locked)</div>
+  <div class="module-chip"><span class="dot status-unknown"></span>Discord</div>
+  <div class="module-chip"><span class="dot status-unknown"></span>Replicate</div>
+  <div class="module-chip"><span class="dot status-unknown"></span>Shodan</div>
+</div>
+
+<div class="footer">
+  Workhorse Command Center v0.1.0 &mdash; Ace Magician AM06 Pro &mdash; Windows 11 &mdash; Tailscale 100.83.49.9
+</div>
+
+<script>
+  // Auto-refresh timestamp
+  const now = new Date();
+  document.title = `Workhorse — ${now.toLocaleTimeString()}`;
+</script>
+</body>
+</html>

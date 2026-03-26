@@ -35,7 +35,7 @@ except ImportError:
 
 try:
     from rudy.network_defense import NetworkDefense
-from rudy.presence import PresenceMonitor
+    from rudy.presence import PresenceMonitor
     HAS_PRESENCE = True
 except ImportError:
     HAS_PRESENCE = False
@@ -519,45 +519,4 @@ class SecurityAgent(AgentBase):
                 )
                 if r.status_code == 200:
                     breach_data = r.json()
-                    breach_names = [b.get("Name", "Unknown") for b in breach_data[:5]]
-                    self._security_event("alert", "breach_detected",
-                        f"{email} found in {len(breach_data)} breaches: {', '.join(breach_names)}")
-                    breached.append(email)
-                elif r.status_code == 404:
-                    self.log.info(f"  {email}: clean (not in any known breaches)")
-                elif r.status_code == 401:
-                    self.log.info(f"  HIBP API requires API key for this endpoint")
-                    break  # Don't hammer the API
-                else:
-                    self.log.info(f"  {email}: API returned {r.status_code}")
-
-                time.sleep(1.6)  # HIBP rate limit: 1 request per 1.5s
-            except Exception as e:
-                self.log.info(f"  {email}: check failed ({e})")
-
-        # Save last check time
-        with open(last_check_file, "w") as f:
-            json.dump({"last_check": datetime.now().isoformat(), "breached": breached}, f)
-
-        if not breached:
-            self.log.info("  All monitored emails are clean")
-
-
-if __name__ == "__main__":
-    import sys
-    mode = sys.argv[1] if len(sys.argv) > 1 else "full"
-    agent = SecurityAgent()
-    agent.execute(mode=mode)
-
-
-    def _run_domain_intel(self, domains=None):
-        """Run domain intelligence on suspicious domains."""
-        try:
-            sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-            from rudy.web_intelligence import DomainIntel
-            di = DomainIntel()
-            if domains:
-                return {d: di.full_domain_report(d) for d in domains[:5]}
-            return {"status": "no domains to investigate"}
-        except Exception as e:
-            return {"error": str(e)[:100]}
+                    breach_names = [b.get("Name", "Unknown") for b i
