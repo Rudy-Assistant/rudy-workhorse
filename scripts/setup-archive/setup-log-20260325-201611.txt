@@ -1,0 +1,79 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20260325201611
+Username: MINI-PC\C
+RunAs User: MINI-PC\C
+Configuration Name: 
+Machine: MINI-PC (Microsoft Windows NT 10.0.26200.0)
+Host Application: powershell -ExecutionPolicy Bypass -File C:\Users\C\Desktop\setup-mini-pc.ps1
+Process ID: 15808
+PSVersion: 5.1.26100.7920
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.26100.7920
+BuildVersion: 10.0.26100.7920
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+Transcript started, output file is C:\Users\C\Desktop\setup-log-20260325-201611.txt
+
+==> Configuring power plan: Always On
+Invalid Parameters -- try "/?" for help
+Invalid Parameters -- try "/?" for help
+  Created and activated 'Always On' power plan
+
+
+
+
+  Sleep, hibernate, and display timeout all set to Never
+
+==> Disabling lock screen
+  Set NoLockScreen = 1
+  Set DisableLockWorkstation = 1
+
+==> Setting up auto-login
+  Current user: C
+  Auto-login enabled for C
+
+==> Preventing forced Windows Update restarts
+  Set NoAutoRebootWithLoggedOnUsers = 1
+  Set AUOptions = 2
+
+==> Disabling USB selective suspend
+  Set DisableSelectiveSuspend = 1
+
+
+  USB selective suspend disabled
+
+==> Reducing notification noise
+  Set SubscribedContent-338389Enabled = 0
+  Set SubscribedContent-310093Enabled = 0
+  Set SoftLandingEnabled = 0
+
+==> Enabling Remote Desktop as backup
+  Set fDenyTSConnections = 0
+  RDP firewall rules enabled
+
+==> Checking RustDesk startup registration
+  Added RustDesk to startup
+
+==> Creating daily health-check scheduled task
+  Created health-check task (runs daily at 6 AM)
+
+============================================
+  SETUP COMPLETE
+============================================
+
+  Next manual steps:
+  1. BIOS: Set 'AC Power Recovery' -> 'Power On'
+  2. RustDesk: Set a permanent unattended password
+  3. Router: Reserve a static LAN IP for this machine
+  4. Consider an HDMI dummy plug if remote resolution is wrong
+  5. Install recommended Claude Code toolkits (see companion guide)
+
+  Log saved to: C:\Users\C\Desktop\setup-log-20260325-201611.txt
+**********************
+Windows PowerShell transcript end
+End time: 20260325201643
+**********************

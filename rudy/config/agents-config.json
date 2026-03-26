@@ -1,0 +1,48 @@
+{
+  "agents": {
+    "system_master": {
+      "schedule": "Every 5 min (via WorkhorseHealthCheck)",
+      "default_mode": "full",
+      "alert_threshold": 3
+    },
+    "operations_monitor": {
+      "schedule": "Weekly Sunday 4 AM",
+      "default_mode": "full",
+      "result_retention_days": 7
+    },
+    "research_intel": {
+      "schedule": "Daily 6 AM (digest), M/W/F 10 AM (capability)",
+      "default_mode": "digest"
+    },
+    "task_master": {
+      "schedule": "Daily 7:30 AM (briefing)",
+      "default_mode": "briefing"
+    },
+    "sentinel": {
+      "schedule": "Every 15 minutes",
+      "default_mode": "full",
+      "max_runtime_seconds": 30,
+      "purpose": "Continuous awareness \u2014 noticing, learning, micro-improving"
+    },
+    "security_agent": {
+      "schedule": "Every 30 minutes",
+      "default_mode": "full",
+      "purpose": "Defensive intelligence \u2014 network monitoring, file integrity, breach detection, event log analysis",
+      "capabilities": [
+        "Network connection anomaly detection (psutil)",
+        "Listening port monitoring",
+        "File integrity checking (SHA-256)",
+        "Windows Event Log analysis (failed logins, new accounts, service installs)",
+        "Breach monitoring (HIBP API)",
+        "Process anomaly detection",
+        "DNS-level blocking (87K+ malware/tracking domains)"
+      ],
+      "planned_hardware": [
+        "Flipper Zero (USB serial)",
+        "IP security camera (RTSP/OpenCV)"
+      ]
+    }
+  },
+  "created": "2026-03-26T09:31:04.221069",
+  "version": "1.2"
+}

@@ -1,0 +1,68 @@
+name: Module Smoke Tests
+
+on:
+  push:
+    branches: [main]
+    paths: ['rudy/**']
+  pull_request:
+    branches: [main]
+
+jobs:
+  smoke-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install base dependencies
+        run: |
+          pip install --upgrade pip
+          pip install requests beautifulsoup4 pandas pyyaml pydantic httpx \
+            psutil rich structlog jinja2 arrow tabulate python-dotenv \
+            feedparser markdownify tenacity cachetools humanize tqdm colorama \
+            click typer jsonschema schedule watchdog cryptography
+
+      - name: Import core modules
+        run: |
+          python -c "
+          import importlib, sys
+
+          # Modules that should import without heavy external deps
+          core_modules = [
+              'rudy',
+              'rudy.paths',
+              'rudy.nlp',
+              'rudy.financial',
+              'rudy.web_intelligence',
+              'rudy.email_multi',
+              'rudy.obsolescence_monitor',
+          ]
+
+          failed = []
+          for mod in core_modules:
+              try:
+                  importlib.import_module(mod)
+                  print(f'  OK: {mod}')
+              except Exception as e:
+                  print(f'  FAIL: {mod} — {e}')
+                  failed.append(mod)
+
+          if failed:
+              print(f'\n{len(failed)} module(s) failed to import')
+              sys.exit(1)
+          else:
+              print(f'\nAll {len(core_modules)} core modules imported successfully')
+          "
+
+      - name: Check module file count
+        run: |
+          count=$(find rudy/ -name "*.py" | wc -l)
+          echo "Total Python files in rudy/: $count"
+          if [ "$count" -lt 10 ]; then
+            echo "WARNING: Expected at least 10 modules, found $count"
+            exit 1
+          fi

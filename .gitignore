@@ -1,0 +1,91 @@
+# ===== Rudy / Workhorse .gitignore =====
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Credentials & secrets (CRITICAL - never commit)
+.env
+*.env
+rudy-totp-secret.json
+rudy-logs/api-tokens.json
+rudy-logs/api-server-config.json
+rudy-logs/service-accounts.json
+token.txt
+
+# Logs & runtime state
+rudy-logs/
+rudy-commands/archive/
+rudy-commands/*.result
+rudy-commands/_runner.lock
+
+# AI models (too large for git)
+rudy-data/models/
+rudy-data/avatar/models/
+
+# Browser sessions & profiles
+data/sessions/
+data/browser-profile/
+
+# Large data
+*.onnx
+*.bin
+*.safetensors
+*.gguf
+*.pt
+*.pth
+
+# ChromaDB vector store
+rudy-data/chromadb/
+chroma_data/
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Results from command runner (contain runtime output)
+*.result
+*.result.json
+
+# Health check state
+ALERT-ACTIVE.txt
+healthcheck-state.json
+
+# Temp files
+*.tmp
+*.bak
+*.old
+
+# Node modules (if any)
+node_modules/
+
+# OS
+.DS_Store
+
+# Audit reports (generated, not source)
+audit-reports/
+health-reports/
+briefings/
+
+# Sprint/task planning (keep in repo root but not sub-outputs)
+projects/

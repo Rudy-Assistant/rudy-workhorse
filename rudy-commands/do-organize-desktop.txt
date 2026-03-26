@@ -1,0 +1,238 @@
+"""
+Desktop Organization — Move all loose files into clean directory structure.
+Keeps CLAUDE.md, TASKS.md, desktop.ini, and rudy-commands/ at root.
+Moves everything else into categorized subdirectories.
+Updates all path references in scripts and scheduled tasks.
+"""
+import os, shutil, subprocess, glob
+
+DESKTOP = r"C:\Users\C\Desktop"
+SCRIPTS_RUDY = os.path.join(DESKTOP, "scripts", "rudy")
+SCRIPTS_WH = os.path.join(DESKTOP, "scripts", "workhorse")
+SCRIPTS_ARCHIVE = os.path.join(DESKTOP, "scripts", "setup-archive")
+DOCS = os.path.join(DESKTOP, "docs")
+DATA_SESSIONS = os.path.join(DESKTOP, "data", "sessions")
+DATA_BROWSER = os.path.join(DESKTOP, "data", "browser-profile")
+CMD_ARCHIVE = os.path.join(DESKTOP, "rudy-commands", "archive")
+
+# Ensure all directories exist
+for d in [SCRIPTS_RUDY, SCRIPTS_WH, SCRIPTS_ARCHIVE, DOCS, DATA_SESSIONS, DATA_BROWSER, CMD_ARCHIVE]:
+    os.makedirs(d, exist_ok=True)
+
+print("=" * 60)
+print("  DESKTOP ORGANIZATION")
+print("=" * 60)
+
+moved = 0
+errors = 0
+
+def safe_move(src, dst_dir, label=""):
+    global moved, errors
+    fname = os.path.basename(src)
+    dst = os.path.join(dst_dir, fname)
+    if not os.path.exists(src):
+        return
+    if os.path.exists(dst):
+        # Don't overwrite — skip
+        print(f"  SKIP (exists): {fname}")
+        return
+    try:
+        shutil.move(src, dst)
+        print(f"  MOVED: {fname} → {label or os.path.basename(dst_dir)}/")
+        moved += 1
+    except Exception as e:
+        print(f"  ERROR: {fname}: {e}")
+        errors += 1
+
+# === 1. RUDY SCRIPTS → scripts/rudy/ ===
+print("\n[1] Moving Rudy scripts...")
+rudy_scripts = [
+    "rudy-auth-fix.py",
+    "rudy-complete-setup.py",
+    "rudy-diagnose.py",
+    "rudy-empower.ps1",
+    "rudy-gmail-api.py",
+    "rudy-stealth-browser.py",
+    "rudy-suno.py",
+    "rudy-suno-generate.py",
+]
+for f in rudy_scripts:
+    safe_move(os.path.join(DESKTOP, f), SCRIPTS_RUDY, "scripts/rudy")
+
+# Keep these at root (referenced by health check + Task Scheduler):
+# - rudy-command-runner.py
+# - rudy-listener.py
+print("  KEEP: rudy-command-runner.py (referenced by health check)")
+print("  KEEP: rudy-listener.py (referenced by health check)")
+
+# === 2. WORKHORSE SCRIPTS → scripts/workhorse/ ===
+print("\n[2] Moving Workhorse scripts...")
+wh_scripts = [
+    "workhorse-maintenance.py",
+    "workhorse-research-feed.py",
+    "workhorse-subscribe.py",
+    "workhorse-watchdog.py",
+    "validate-research-feed.py",
+]
+for f in wh_scripts:
+    safe_move(os.path.join(DESKTOP, f), SCRIPTS_WH, "scripts/workhorse")
+
+# Keep at root (referenced by Task Scheduler):
+# - workhorse-startup.bat
+# - workhorse-healthcheck.ps1 (if exists)
+# - enforce-rustdesk-config.ps1 (referenced by schtask)
+print("  KEEP: workhorse-startup.bat (referenced by Task Scheduler)")
+print("  KEEP: enforce-rustdesk-config.ps1 (referenced by Task Scheduler)")
+
+# === 3. ONE-TIME SETUP SCRIPTS → scripts/setup-archive/ ===
+print("\n[3] Archiving completed setup scripts...")
+setup_files = [
+    "FIX-RUSTDESK-DOUBLECLICK-ME.bat",
+    "SETUP-RESILIENCE-DOUBLECLICK-ME.bat",
+    "RUDY-FULL-SETUP.bat",
+    "RUN-SETUP.bat",
+    "START-COMMAND-RUNNER.bat",
+    "install-claude-toolkits.ps1",
+    "install-command-runner.ps1",
+    "install-desktop-commander.cmd",
+    "install-rudy-service.ps1",
+    "setup-mini-pc.ps1",
+    "RESEARCH-FEED-SETUP.ps1",
+    "research-feed.cmd",
+    "start-rudy.bat",
+    "setup-log-20260325-201611.txt",
+]
+for f in setup_files:
+    safe_move(os.path.join(DESKTOP, f), SCRIPTS_ARCHIVE, "scripts/setup-archive")
+
+# === 4. DOCUMENTATION → docs/ ===
+print("\n[4] Moving documentation...")
+doc_files = [
+    "MANIFEST.txt",
+    "RESEARCH-FEED-INDEX.md",
+    "RESEARCH-FEED-README.md",
+    "RESEARCH-FEED-SUMMARY.txt",
+    "claude-code-toolkit-guide.md",
+    "research-feed-integration.md",
+    "dashboard.html",
+]
+for f in doc_files:
+    safe_move(os.path.join(DESKTOP, f), DOCS, "docs")
+
+# === 5. DATA DIRECTORIES ===
+print("\n[5] Moving data directories...")
+
+# Move rudy-sessions → data/sessions
+src_sessions = os.path.join(DESKTOP, "rudy-sessions")
+if os.path.exists(src_sessions):
+    for item in os.listdir(src_sessions):
+        src = os.path.join(src_sessions, item)
+        dst = os.path.join(DATA_SESSIONS, item)
+        if not os.path.exists(dst):
+            try:
+                shutil.move(src, dst)
+                print(f"  MOVED: rudy-sessions/{item} → data/sessions/")
+                moved += 1
+            except Exception as e:
+                print(f"  ERROR moving {item}: {e}")
+    # Try to remove empty dir
+    try:
+        os.rmdir(src_sessions)
+        print("  REMOVED: empty rudy-sessions/")
+    except:
+        pass
+
+# Move rudy-browser-profile → data/browser-profile
+src_browser = os.path.join(DESKTOP, "rudy-browser-profile")
+if os.path.exists(src_browser):
+    for item in os.listdir(src_browser):
+        src = os.path.join(src_browser, item)
+        dst = os.path.join(DATA_BROWSER, item)
+        if not os.path.exists(dst):
+            try:
+                shutil.move(src, dst)
+                moved += 1
+            except:
+                pass
+    try:
+        os.rmdir(src_browser)
+        print("  MOVED: rudy-browser-profile → data/browser-profile")
+    except:
+        print("  KEPT: rudy-browser-profile (not empty)")
+
+# === 6. CLEAN UP rudy-commands/ ===
+print("\n[6] Archiving old command results...")
+
+cmd_dir = os.path.join(DESKTOP, "rudy-commands")
+result_count = 0
+for f in os.listdir(cmd_dir):
+    if f.endswith('.result'):
+        src = os.path.join(cmd_dir, f)
+        dst = os.path.join(CMD_ARCHIVE, f)
+        try:
+            shutil.move(src, dst)
+            result_count += 1
+        except:
+            pass
+
+print(f"  Archived {result_count} .result files")
+
+# Also move old .txt script files (not the _README)
+old_txt = [
+    "do-check-rd.txt", "do-fix-rustdesk-final.txt", "do-fix-rustdesk-v2.txt",
+    "do-organize.txt", "do-status.txt", "sms-code.txt"
+]
+for f in old_txt:
+    fp = os.path.join(cmd_dir, f)
+    if os.path.exists(fp):
+        safe_move(fp, CMD_ARCHIVE, "rudy-commands/archive")
+
+# Keep do-harden-remote.txt (still referenced by harden-remote.py launcher)
+# Keep do-organize-desktop.txt (this script!)
+
+# Clean up .result.json if any
+for f in glob.glob(os.path.join(cmd_dir, "*.result.json")):
+    safe_move(f, CMD_ARCHIVE, "rudy-commands/archive")
+
+# === 7. CLEAN UP __pycache__ and pip cache ===
+print("\n[7] Cleaning caches...")
+pycache = os.path.join(DESKTOP, "__pycache__")
+if os.path.exists(pycache):
+    shutil.rmtree(pycache, ignore_errors=True)
+    print("  REMOVED: __pycache__/")
+
+pip_dir = os.path.join(DESKTOP, "pip")
+if os.path.exists(pip_dir):
+    shutil.rmtree(pip_dir, ignore_errors=True)
+    print("  REMOVED: pip/")
+
+# === 8. SUMMARY ===
+print(f"\n{'=' * 60}")
+print(f"  ORGANIZATION COMPLETE")
+print(f"  Moved: {moved} files")
+print(f"  Errors: {errors}")
+print(f"{'=' * 60}")
+
+# Show what's left at Desktop root
+print("\n  Desktop root now contains:")
+for item in sorted(os.listdir(DESKTOP)):
+    full = os.path.join(DESKTOP, item)
+    if os.path.isdir(full):
+        count = len(os.listdir(full))
+        print(f"    {item}/ ({count} items)")
+    else:
+        size = os.path.getsize(full)
+        print(f"    {item} ({size:,} bytes)")
+
+print(f"\n  Directory structure:")
+print(f"    scripts/rudy/        — Rudy utility scripts")
+print(f"    scripts/workhorse/   — System management scripts")
+print(f"    scripts/setup-archive/ — Completed one-time setup scripts")
+print(f"    docs/                — Documentation, guides, dashboards")
+print(f"    data/sessions/       — Browser session data")
+print(f"    data/browser-profile/— Stealth browser profile")
+print(f"    rudy-commands/       — Command runner (active)")
+print(f"    rudy-commands/archive/ — Old results and scripts")
+print(f"    rudy-logs/           — All logs")
+print(f"    rudy/                — Rudy Python package")
+print(f"    memory/              — Knowledge base")
