@@ -213,6 +213,10 @@ The Orchestrator (`rudy/agents/orchestrator.py`) maps the full toolkit to 8 spec
   7. Listening Port Audit — detects new services/backdoors binding to ports
 - **Presence Intelligence** (`rudy/presence_analytics.py`): Behavioral device identification via co-occurrence clustering, MAC OUI fingerprinting, activity pattern analysis. Dashboard: `presence-dashboard.jsx`
 - **Wellness Monitor** (`rudy/wellness.py`): Family safety — inactivity detection, routine deviation, fall-risk mode
+- **USB Quarantine** (`rudy/usb_quarantine.py`): Full quarantine protocol — every new USB device is fingerprinted (VID/PID, serial, class, driver, composite check), threat scored against known-malicious signatures (Rubber Ducky, O.MG, Flipper Zero, BadUSB platforms), CRITICAL/HIGH auto-blocked and Chris alerted, whitelist for trusted devices. Integrated into Sentinel.
+- **Surveillance** (`rudy/surveillance.py`): Video camera integration — OpenCV capture (USB webcam/RTSP), motion detection, person detection (HOG), snapshot-on-motion, alert pipeline, storage management. Ready for camera plug-in.
+- **Find My Friends** (`rudy/find_my.py`): iCloud location monitoring for family safety — geofences, routine deviation, stale alerts, speed anomalies, location history learning. Requires Apple ID setup.
+- **Forensic Phone Check** (`rudy/phone_check.py`): `ForensicPhoneCheck` extends standard scan with USB quarantine integration, network traffic capture, certificate deep inspection, behavioral monitoring, and forensic timeline.
 - **Threat Posture**: Family farm at 4101 Kansas Ave, Modesto — elevated counter-espionage stance (DA/attorney family, community-prominent). Unknown devices treated as hostile by default.
 - **Planned Hardware**: Flipper Zero (RF scanning), IP security camera (motion detection via OpenCV), Aqara FP2 (fall detection)
 - **Phase 2 Roadmap**: Proxmox VE → Security Onion + Kali + T-Pot VMs (see memory/projects/security-architecture.md)
@@ -304,7 +308,10 @@ python-pptx, python-docx, openpyxl, reportlab, PyPDF2, Pillow, svgwrite, qrcode,
 | **local_ai.py** | Local LLM inference (Phi-3-Mini/Mistral-7B via llama-cpp-python) — offline reasoning, alert triage, ops decisions |
 | **offline_ops.py** | Offline operations controller — connectivity monitoring, action queuing, AI-powered autonomous operation during outages |
 | **vpn_manager.py** | ProtonVPN control — connect/disconnect by country, session timeouts, post-disconnect health checks, remote access safety interlocks |
-| **phone_check.py** | Mobile device security scanning — iOS/Android malware/spyware detection, MVT integration, ADB/libimobiledevice. **Fixed**: passcode status now reports "indeterminate" when device is unlocked during scan (was false-positive CRITICAL) |
+| **phone_check.py** | Mobile device security scanning — iOS/Android malware/spyware detection, MVT integration, ADB/libimobiledevice. Now includes `ForensicPhoneCheck` class with USB quarantine integration, network traffic capture, deep certificate inspection, behavioral monitoring, and forensic timeline generation. |
+| **usb_quarantine.py** | Full USB device quarantine protocol — fingerprinting (VID/PID/serial/class/driver), composite device detection, known-malicious signature DB (Rubber Ducky, O.MG, Flipper Zero, etc.), threat scoring (0-100), auto-block for CRITICAL/HIGH, email alerts, whitelist management, mass storage deep scan, behavioral monitoring. Integrated into Sentinel v2.2. |
+| **find_my.py** | iCloud Find My Friends location monitoring — pyicloud backend, geofence alerts (safe zones/exclusion zones), routine deviation detection, stale location alerts, speed anomaly detection (impossible travel), location history for pattern learning, 2FA handling with email-based code delivery. |
+| **surveillance.py** | Video camera integration — OpenCV USB/RTSP capture, motion detection (frame differencing + background subtraction), person detection (HOG), snapshot on trigger, alert pipeline (motion→snapshot→email), storage management, Sentinel integration. |
 | **photo_intel.py** | Photo intelligence — EXIF metadata extraction, GPS geocoding, timeline generation, duplicate detection, vacation reconstructor |
 | **voice_clone.py** | Voice cloning — Pocket TTS (primary)/OpenVoice/Bark, custom character voices, memorial voice recreation, batch script generation. Coqui TTS retired (abandoned, Python 3.12 incompatible). |
 | **avatar.py** | Digital avatars — SadTalker talking-head, InsightFace face swap, Wav2Lip lip sync, MoviePy compositing, presenter videos |

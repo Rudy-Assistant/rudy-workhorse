@@ -224,39 +224,48 @@ class Sentinel(AgentBase):
             pass
 
     def _scan_device_events(self, state):
-        """Detect new USB devices and network device changes."""
+        """Detect new USB devices via quarantine protocol.
+
+        Integrates with rudy.usb_quarantine for full device screening:
+        - New devices are fingerprinted (VID/PID, class, driver, composite check)
+        - Threat scored against known-malicious signatures and behavioral heuristics
+        - CRITICAL/HIGH threats are auto-blocked and alert sent to Chris
+        - MEDIUM threats prompt for review
+        - Whitelisted devices pass through silently
+        """
         try:
-            # USB devices: quick WMI query
-            result = subprocess.run(
-                ["powershell", "-Command",
-                 "Get-PnpDevice -Class USB -Status OK -ErrorAction SilentlyContinue | "
-                 "Select-Object -ExpandProperty InstanceId"],
-                capture_output=True, text=True, timeout=10
-            )
-            if result.returncode == 0:
-                current_usb = set(result.stdout.strip().splitlines())
-                prev_usb = set(state.get("usb_devices", []))
+            from rudy.usb_quarantine import USBQuarantine
+            q = USBQuarantine()
+            report = q.scan()
 
-                new_devices = current_usb - prev_usb
-                removed_devices = prev_usb - current_usb
+            for dev in report.get("new_devices", []):
+                name = dev.get("friendly_name") or dev.get("description") or f"USB {dev.get('vid')}:{dev.get('pid')}"
+                score = dev.get("threat_score", 0)
+                risk = dev.get("risk_level", "UNKNOWN")
 
-                if prev_usb and new_devices:
-                    # Only report if we had a baseline
-                    for dev in list(new_devices)[:3]:
-                        short = dev.split("\\")[-1][:40] if "\\" in dev else dev[:40]
-                        self._observe("device_connected",
-                            f"USB device connected: {short}",
-                            actionable=True)
+                if score >= 50:
+                    self._observe("usb_threat",
+                        f"USB {risk}: {name} (score={score}) — {dev.get('recommended_action')}",
+                        actionable=True)
+                else:
+                    self._observe("device_connected",
+                        f"New USB device: {name} (risk={risk}, score={score})",
+                        actionable=score >= 30)
 
-                if prev_usb and removed_devices:
-                    for dev in list(removed_devices)[:3]:
-                        short = dev.split("\\")[-1][:40] if "\\" in dev else dev[:40]
-                        self._observe("device_disconnected",
-                            f"USB device removed: {short}",
-                            actionable=False)
+            for action in report.get("actions_taken", []):
+                self._observe("usb_action", action, actionable=True)
 
-                state["usb_devices"] = list(current_usb)
+            # Track device count in state for session briefing
+            state["usb_quarantine_last"] = {
+                "new": len(report.get("new_devices", [])),
+                "threats": len(report.get("threats", [])),
+                "known": len(report.get("known_devices", [])),
+                "timestamp": report.get("timestamp"),
+            }
 
+        except ImportError:
+            # Fallback to basic detection if quarantine module not available
+            self._scan_device_events_basic(state)
         except Exception:
             pass
 
@@ -282,6 +291,29 @@ class Sentinel(AgentBase):
                             actionable=False)
 
                 state["known_network_devices"] = list(current_macs)
+        except Exception:
+            pass
+
+    def _scan_device_events_basic(self, state):
+        """Basic USB detection fallback (used if usb_quarantine module unavailable)."""
+        try:
+            result = subprocess.run(
+                ["powershell", "-Command",
+                 "Get-PnpDevice -Class USB -Status OK -ErrorAction SilentlyContinue | "
+                 "Select-Object -ExpandProperty InstanceId"],
+                capture_output=True, text=True, timeout=10
+            )
+            if result.returncode == 0:
+                current_usb = set(result.stdout.strip().splitlines())
+                prev_usb = set(state.get("usb_devices", []))
+                new_devices = current_usb - prev_usb
+                if prev_usb and new_devices:
+                    for dev in list(new_devices)[:3]:
+                        short = dev.split("\\")[-1][:40] if "\\" in dev else dev[:40]
+                        self._observe("device_connected",
+                            f"USB device connected (UNSCREENED): {short}",
+                            actionable=True)
+                state["usb_devices"] = list(current_usb)
         except Exception:
             pass
 
