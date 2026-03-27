@@ -80,6 +80,19 @@ class Sentinel(AgentBase):
         self._scan_presence_analytics(state)
         if not self._time_ok(): return self._finalize(state)
 
+        # === Live Event Awareness ===
+        self._scan_remote_sessions(state)
+        if not self._time_ok(): return self._finalize(state)
+
+        self._scan_incoming_requests(state)
+        if not self._time_ok(): return self._finalize(state)
+
+        self._scan_device_events(state)
+        if not self._time_ok(): return self._finalize(state)
+
+        self._scan_service_health(state)
+        if not self._time_ok(): return self._finalize(state)
+
         # === Session Guardian (ADR-001) ===
         self._scan_capabilities(state)
         if not self._time_ok(): return self._finalize(state)
@@ -133,6 +146,213 @@ class Sentinel(AgentBase):
         with open(self.STATE_FILE, "w", encoding="utf-8") as f:
             json.dump(state, f, indent=2, default=str)
 
+
+    # === LIVE EVENT AWARENESS ===
+
+    def _scan_remote_sessions(self, state):
+        """Detect active/ended RustDesk remote sessions by checking process state."""
+        try:
+            # Check if RustDesk has an active session by examining connections
+            result = subprocess.run(
+                ["powershell", "-Command",
+                 "(Get-NetTCPConnection -OwningProcess "
+                 "(Get-Process rustdesk -ErrorAction SilentlyContinue | "
+                 "Select -Expand Id) -ErrorAction SilentlyContinue | "
+                 "Where-Object {$_.State -eq 'Established' -and $_.RemotePort -ne 0}).Count"],
+                capture_output=True, text=True, timeout=10
+            )
+            active_conns = 0
+            if result.returncode == 0 and result.stdout.strip().isdigit():
+                active_conns = int(result.stdout.strip())
+
+            was_connected = state.get("rustdesk_session_active", False)
+
+            if active_conns > 0 and not was_connected:
+                self._observe("remote_session",
+                    "RustDesk session started — someone connected",
+                    actionable=True)
+                state["rustdesk_session_start"] = datetime.now().isoformat()
+            elif active_conns == 0 and was_connected:
+                start = state.get("rustdesk_session_start", "unknown")
+                self._observe("remote_session",
+                    f"RustDesk session ended (started: {start})",
+                    actionable=False)
+
+            state["rustdesk_session_active"] = active_conns > 0
+            state["rustdesk_connections"] = active_conns
+
+        except Exception as e:
+            # Silently skip if powershell call fails — not critical
+            pass
+
+    def _scan_incoming_requests(self, state):
+        """Detect new pending command runner scripts (incoming work)."""
+        try:
+            cmd_dir = DESKTOP / "rudy-commands"
+            if not cmd_dir.exists():
+                return
+
+            # Find .py files without a matching .result (pending work)
+            pending = []
+            for f in cmd_dir.glob("*.py"):
+                if f.name.startswith("_running_"):
+                    continue
+                result_file = f.with_suffix(".result")
+                if not result_file.exists():
+                    pending.append(f.name)
+
+            prev_pending = set(state.get("pending_commands", []))
+            current_pending = set(pending)
+
+            # Detect new arrivals
+            new_commands = current_pending - prev_pending
+            if new_commands:
+                self._observe("incoming_request",
+                    f"New command(s) detected: {', '.join(sorted(new_commands))}",
+                    actionable=True)
+
+            # Detect completions
+            completed = prev_pending - current_pending
+            if completed:
+                self._observe("request_completed",
+                    f"Command(s) finished: {', '.join(sorted(completed))}",
+                    actionable=False)
+
+            state["pending_commands"] = list(current_pending)
+
+        except Exception:
+            pass
+
+    def _scan_device_events(self, state):
+        """Detect new USB devices and network device changes."""
+        try:
+            # USB devices: quick WMI query
+            result = subprocess.run(
+                ["powershell", "-Command",
+                 "Get-PnpDevice -Class USB -Status OK -ErrorAction SilentlyContinue | "
+                 "Select-Object -ExpandProperty InstanceId"],
+                capture_output=True, text=True, timeout=10
+            )
+            if result.returncode == 0:
+                current_usb = set(result.stdout.strip().splitlines())
+                prev_usb = set(state.get("usb_devices", []))
+
+                new_devices = current_usb - prev_usb
+                removed_devices = prev_usb - current_usb
+
+                if prev_usb and new_devices:
+                    # Only report if we had a baseline
+                    for dev in list(new_devices)[:3]:
+                        short = dev.split("\\")[-1][:40] if "\\" in dev else dev[:40]
+                        self._observe("device_connected",
+                            f"USB device connected: {short}",
+                            actionable=True)
+
+                if prev_usb and removed_devices:
+                    for dev in list(removed_devices)[:3]:
+                        short = dev.split("\\")[-1][:40] if "\\" in dev else dev[:40]
+                        self._observe("device_disconnected",
+                            f"USB device removed: {short}",
+                            actionable=False)
+
+                state["usb_devices"] = list(current_usb)
+
+        except Exception:
+            pass
+
+        # Network devices: check presence scan results for changes
+        try:
+            presence_file = LOGS_DIR / "presence-latest.json"
+            if presence_file.exists():
+                with open(presence_file) as f:
+                    data = json.load(f)
+                current_macs = set(d.get("mac", "") for d in data.get("devices", []))
+                prev_macs = set(state.get("known_network_devices", []))
+
+                if prev_macs:
+                    new_macs = current_macs - prev_macs
+                    gone_macs = prev_macs - current_macs
+                    if new_macs:
+                        self._observe("network_device_new",
+                            f"{len(new_macs)} new device(s) on network: {', '.join(list(new_macs)[:3])}",
+                            actionable=True)
+                    if gone_macs and len(gone_macs) <= 3:
+                        self._observe("network_device_gone",
+                            f"{len(gone_macs)} device(s) left network",
+                            actionable=False)
+
+                state["known_network_devices"] = list(current_macs)
+        except Exception:
+            pass
+
+    def _scan_service_health(self, state):
+        """Monitor key services: Ollama, Tailscale, RustDesk, command runner."""
+        services_status = {}
+
+        # Ollama
+        try:
+            import urllib.request
+            req = urllib.request.Request("http://localhost:11434/api/tags", method="GET")
+            with urllib.request.urlopen(req, timeout=3) as resp:
+                if resp.status == 200:
+                    data = json.loads(resp.read().decode())
+                    models = [m.get("name", "") for m in data.get("models", [])]
+                    services_status["ollama"] = f"running ({len(models)} models)"
+                else:
+                    services_status["ollama"] = "error"
+        except Exception:
+            services_status["ollama"] = "down"
+
+        # Tailscale
+        try:
+            result = subprocess.run(
+                ["tailscale", "status", "--json"],
+                capture_output=True, text=True, timeout=5
+            )
+            if result.returncode == 0:
+                ts_data = json.loads(result.stdout)
+                self_online = ts_data.get("Self", {}).get("Online", False)
+                services_status["tailscale"] = "connected" if self_online else "disconnected"
+            else:
+                services_status["tailscale"] = "error"
+        except Exception:
+            services_status["tailscale"] = "unavailable"
+
+        # RustDesk service
+        try:
+            result = subprocess.run(
+                ["powershell", "-Command",
+                 "(Get-Service rustdesk -ErrorAction SilentlyContinue).Status"],
+                capture_output=True, text=True, timeout=5
+            )
+            services_status["rustdesk"] = result.stdout.strip().lower() or "not found"
+        except Exception:
+            services_status["rustdesk"] = "unknown"
+
+        # Command runner (check process)
+        try:
+            result = subprocess.run(
+                ["powershell", "-Command",
+                 "@(Get-Process python* -ErrorAction SilentlyContinue | "
+                 "Where-Object {$_.CommandLine -like '*command-runner*'}).Count"],
+                capture_output=True, text=True, timeout=5
+            )
+            count = result.stdout.strip()
+            services_status["command_runner"] = f"running ({count} proc)" if count and count != "0" else "not running"
+        except Exception:
+            services_status["command_runner"] = "unknown"
+
+        # Detect state changes from previous run
+        prev_services = state.get("service_health", {})
+        for svc, status in services_status.items():
+            prev_status = prev_services.get(svc, "unknown")
+            if prev_status != "unknown" and status != prev_status:
+                is_bad = "down" in status or "error" in status or "not running" in status or "disconnected" in status
+                self._observe("service_change",
+                    f"{svc}: {prev_status} → {status}",
+                    actionable=is_bad)
+
+        state["service_health"] = services_status
 
     def _scan_presence_analytics(self, state):
         """Ensure presence analytics are fresh; re-run if stale."""
@@ -547,6 +767,28 @@ class Sentinel(AgentBase):
                     except Exception:
                         pass
 
+            # Dependency health issues (from ResearchIntel)
+            dep_health = LOGS_DIR / "dependency-health.json"
+            if dep_health.exists():
+                try:
+                    dh = json.loads(dep_health.read_text(encoding="utf-8"))
+                    issues = dh.get("issues", [])
+                    if issues:
+                        lines.append("## Dependency Issues")
+                        for issue in issues[:5]:
+                            if issue.get("type") == "superseded":
+                                lines.append(
+                                    f"- **{issue['package']}** is {issue['status']}: "
+                                    f"use `{issue['replacement']}` instead — "
+                                    f"{issue.get('replacement_reason', '')[:80]}")
+                            elif issue.get("type") == "import_failure":
+                                lines.append(
+                                    f"- **{issue['module']}** ({issue['description']}): "
+                                    f"import failed")
+                        lines.append("")
+                except Exception:
+                    pass
+
             # Recent observations (last 5 actionable)
             lines.append("## Recent Observations")
             if self.OBSERVATIONS_FILE.exists():
@@ -585,6 +827,22 @@ class Sentinel(AgentBase):
                     lines.append(f"- Command runner: **inactive** ({age_min:.0f} min since last activity)")
             else:
                 lines.append("- Command runner: no log found")
+
+            # Live system state (from scan_service_health + scan_remote_sessions)
+            svc_health = state.get("service_health", {})
+            if svc_health:
+                lines.append("")
+                lines.append("## Live Services")
+                for svc, status in svc_health.items():
+                    icon = "🟢" if any(w in status for w in ["running", "connected"]) else "🔴" if any(w in status for w in ["down", "error", "not running", "disconnected"]) else "🟡"
+                    lines.append(f"- {icon} **{svc}**: {status}")
+
+            if state.get("rustdesk_session_active"):
+                lines.append(f"- 🖥️ **Remote session**: ACTIVE (since {state.get('rustdesk_session_start', '?')})")
+
+            pending_cmds = state.get("pending_commands", [])
+            if pending_cmds:
+                lines.append(f"- 📥 **Pending commands**: {', '.join(pending_cmds[:5])}")
 
             self.BRIEFING_FILE.write_text("\n".join(lines), encoding="utf-8")
             self._observe("briefing", "Session briefing updated")

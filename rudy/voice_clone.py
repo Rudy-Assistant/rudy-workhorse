@@ -2,7 +2,7 @@
 Voice Clone — Voice cloning, custom character voices, and memorial voice recreation.
 
 Capabilities:
-  1. Clone a voice from audio sample(s) (3-30 seconds of clean speech)
+  1. Clone a voice from audio sample(s) (5-20 seconds of clean speech)
   2. Generate speech in any cloned voice
   3. Create custom character voices for book readings, audiobooks
   4. Memorial voice recreation from recordings of loved ones
@@ -10,10 +10,13 @@ Capabilities:
   6. Audio preprocessing (noise reduction, normalization, segmentation)
 
 Engines (tried in order):
-  1. Coqui TTS (XTTS v2) — best open-source voice cloning, <30s sample needed
+  1. Pocket TTS (Kyutai Labs, 2026) — Python 3.12 native, CPU-optimized, 5-20s voice cloning
   2. OpenVoice — zero-shot cross-lingual voice cloning
   3. Bark (Suno) — text-to-speech with speaker conditioning
   4. gTTS/pyttsx3 fallback — no cloning, but guaranteed TTS
+
+Retired engines:
+  - Coqui TTS (XTTS v2) — project abandoned, Python 3.12 incompatible
 
 All processing is LOCAL — no cloud API needed, full privacy.
 """
@@ -197,8 +200,71 @@ class AudioPreprocessor:
             return [{"error": str(e)[:200]}]
 
 
+class PocketTTSEngine:
+    """Voice cloning via Pocket TTS (Kyutai Labs, 2026).
+
+    Python 3.12 native, CPU-optimized, 5-20s reference audio for voice cloning.
+    Replaced Coqui TTS which was abandoned and incompatible with Python 3.12.
+    """
+
+    def __init__(self):
+        self._model = None
+        self.available = self._check_available()
+
+    def _check_available(self) -> bool:
+        try:
+            import pocket_tts
+            return True
+        except ImportError:
+            return False
+
+    def _get_model(self):
+        if self._model is None and self.available:
+            import pocket_tts
+            self._model = pocket_tts.load_model()
+        return self._model
+
+    def clone_and_speak(self, text: str, reference_audio: str,
+                        output_path: str, language: str = "en") -> dict:
+        """Generate speech in cloned voice using Pocket TTS."""
+        model = self._get_model()
+        if not model:
+            return {"error": "Pocket TTS not loaded. Run: pip install pocket-tts"}
+
+        try:
+            import pocket_tts
+            # Clone voice from reference audio and synthesize
+            audio = pocket_tts.tts(
+                model,
+                text=text,
+                speaker_wav=reference_audio,
+                language=language,
+            )
+            pocket_tts.save_audio(audio, output_path)
+            return {"success": True, "output": output_path, "engine": "pocket_tts"}
+        except Exception as e:
+            return {"success": False, "error": str(e)[:300], "engine": "pocket_tts"}
+
+    def speak(self, text: str, output_path: str, language: str = "en") -> dict:
+        """Basic TTS without cloning."""
+        model = self._get_model()
+        if not model:
+            return {"error": "Pocket TTS not loaded"}
+        try:
+            import pocket_tts
+            audio = pocket_tts.tts(model, text=text, language=language)
+            pocket_tts.save_audio(audio, output_path)
+            return {"success": True, "output": output_path, "engine": "pocket_tts"}
+        except Exception as e:
+            return {"success": False, "error": str(e)[:300], "engine": "pocket_tts"}
+
+
 class CoquiTTSEngine:
-    """Voice cloning via Coqui TTS (XTTS v2) — best open-source option."""
+    """Voice cloning via Coqui TTS (XTTS v2) — RETIRED.
+
+    Coqui project is abandoned and incompatible with Python 3.12.
+    Kept as fallback for systems that still have it installed.
+    """
 
     def __init__(self):
         self._tts = None
@@ -214,7 +280,6 @@ class CoquiTTSEngine:
     def _get_tts(self):
         if self._tts is None and self.available:
             from TTS.api import TTS
-            # XTTS v2 — multilingual, voice cloning with <30s reference
             self._tts = TTS("tts_models/multilingual/multi-dataset/xtts_v2")
         return self._tts
 
@@ -223,7 +288,7 @@ class CoquiTTSEngine:
         """Generate speech in cloned voice."""
         tts = self._get_tts()
         if not tts:
-            return {"error": "Coqui TTS not installed. Run: pip install TTS"}
+            return {"error": "Coqui TTS not installed (retired — use pocket-tts)"}
 
         try:
             tts.tts_to_file(
@@ -357,7 +422,8 @@ class VoiceCloner:
 
         self.preprocessor = AudioPreprocessor()
         self.engines = {
-            "coqui": CoquiTTSEngine(),
+            "pocket_tts": PocketTTSEngine(),
+            "coqui": CoquiTTSEngine(),  # Retired — kept as legacy fallback
             "openvoice": OpenVoiceEngine(),
             "bark": BarkEngine(),
             "fallback": FallbackTTSEngine(),
@@ -456,7 +522,14 @@ class VoiceCloner:
             if not Path(ref_audio).exists():
                 return {"error": f"Reference audio not found for profile '{profile_name}'"}
 
-            # Try engines in order: Coqui → OpenVoice → Bark → Fallback
+            # Try engines in order: Pocket TTS → Coqui (legacy) → OpenVoice → Bark → Fallback
+            if self.engines["pocket_tts"].available:
+                result = self.engines["pocket_tts"].clone_and_speak(
+                    text, ref_audio, output_path, language
+                )
+                if result.get("success"):
+                    return result
+
             if self.engines["coqui"].available:
                 result = self.engines["coqui"].clone_and_speak(
                     text, ref_audio, output_path, language

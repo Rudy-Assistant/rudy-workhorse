@@ -60,10 +60,11 @@ def _run(cmd: str, timeout: int = 60):
 
 TOOL_LANDSCAPE = {
     "voice_cloning": {
-        "current": ["TTS (Coqui)", "bark", "openvoice"],
-        "best_of_breed": "Coqui XTTS v2",
-        "watch": ["fish-speech", "cosyvoice", "metavoice", "parler-tts"],
-        "check_pypi": ["TTS", "bark", "openvoice-cli", "fish-speech"],
+        "current": ["pocket-tts", "bark", "openvoice"],
+        "best_of_breed": "Pocket TTS (Kyutai Labs)",
+        "retired": {"TTS (Coqui)": "abandoned, Python 3.12 incompatible"},
+        "watch": ["fish-speech", "cosyvoice", "metavoice", "parler-tts", "mars5-tts"],
+        "check_pypi": ["pocket-tts", "bark", "openvoice-cli", "fish-speech"],
     },
     "talking_head": {
         "current": ["sadtalker", "wav2lip"],
@@ -84,10 +85,10 @@ TOOL_LANDSCAPE = {
         "check_pypi": ["easyocr", "surya-ocr", "python-doctr"],
     },
     "local_llm": {
-        "current": ["llama-cpp-python"],
-        "best_of_breed": "llama-cpp-python",
-        "watch": ["mlc-llm", "ollama", "exllamav2", "vllm"],
-        "check_pypi": ["llama-cpp-python"],
+        "current": ["ollama", "llama-cpp-python"],
+        "best_of_breed": "Ollama (HTTP API, model management)",
+        "watch": ["mlc-llm", "exllamav2", "vllm", "llamafile"],
+        "check_pypi": ["llama-cpp-python", "ollama"],
     },
     "web_scraping": {
         "current": ["trafilatura", "newspaper3k", "beautifulsoup4"],
