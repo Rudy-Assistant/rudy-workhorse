@@ -159,9 +159,9 @@ Six agents manage the Workhorse autonomously. All agents are in `rudy/agents/`, 
 |-------|--------|----------|---------------------|
 | **SystemMaster** | Health & Recovery | Every 5 min | Service monitoring, process restart, disk space, log rotation, network checks |
 | **SecurityAgent** | Defensive Intelligence | Every 30 min | Network anomaly detection, file integrity, breach monitoring, event log analysis |
-| **Sentinel** | Awareness & Growth | Every 15 min | Notices changes, spots opportunities, micro-improvements, tracks agent staleness |
+| **Sentinel** | Awareness & Growth | Every 15 min | Notices changes, spots opportunities, micro-improvements, tracks agent staleness, RustDesk session detection, incoming request monitoring, device events, service health |
 | **TaskMaster** | Work Coordination | Daily 7:30 AM | Morning briefings, agent health monitoring, work queue management |
-| **ResearchIntel** | Intelligence & Learning | Daily 6 AM + M/W/F 10 AM | RSS feed digests, capability inventory, tool recommendations |
+| **ResearchIntel** | Intelligence & Learning | Daily 6 AM + M/W/F 10 AM | RSS feed digests, capability inventory, 4-layer dependency health audit (import check, known supersessions, live web audit via PyPI/GitHub/web search, system health), tool recommendations |
 | **OperationsMonitor** | Maintenance & Cleanup | Weekly Sun 4 AM | Temp cleanup, cache purge, result archiving, privacy drift detection, disk audit |
 
 ### Agent Governance Layer
@@ -181,6 +181,20 @@ The Orchestrator (`rudy/agents/orchestrator.py`) maps the full toolkit to 8 spec
 **Execution framework**: LangGraph (stateful workflows with SQLite checkpointing) — installed via `install-langgraph.py`. Pre-built workflows: morning_briefing, security_incident, self_improvement, maintenance.
 
 **Framework decision**: Evaluated CrewAI (~20k stars), AutoGen (~29k), Swarms (~8k), Agency Swarm (~5k). Chose LangGraph (~9k) because: (a) already have langchain installed, (b) state persistence + human-in-the-loop fit our escalation model, (c) lightweight add-on vs. full framework replacement.
+
+### Proactive Dependency Health (Zealous Inquisitor)
+4-layer audit runs M/W/F 10 AM via ResearchIntel. Core question: "Is this dependency still the BEST solution for its function?"
+
+| Layer | What | Method |
+|-------|------|--------|
+| **1: Import** | Does it load on Python 3.12? | subprocess import check |
+| **2: Memory** | Known superseded packages | SUPERSEDED dict (institutional memory, prevents re-learning) |
+| **3: Live Web** | Is something better available? | PyPI API (freshness), GitHub API (vitality/archived), web search (alternatives), local AI synthesizes gathered evidence ONLY |
+| **4: System** | OS/driver/tool health | Windows Update pending, driver problems, core tool versions (Python/Node/Git/Ollama), disk space |
+
+**Key principle**: Local AI (Ollama) is NEVER used to judge packages from training data. It only synthesizes facts gathered from live web sources. A model that confirms a package once will always confirm it — that's not an audit.
+
+**Reports**: `rudy-logs/dependency-health.json` (issues + evidence + system health)
 
 ### Security Infrastructure
 - **DNS Blocking**: 87,419 malware/tracking domains via hosts file (weekly refresh Sun 2 AM)
@@ -292,7 +306,7 @@ python-pptx, python-docx, openpyxl, reportlab, PyPDF2, Pillow, svgwrite, qrcode,
 | **vpn_manager.py** | ProtonVPN control — connect/disconnect by country, session timeouts, post-disconnect health checks, remote access safety interlocks |
 | **phone_check.py** | Mobile device security scanning — iOS/Android malware/spyware detection, MVT integration, ADB/libimobiledevice. **Fixed**: passcode status now reports "indeterminate" when device is unlocked during scan (was false-positive CRITICAL) |
 | **photo_intel.py** | Photo intelligence — EXIF metadata extraction, GPS geocoding, timeline generation, duplicate detection, vacation reconstructor |
-| **voice_clone.py** | Voice cloning — Coqui XTTS v2/OpenVoice/Bark, custom character voices, memorial voice recreation, batch script generation |
+| **voice_clone.py** | Voice cloning — Pocket TTS (primary)/OpenVoice/Bark, custom character voices, memorial voice recreation, batch script generation. Coqui TTS retired (abandoned, Python 3.12 incompatible). |
 | **avatar.py** | Digital avatars — SadTalker talking-head, InsightFace face swap, Wav2Lip lip sync, MoviePy compositing, presenter videos |
 | **obsolescence_monitor.py** | Capability audit — package freshness, tool landscape comparison, module health, usage tracking, upgrade recommendations |
 | **integrations/github_ops.py** | GitHub operations — issue creation, PR management, commits/push, releases, agent-specific helpers (upgrade issues, security alerts, anomaly reports) |
@@ -830,7 +844,7 @@ Before building ANY custom solution, you MUST:
 - ~~Ollama~~ — **INSTALLED** v0.18.3, phi3:mini active. local_ai.py migrated to Ollama HTTP backend.
 - ~~Chocolatey~~ — **INSTALLED** v2.7.0
 - ~~ADB~~ — **INSTALLED** v1.0.41 via Chocolatey (Windows native, also in WSL)
-- Coqui TTS (voice cloning engine)
+- ~~Coqui TTS~~ — **RETIRED**: project abandoned, Python 3.12 incompatible. Replaced by **Pocket TTS** (Kyutai Labs, installed 2026-03-27)
 - InsightFace (face analysis for avatars — needs Visual C++ Build Tools)
 - Docker (for containerized services — WSL 2 is Docker's backend)
 - SadTalker (talking-head video — needs git clone)
