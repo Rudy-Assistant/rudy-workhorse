@@ -1,8 +1,8 @@
 """
 Local AI Engine — Offline intelligence for The Workhorse.
 
-Runs a quantized LLM (Mistral-7B or Phi-3-Mini) entirely on CPU,
-giving Rudy independent reasoning capability even during internet outages.
+Runs a quantized LLM entirely on CPU, giving Rudy independent reasoning
+capability even during internet outages.
 
 Capabilities (all 100% offline):
   - Intent classification: Understand what a command/alert means
@@ -12,16 +12,16 @@ Capabilities (all 100% offline):
   - Natural language generation: Write email subjects, alert messages
   - Conversation: Handle basic family assistant queries offline
 
-Architecture:
-  - llama-cpp-python for inference (GGUF format models)
-  - Model loaded once, kept in memory for fast repeated calls
-  - Two tiers: Phi-3-Mini (fast, 2.3GB) and Mistral-7B (smart, 5.2GB)
-  - System prompts tuned per use case (security, ops, assistant)
-  - Response caching for repeated queries (TinyDB)
+Architecture (dual backend):
+  Primary: Ollama HTTP API (http://localhost:11434)
+    - Manages model lifecycle, auto-loads, better memory management
+    - Models: phi3:mini, mistral, tinyllama (pull via 'ollama pull')
+  Fallback: llama-cpp-python (GGUF format)
+    - Direct CPU inference if Ollama is down
+    - Models in rudy-data/models/*.gguf
+  Response caching for repeated queries
 
 Hardware target: AMD Ryzen 5 5600U, 16GB RAM, CPU-only.
-  - Phi-3-Mini: ~5-6 tok/s, 2.3GB RAM
-  - Mistral-7B-Q4: ~2-3 tok/s, 5.2GB RAM
 """
 
 import json
@@ -163,38 +163,107 @@ class ResponseCache:
         _save_json(self.cache_file, self.cache)
 
 
+# Ollama model name mapping (our names → Ollama names)
+OLLAMA_MODEL_MAP = {
+    "phi3-mini": "phi3:mini",
+    "mistral-7b": "mistral",
+    "tinyllama": "tinyllama",
+}
+
+OLLAMA_URL = "http://localhost:11434"
+
+
+class OllamaBackend:
+    """Ollama HTTP API backend — primary inference engine."""
+
+    def __init__(self):
+        self._available = None  # Cache availability check
+
+    def is_available(self) -> bool:
+        """Check if Ollama server is running."""
+        try:
+            import urllib.request
+            req = urllib.request.Request(f"{OLLAMA_URL}/api/tags", method="GET")
+            with urllib.request.urlopen(req, timeout=3) as resp:
+                self._available = resp.status == 200
+                return self._available
+        except Exception:
+            self._available = False
+            return False
+
+    def list_models(self) -> list:
+        """List locally available Ollama models."""
+        try:
+            import urllib.request
+            req = urllib.request.Request(f"{OLLAMA_URL}/api/tags", method="GET")
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                data = json.loads(resp.read().decode())
+                return [m.get("name", "") for m in data.get("models", [])]
+        except Exception:
+            return []
+
+    def has_model(self, model_name: str) -> bool:
+        """Check if a specific model is available in Ollama."""
+        ollama_name = OLLAMA_MODEL_MAP.get(model_name, model_name)
+        models = self.list_models()
+        return any(ollama_name in m for m in models)
+
+    def generate(self, prompt: str, system: str = "", model_name: str = "phi3-mini",
+                 max_tokens: int = 256, temperature: float = 0.3) -> str:
+        """Generate a response via Ollama HTTP API."""
+        import urllib.request
+
+        ollama_name = OLLAMA_MODEL_MAP.get(model_name, model_name)
+
+        payload = json.dumps({
+            "model": ollama_name,
+            "prompt": prompt,
+            "system": system,
+            "stream": False,
+            "options": {
+                "num_predict": max_tokens,
+                "temperature": temperature,
+            }
+        }).encode()
+
+        req = urllib.request.Request(
+            f"{OLLAMA_URL}/api/generate",
+            data=payload,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            data = json.loads(resp.read().decode())
+            return data.get("response", "").strip()
+
+
 class LocalAI:
     """
-    Local LLM inference engine.
+    Local LLM inference engine — Ollama primary, llama-cpp-python fallback.
 
     Usage:
         ai = LocalAI()
-        ai.load_model("phi3-mini")  # or "mistral-7b"
-
-        # General query
         response = ai.ask("What services are running on this PC?")
-
-        # Security triage
         result = ai.triage_alert("Unknown device MAC aa:bb:cc appeared at 3 AM")
-
-        # Operations decision
         action = ai.ops_decision("RustDesk service has been down for 10 minutes")
-
-        # Summarize text
         summary = ai.summarize("... long log output ...")
     """
 
     def __init__(self, default_model: str = "phi3-mini"):
         MODELS_DIR.mkdir(parents=True, exist_ok=True)
-        self._llm = None
+        self._llm = None  # llama-cpp fallback
         self._model_name = None
         self._cache = ResponseCache()
         self._default_model = default_model
+        self._ollama = OllamaBackend()
+        self._backend = None  # "ollama" or "llamacpp" — set on first use
         self._stats = {
             "total_queries": 0,
             "cache_hits": 0,
             "total_tokens_generated": 0,
             "load_time_seconds": 0,
+            "backend": None,
         }
 
     def is_model_available(self, model_name: str = None) -> bool:
@@ -306,38 +375,69 @@ class LocalAI:
             return False
 
     def _ensure_loaded(self):
-        """Auto-load default model if not loaded."""
+        """Auto-select backend: try Ollama first, fall back to llama-cpp."""
+        if self._backend == "ollama":
+            return  # Already using Ollama
+
+        # Try Ollama
+        if self._ollama.is_available():
+            model = self._default_model
+            if self._ollama.has_model(model):
+                self._backend = "ollama"
+                self._model_name = model
+                self._stats["backend"] = "ollama"
+                return
+
+        # Fall back to llama-cpp-python
         if self._llm is None:
             if not self.load_model():
                 raise RuntimeError(
-                    f"No model loaded. Download one first with download_model() "
-                    f"or install llama-cpp-python."
+                    "No AI backend available. Either start Ollama "
+                    "(ollama serve) or download a GGUF model."
                 )
+        self._backend = "llamacpp"
+        self._stats["backend"] = "llamacpp"
 
     def _generate(self, prompt: str, system: str = "", max_tokens: int = 256,
                   temperature: float = 0.3) -> str:
-        """Core generation method."""
+        """Core generation — routes to Ollama or llama-cpp."""
         self._ensure_loaded()
 
-        # Build chat-style prompt
+        start = time.time()
+        self._stats["total_queries"] += 1
+
+        if self._backend == "ollama":
+            try:
+                text = self._ollama.generate(
+                    prompt, system=system,
+                    model_name=self._model_name or self._default_model,
+                    max_tokens=max_tokens, temperature=temperature
+                )
+                return text
+            except Exception as e:
+                # Ollama failed — try falling back to llama-cpp
+                if self._llm is not None or self.load_model():
+                    self._backend = "llamacpp"
+                    self._stats["backend"] = "llamacpp"
+                    # Fall through to llama-cpp below
+                else:
+                    raise RuntimeError(f"Ollama failed ({e}) and no llama-cpp fallback")
+
+        # llama-cpp-python path
         if system:
             full_prompt = f"[INST] {system}\n\n{prompt} [/INST]"
         else:
             full_prompt = f"[INST] {prompt} [/INST]"
 
-        start = time.time()
         result = self._llm(
             full_prompt,
             max_tokens=max_tokens,
             temperature=temperature,
             stop=["[INST]", "</s>"],
         )
-        elapsed = time.time() - start
 
         text = result["choices"][0]["text"].strip()
         tokens = result["usage"]["completion_tokens"]
-
-        self._stats["total_queries"] += 1
         self._stats["total_tokens_generated"] += tokens
 
         return text
@@ -454,15 +554,30 @@ class LocalAI:
 
     def get_health(self) -> dict:
         """Quick health check — is the AI operational?"""
-        if self._llm is None:
-            if self.is_model_available():
-                return {"status": "available", "note": "Model file exists but not loaded"}
-            return {"status": "no_model", "note": "No model downloaded yet"}
-        return {
-            "status": "operational",
-            "model": self._model_name,
-            "queries_served": self._stats["total_queries"],
-        }
+        # Check Ollama first
+        if self._ollama.is_available():
+            models = self._ollama.list_models()
+            return {
+                "status": "operational",
+                "backend": "ollama",
+                "models": models,
+                "queries_served": self._stats["total_queries"],
+            }
+
+        # Check llama-cpp
+        if self._llm is not None:
+            return {
+                "status": "operational",
+                "backend": "llamacpp",
+                "model": self._model_name,
+                "queries_served": self._stats["total_queries"],
+            }
+
+        if self.is_model_available():
+            return {"status": "available", "backend": "llamacpp",
+                    "note": "GGUF model exists but not loaded. Ollama not running."}
+        return {"status": "no_backend",
+                "note": "No AI backend available. Start Ollama or download a GGUF model."}
 
 
 class OfflineAI:
@@ -527,14 +642,26 @@ class OfflineAI:
 
 if __name__ == "__main__":
     ai = LocalAI()
-    print("Local AI Engine")
+    print("Local AI Engine (dual backend)")
     print(f"  Models directory: {MODELS_DIR}")
-    print(f"\n  Available models:")
+
+    # Ollama status
+    ollama = OllamaBackend()
+    if ollama.is_available():
+        models = ollama.list_models()
+        print(f"\n  Ollama: RUNNING ({len(models)} models)")
+        for m in models:
+            print(f"    - {m}")
+    else:
+        print(f"\n  Ollama: NOT RUNNING (start with 'ollama serve')")
+
+    # GGUF models
+    print(f"\n  GGUF models (llama-cpp fallback):")
     for m in ai.list_available_models():
         status = "DOWNLOADED" if m["available_locally"] else "needs download"
         print(f"    {m['name']:15s} {m['size_gb']}GB  [{status}]  {m['description']}")
-    print(f"\n  Status: {json.dumps(ai.get_health(), indent=2)}")
-    print(f"\n  To get started:")
-    print(f"    ai.download_model('phi3-mini')   # Download Phi-3 Mini (2.3GB, fast)")
-    print(f"    ai.load_model('phi3-mini')        # Load into memory")
-    print(f"    ai.ask('What is your purpose?')   # Ask a question")
+
+    print(f"\n  Health: {json.dumps(ai.get_health(), indent=2)}")
+    print(f"\n  Usage:")
+    print(f"    ai = LocalAI()")
+    print(f"    ai.ask('What is your purpose?')   # Auto-selects Ollama or llama-cpp")

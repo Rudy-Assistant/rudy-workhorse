@@ -89,3 +89,10 @@ briefings/
 
 # Sprint/task planning (keep in repo root but not sub-outputs)
 projects/
+
+# Binary/app exclusions (added 2026-03-27)
+Tor Browser/
+*.exe
+*.dll
+*.xpi
+*.ja

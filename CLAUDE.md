@@ -58,7 +58,7 @@ Christopher M. Cimino (ccimino2@gmail.com). Attorney — California State Bar #2
 - Chrome extension (connected ✅)
 - Canva (connected ✅) — design generation, export, editing
 - Notion (connected ✅) — knowledge base: "Rudy — Workhorse Command Center" with Improvement Log + Tool Inventory + Gap Closers databases + Sprint Logs
-- Google Drive (suggested — click Connect to replace OneDrive)
+- Google Drive (connected ✅) — file search, fetch content. Replaces OneDrive.
 
 ## Cowork Plugins
 - Engineering (standups, code review, architecture, incidents, docs)
@@ -281,6 +281,9 @@ python-pptx, python-docx, openpyxl, reportlab, PyPDF2, Pillow, svgwrite, qrcode,
 | **web_intelligence.py** | Article extraction, page change monitoring, WHOIS/DNS, job board monitoring |
 | **voice.py** | TTS (gTTS/pyttsx3), STT (Whisper), audio processing (pydub), media download (yt-dlp) |
 | **ocr.py** | Image OCR (EasyOCR), PDF extraction (pdfplumber), universal document parser |
+| **tools/ocr_fallback.py** | CLI EasyOCR fallback — use when Claude API returns "Could not process image" |
+| **tools/screenshot_reader.py** | Playwright screenshot + OCR pipeline — web content to text without API |
+| **tools/screen_capture.py** | Desktop screen capture + OCR (mss/pyautogui) — non-browser content |
 | **financial.py** | Market data (yfinance), portfolio tracking, price alerts, forex, watchlist |
 | **nlp.py** | Sentiment analysis, entity extraction, text summarization, keyword extraction |
 | **api_server.py** | FastAPI webhook receiver & REST API (port 8000, Tailscale accessible) |
@@ -390,8 +393,6 @@ Aliases: `system`, `security`, `ops`, `research`, `task`, `intel`
 ## Connectors Available (Not Yet Connected)
 | Connector | Why Useful |
 |-----------|-----------|
-| Google Drive | File storage/sharing — replaces OneDrive (Chris prefers Google ecosystem) |
-| Notion | Knowledge base for Rudy — persistent memory, project docs, wiki |
 | Hugging Face | Access thousands of AI models for image/text/audio generation |
 | Make | Advanced workflow automation (more complex than Zapier) |
 | n8n | Self-hosted workflow automation (can run on The Workhorse) |
@@ -425,26 +426,26 @@ All registered with `rudy.ciminoassistant@zohomail.com` / `CMCPassTemp7508!`
 - **Rudy Gmail recovery**: Account locked out (too many auth attempts 2026-03-26). If it doesn't recover, create backup account
 - **Rudy TOTP**: Add authenticator app so Rudy can handle 2FA programmatically via pyotp
 - **Suno setup**: Get Suno cookie or API key → run `python rudy-suno.py setup` on The Workhorse
-- **Google Drive MCP**: Click Connect when prompted (replaces OneDrive)
+- **Google Drive MCP**: ✅ Connected 2026-03-27 — file search + fetch
 - **Hugging Face MCP**: Click Connect when prompted (image generation)
 - **Notion setup**: Connected — create Rudy knowledge base workspace structure
 - **Legal plugin**: Install when prompted (contract review, NDA triage, legal briefs)
+- **Text messaging (SMS)**: Empower Rudy to send SMS to family. Options: Twilio (paid, ~$0.0079/msg), Vonage, or Google Voice via Playwright. Priority: enables Rudy to reach non-technical family members who don't check email. Evaluate Twilio free trial first.
+- **Zoho SMTP limitations**: Plain text sends work. Attachments with executables (.cmd, .zip containing .cmd) are blocked by Zoho policy (554 5.1.8). Workaround: send script content inline or use Gmail draft MCP.
 - BIOS: AC Power Recovery → Power On (no USB keyboard; using smart plug workaround)
 - Smart plug for remote power cycling
 - Remaining accounts: Discord, Replicate, Shodan, 2captcha, Cloudflare, HIBP, PyPI
 
 ## Local AI (Offline Intelligence)
 - **Module**: `rudy/local_ai.py` + `rudy/offline_ops.py`
-- **Runtime**: llama-cpp-python (GGUF format, CPU-only inference) + **Ollama v0.18.3** (installed 2026-03-26)
-- **Ollama models**: phi3:mini (downloading), more available via `ollama pull`
-- **Legacy models dir**: `rudy-data/models/` (GGUF files for llama-cpp-python)
-- **Primary model**: Phi-3-Mini-4K-Instruct Q4 (2.3GB, ~5-6 tok/s) — fast, good for classification/triage
-- **Heavy model**: Mistral-7B-Instruct Q4_K_M (4.4GB, ~2-3 tok/s) — smarter, for complex reasoning
-- **Emergency model**: TinyLlama-1.1B Q4 (0.7GB, ~15-20 tok/s) — ultra-fast fallback
+- **Primary backend**: Ollama v0.18.3 (HTTP API at `http://localhost:11434`)
+- **Fallback backend**: llama-cpp-python (GGUF format, CPU-only inference)
+- **Ollama models**: phi3:mini (active, tested 2026-03-27), more via `ollama pull`
+- **GGUF models dir**: `rudy-data/models/` (for llama-cpp-python fallback)
 - **Capabilities**: Alert triage, ops decisions, text summarization, intent classification, offline conversation
-- **Offline controller**: Detects outages, switches to local AI, queues outbound actions, replays on recovery
-- **Usage**: `from rudy.local_ai import OfflineAI; ai = OfflineAI.get(); ai.ask("What should I do?")`
-- **TODO**: Migrate local_ai.py to use Ollama HTTP API (`http://localhost:11434`) as primary backend, llama-cpp-python as fallback
+- **Offline controller**: `rudy/offline_ops.py` — detects outages, switches to local AI, queues outbound actions, replays on recovery
+- **Usage**: `from rudy.local_ai import LocalAI; ai = LocalAI(); ai.ask("What should I do?")`
+- **Auto-routing**: `LocalAI._ensure_loaded()` checks Ollama first, falls back to llama-cpp-python automatically
 
 ## Remote Access Hardening
 Applied 2026-03-26 via harden-remote.py (28/28) + harden-admin-elevated.py (19/19):
@@ -459,21 +460,38 @@ Applied 2026-03-26 via harden-remote.py (28/28) + harden-admin-elevated.py (19/1
 - **Windows Update**: Auto-reboot blocked (NoAutoRebootWithLoggedOnUsers=1, AUOptions=3, AlwaysAutoRebootAtScheduledTime=0)
 - **Auto-maintenance**: Disabled (MaintenanceDisabled=1, WakeUp=0) — prevents disruptive background tasks
 - **NIC power saving**: Disabled (registry + adapter settings) — prevents Wi-Fi drops during idle
-- **RustDesk**: Was v1.4.1 (winget), upgrading to v1.4.6 (latest from GitHub, 2026-03-05). Winget index is stale — future upgrades must download from GitHub releases directly. Force-upgrade deployed via `force-upgrade-rustdesk-146.py`.
+- **RustDesk**: v1.4.6+64 (latest stable as of 2026-03-27). Winget index is stale — future upgrades must download from GitHub releases directly. Stability fix applied 2026-03-27: killed zombie processes, fixed all 4 config locations (user + SYSTEM), set crash recovery policy (5s/10s/30s restart). Previous crash pattern was librustdesk.dll 0xc0000409 caused by accumulating "Not Responding" zombie processes.
 - **RECOMMENDED**: Buy HDMI dummy plug ($5-10) for bulletproof headless operation (Amazon: "HDMI dummy plug display emulator 4K")
+- **OpenSSH Server**: ✅ Installed + running 2026-03-27. Auto-start. Firewall: Tailscale only (100.64.0.0/10). Access: `ssh C@100.83.49.9`
+- **WinRM (PowerShell Remoting)**: ✅ Enabled 2026-03-27. Auto-start. Firewall: Tailscale only. Access: `Enter-PSSession -ComputerName 100.83.49.9`
+- **RustDesk Watchdog v2**: Upgraded 2026-03-27 — now kills zombie (Not Responding) processes, kills excess processes (>3), syncs config from canonical source to all 4 locations (not just append-only)
+
+### Backup Access Methods (if RustDesk fails)
+| Method | Command | Notes |
+|--------|---------|-------|
+| **SSH** | `ssh C@100.83.49.9` | OpenSSH Server, Tailscale only, auto-start |
+| **WinRM** | `Enter-PSSession -ComputerName 100.83.49.9` | PowerShell Remoting, Tailscale only |
+| **Tailscale SSH** | `tailscale ssh mini-pc` | If Tailscale SSH ACLs are configured |
 
 ### Connection Resilience Stack
 | Layer | Component | Frequency | What It Does |
 |-------|-----------|-----------|-------------|
 | **1** | RustDesk service auto-restart | On crash | sc.exe failure actions: 5s/10s/30s restart |
-| **2** | RustDeskWatchdog | Every 2 min | Service + process check, crash loop detection, config enforcement |
+| **2** | RustDeskWatchdog v2 | Every 2 min | Service + process check, **zombie kill**, crash loop detection, **full config sync** |
 | **3** | TailscaleKeepalive | Every 5 min | Connection check, service restart, `tailscale up` |
 | **4** | ConnectionMonitor | Every 5 min | 7-point health check, email alerts on critical failures |
 | **5** | WorkhorseHealthCheck | Every 5 min | Full service monitoring, auto-restart all services |
 | **6** | PhoneHomeBeacon | Every 6 hours | Status email to Chris, Tailscale backup access |
-| **Scripts** | scripts/workhorse/ | — | rustdesk-watchdog.ps1, tailscale-keepalive.ps1, connection-selftest.py, auto-git-push.ps1 |
+| **7** | OpenSSH Server | Always on | Backup access via `ssh C@100.83.49.9` (Tailscale) |
+| **8** | WinRM | Always on | Backup access via `Enter-PSSession` (Tailscale) |
+| **Scripts** | scripts/workhorse/ | — | rustdesk-watchdog.ps1 (v2), tailscale-keepalive.ps1, connection-selftest.py, auto-git-push.ps1 |
 | **Status** | rudy-logs/connection-status.json | — | Machine-readable health status (for API/dashboard) |
 | **Monitor module** | rudy/connection_monitor.py | — | 7-check suite with email alerting and 24h history |
+
+### Cascade Failure Prevention (Resilience Sprint 2026-03-27)
+Incident: API error → agent crash → RustDesk zombies → config desync → password rejection → no memory in new session → lockout.
+Fixes applied: (1) Watchdog v2 kills zombies + syncs config, (2) SSH + WinRM backup access always-on, (3) Image fallback scripts at `rudy/tools/` for offline OCR.
+Remaining: Buy HDMI dummy plug, agent crash handler → Notion state dump, Ollama migration for local LLM failover.
 
 ## Privacy & Security Hardening
 Applied 2026-03-26 via harden-privacy.py (ran as admin, 45/49 succeeded):
@@ -663,6 +681,7 @@ These rules apply to EVERY Cowork session. Claude must follow them proactively w
 | **Notion** | Search/create/update pages & databases, persistent memory | Sprint logs, improvement tracking, knowledge base |
 | **Canva** | Generate/edit/export designs | Graphics, presentations, social media |
 | **Chrome Extension** | Navigate pages, read content, execute JS, fill forms, screenshots | Web automation, form filling, scraping |
+| **Google Drive** | Search files, fetch content | File access, document retrieval |
 
 ### Skills (invoke via Skill tool)
 | Skill | What It Does | Trigger Words |
@@ -717,6 +736,11 @@ Before building ANY custom solution, you MUST:
 **3. Use Cowork toolkit before custom code** — skills, connectors, plugins, Chrome automation
 **4. Compose, don't rewrite** — wrap existing tools with thin adapters, don't reimplement
 
+### HARD RULES — Session Discipline
+1. **At session start**: Read `rudy-logs/session-briefing.md` if it exists (Sentinel generates this). Contains: machine state, pending work, last session summary, available tools.
+2. **Before writing ANY new Python file**: Check `rudy-logs/capability-manifest.json` for existing solutions. Also check: Cowork skills (30+), MCP connectors (5), rudy/ modules (31+), installed packages (100+), scheduled tasks (24). The Capability Index below is your cheat sheet.
+3. **Before building custom**: Search the MCP registry, check installed pip packages (`pip list` on Workhorse), and review the Cowork Capability Index. If you're writing >50 lines of Python for something that sounds generic, you almost certainly missed an existing tool.
+
 ### Anti-Patterns (learned the hard way)
 - **Don't ask Chris to handle files** → use allow_cowork_file_delete, request_cowork_directory
 - **Don't guess the Desktop path** → it's `~/Desktop` (maps to `C:\Users\C\Desktop`)
@@ -725,6 +749,8 @@ Before building ANY custom solution, you MUST:
 - **Don't forget Notion** → log improvements, track tools, persist sprint state
 - **Don't forget Chrome** → can automate web tasks when CLI tools aren't enough
 - **Don't build custom when best-in-class exists** → search GitHub/PyPI/MCP registry first
+- **Don't forget your skills** → 30+ skills across Engineering, Operations, Productivity, Legal, Plugin Management. Invoke them — they contain condensed best practices superior to ad-hoc approaches.
+- **Don't forget sub-agents** → use the Agent tool for parallel research, exploration, file searches. Don't do everything sequentially when you can fan out.
 
 ## Version Control
 | Detail | Value |
@@ -742,14 +768,17 @@ Before building ANY custom solution, you MUST:
 ## Next Sprint
 **Stability & Gaps** — suggested priorities:
 1. **Email listener backend** — `rudy/email_poller.py` built (multi-backend polling). Outlook.com account creation script deployed (`setup-outlook-account.py`). Once Outlook account exists, set `RUDY_OUTLOOK_EMAIL` + `RUDY_OUTLOOK_PASSWORD` env vars and switch listener to email_poller daemon mode.
-2. **RustDesk upgrade** — ✅ DONE: v1.4.6 confirmed.
+2. **RustDesk stability** — ✅ v1.4.6+64, stability fix + **watchdog v2** applied 2026-03-27 (zombie kill, full config sync, crash recovery). **SSH + WinRM backup access enabled.**
 3. **GitHub repo + push + release** — ✅ DONE: v0.1.0 released.
-4. **Ollama** — Install in progress (background). Once installed, migrate `local_ai.py` to Ollama backend (faster, better model management).
-5. Install Chocolatey → ADB + libimobiledevice for phone_check
-6. Install Coqui TTS + InsightFace (creative suite failures)
-7. Set up Google Drive MCP connector
-9. Configure Suno API for music generation
-10. Buy HDMI dummy plug ($5-10 on Amazon)
+4. **Ollama** — ✅ Installed v0.18.3, phi3:mini model active. `local_ai.py` migrated to Ollama HTTP backend (primary) with llama-cpp-python fallback. Tested: operational.
+5. **Image fallback scripts** — ✅ Deployed 2026-03-27 to `rudy/tools/` (ocr_fallback.py, screenshot_reader.py, screen_capture.py)
+6. **Session Guardian (ADR-001)** — ✅ DONE 2026-03-27. Sentinel v2.0 deployed with: `_scan_capabilities()` (generates `capability-manifest.json` — 41 modules, 200 packages, 35 skills), `_generate_session_briefing()` (generates `session-briefing.md`), `_check_session_activity()` + `_trigger_handoff()` (inactivity detection + continuation prompt). Two Cowork skills created: `/session-start` and `/check-before-build` at `Desktop/.claude/skills/`.
+7. **Agent crash handler** — ✅ DONE 2026-03-27. `AgentBase.execute()` now writes crash dumps to `rudy-logs/crash-dumps/` with full traceback, agent state, recent log lines. Sentinel v2.0 includes crash dumps in session briefings. CRASH-DETECTED.txt marker for quick detection.
+8. **Chocolatey + ADB** — ✅ DONE 2026-03-27. Chocolatey 2.7.0 installed, ADB 1.0.41 installed via choco. `phone_check.py` can now scan Android devices natively on Windows.
+9. Install Coqui TTS + InsightFace (creative suite failures — InsightFace needs Visual C++ Build Tools)
+10. Set up Google Drive MCP connector
+11. Configure Suno API for music generation
+12. Buy HDMI dummy plug ($5-10 on Amazon) — prevents headless display issues
 
 ## Deploy Results (Verified 2026-03-26)
 | Script | Result | Key Notes |
@@ -798,12 +827,13 @@ Before building ANY custom solution, you MUST:
 | **Scan gap** | phone_check.py needs fix: report passcode as "indeterminate" when device is unlocked. Future scans should prioritize hostile/unknown network devices over trusted owner devices. |
 
 ### Still Needs Installation
-- ~~Ollama~~ — **INSTALLED** v0.18.3, phi3:mini model downloading. Next: migrate local_ai.py to Ollama backend.
+- ~~Ollama~~ — **INSTALLED** v0.18.3, phi3:mini active. local_ai.py migrated to Ollama HTTP backend.
+- ~~Chocolatey~~ — **INSTALLED** v2.7.0
+- ~~ADB~~ — **INSTALLED** v1.0.41 via Chocolatey (Windows native, also in WSL)
 - Coqui TTS (voice cloning engine)
-- InsightFace (face analysis for avatars)
+- InsightFace (face analysis for avatars — needs Visual C++ Build Tools)
 - Docker (for containerized services — WSL 2 is Docker's backend)
 - SadTalker (talking-head video — needs git clone)
-- ADB (for Android scanning — `sudo apt install adb` in WSL)
 
 ## Key Constraints
 - No physical keyboard/monitor — headless operation, all input via RustDesk remote

@@ -14,6 +14,9 @@ The Sentinel owns *awareness*. It:
   3. Queues micro-improvements for the other agents or itself
   4. Learns from what happened (reads agent statuses, spots patterns)
   5. Takes small, safe actions (never destructive, never heavy)
+  6. Maintains a capability manifest (Session Guardian — ADR-001)
+  7. Generates session briefings for Cowork handoff
+  8. Detects session inactivity and triggers handoff protocol
 
 Design principles:
   - Never run longer than 30 seconds
@@ -21,6 +24,14 @@ Design principles:
   - Never modify critical files
   - Always log what it noticed, even if it takes no action
   - Think of it as a heartbeat with curiosity
+
+Session Guardian (ADR-001, 2026-03-27):
+  The Sentinel is the anchor of the Session Guardian system.
+  It produces two files that Cowork sessions consume:
+    - rudy-logs/capability-manifest.json — what tools/skills/modules/packages exist
+    - rudy-logs/session-briefing.md — structured context for new sessions
+  It also detects Cowork inactivity via command runner timestamps and
+  triggers handoff: saves state to disk, generates continuation prompt.
 """
 import json
 import os
@@ -34,11 +45,18 @@ from . import AgentBase, DESKTOP, LOGS_DIR
 
 class Sentinel(AgentBase):
     name = "sentinel"
-    version = "1.0"
+    version = "2.0"
 
     STATE_FILE = LOGS_DIR / "sentinel-state.json"
     OBSERVATIONS_FILE = LOGS_DIR / "sentinel-observations.json"
+    MANIFEST_FILE = LOGS_DIR / "capability-manifest.json"
+    BRIEFING_FILE = LOGS_DIR / "session-briefing.md"
+    CONTINUATION_FILE = LOGS_DIR / "continuation-prompt.md"
     MAX_RUNTIME = 30  # seconds — hard cap
+
+    # Session inactivity thresholds
+    INACTIVITY_WARN_MINUTES = 30
+    INACTIVITY_HANDOFF_MINUTES = 120
 
     def run(self, **kwargs):
         self.start = time.time()
@@ -62,14 +80,28 @@ class Sentinel(AgentBase):
         self._scan_presence_analytics(state)
         if not self._time_ok(): return self._finalize(state)
 
+        # === Session Guardian (ADR-001) ===
+        self._scan_capabilities(state)
+        if not self._time_ok(): return self._finalize(state)
+
+        self._generate_session_briefing(state)
+        if not self._time_ok(): return self._finalize(state)
+
+        self._check_session_activity(state)
+        if not self._time_ok(): return self._finalize(state)
+
         self._micro_improve(state)
         self._finalize(state)
 
     def _time_ok(self) -> bool:
+        if not hasattr(self, 'start'):
+            self.start = time.time()
         return (time.time() - self.start) < self.MAX_RUNTIME
 
     def _observe(self, category: str, observation: str, actionable: bool = False):
         """Record something noticed."""
+        if not hasattr(self, 'observations'):
+            self.observations = []
         entry = {
             "time": datetime.now().isoformat(),
             "category": category,
@@ -302,6 +334,351 @@ class Sentinel(AgentBase):
                         actionable=False)
             except:
                 pass
+
+    # === SESSION GUARDIAN (ADR-001) ===
+
+    def _scan_capabilities(self, state):
+        """Build/refresh the capability manifest.
+
+        Composes existing data sources:
+          - pip list → installed packages
+          - rudy/ directory → available modules
+          - agent-domains.json → skills, connectors, scheduled tasks
+          - research-capability.json → existing package audit (from ObsolescenceMonitor)
+
+        Only rebuilds every 4th run (~hourly) unless forced.
+        """
+        run_count = state.get("run_count", 0)
+        if run_count % 4 != 0 and self.MANIFEST_FILE.exists():
+            return  # Reuse cached manifest
+
+        try:
+            manifest = {
+                "generated": datetime.now().isoformat(),
+                "version": "1.0",
+                "modules": [],
+                "packages": [],
+                "skills": [],
+                "connectors": [],
+                "scheduled_tasks": [],
+                "agents": [],
+                "user_apps": [],
+            }
+
+            # 1. Scan rudy/ modules
+            rudy_dir = DESKTOP / "rudy"
+            if rudy_dir.is_dir():
+                for f in sorted(rudy_dir.glob("*.py")):
+                    if f.name.startswith("_"):
+                        continue
+                    manifest["modules"].append({
+                        "name": f.stem,
+                        "path": f"rudy/{f.name}",
+                        "size_kb": round(f.stat().st_size / 1024, 1),
+                    })
+                # Also scan rudy/tools/
+                tools_dir = rudy_dir / "tools"
+                if tools_dir.is_dir():
+                    for f in sorted(tools_dir.glob("*.py")):
+                        if f.name.startswith("_"):
+                            continue
+                        manifest["modules"].append({
+                            "name": f"tools/{f.stem}",
+                            "path": f"rudy/tools/{f.name}",
+                            "size_kb": round(f.stat().st_size / 1024, 1),
+                        })
+
+            # 2. Read agent-domains.json for skills, connectors, tasks
+            domains_file = rudy_dir / "config" / "agent-domains.json"
+            if domains_file.exists():
+                try:
+                    domains = json.loads(domains_file.read_text())
+                    all_skills = set()
+                    all_connectors = set()
+                    all_tasks = set()
+                    for domain in domains.get("domains", {}).values():
+                        for s in domain.get("cowork_skills", []):
+                            all_skills.add(s)
+                        for c in domain.get("connectors", []):
+                            all_connectors.add(c)
+                        for t in domain.get("scheduled_tasks", []):
+                            all_tasks.add(t)
+                    manifest["skills"] = sorted(all_skills)
+                    manifest["connectors"] = sorted(all_connectors)
+                    manifest["scheduled_tasks"] = sorted(all_tasks)
+                except Exception:
+                    pass
+
+            # 3. Read installed packages from existing research-capability.json
+            # (generated by ObsolescenceMonitor — don't duplicate its work)
+            cap_file = LOGS_DIR / "research-capability.json"
+            if cap_file.exists():
+                try:
+                    cap = json.loads(cap_file.read_text())
+                    pkgs = cap.get("python_packages", [])
+                    if isinstance(pkgs, list):
+                        manifest["packages"] = [
+                            p if isinstance(p, str) else p.get("name", str(p))
+                            for p in pkgs[:200]  # Cap to avoid bloat
+                        ]
+                except Exception:
+                    pass
+
+            # 4. Scan agents
+            agents_dir = DESKTOP / "rudy" / "agents"
+            if agents_dir.is_dir():
+                for f in sorted(agents_dir.glob("*.py")):
+                    if f.name.startswith("_") or f.name in ("runner.py", "orchestrator.py", "workflow_engine.py"):
+                        continue
+                    manifest["agents"].append(f.stem)
+
+            # 5. Scan user apps
+            apps_dir = DESKTOP / "user-apps"
+            if apps_dir.is_dir():
+                for f in sorted(apps_dir.glob("*.cmd")):
+                    manifest["user_apps"].append(f.stem)
+
+            # Write manifest
+            with open(self.MANIFEST_FILE, "w", encoding="utf-8") as f:
+                json.dump(manifest, f, indent=2)
+
+            total = (len(manifest["modules"]) + len(manifest["packages"])
+                     + len(manifest["skills"]) + len(manifest["agents"]))
+            self._observe("capabilities",
+                f"Manifest updated: {len(manifest['modules'])} modules, "
+                f"{len(manifest['packages'])} packages, "
+                f"{len(manifest['skills'])} skills, "
+                f"{len(manifest['agents'])} agents")
+
+        except Exception as e:
+            self._observe("capability_error", f"Manifest scan failed: {e}")
+
+    def _generate_session_briefing(self, state):
+        """Generate a structured briefing for the next Cowork session.
+
+        Reads agent statuses, pending work, recent observations, and
+        produces a markdown file that new sessions should read first.
+        Only regenerates every 4th run (~hourly) or when state changes.
+        """
+        run_count = state.get("run_count", 0)
+        if run_count % 4 != 0 and self.BRIEFING_FILE.exists():
+            return
+
+        try:
+            lines = []
+            now = datetime.now()
+            lines.append(f"# Session Briefing — {now.strftime('%Y-%m-%d %H:%M')}")
+            lines.append(f"*Generated by Sentinel v{self.version}*\n")
+
+            # Machine state
+            import shutil
+            total, used, free = shutil.disk_usage("C:\\")
+            free_gb = round(free / (1024**3), 1)
+            lines.append("## Machine State")
+            lines.append(f"- Disk: {free_gb} GB free")
+            lines.append(f"- Sentinel streak: {state.get('streak', 0)} consecutive healthy runs")
+            lines.append(f"- Last Sentinel run: {state.get('last_run', 'unknown')}")
+            lines.append("")
+
+            # Agent health summary
+            lines.append("## Agent Health")
+            agents = ["system_master", "security_agent", "sentinel",
+                       "task_master", "research_intel", "operations_monitor"]
+            for agent_name in agents:
+                status = self.read_status(agent_name)
+                s = status.get("status", "unknown")
+                last = status.get("last_run", "never")
+                summary = status.get("summary", "")[:80]
+                icon = "✅" if s == "ok" else "⚠️" if s == "warning" else "❌" if s == "error" else "❓"
+                lines.append(f"- {icon} **{agent_name}**: {s} (last: {last})")
+                if summary:
+                    lines.append(f"  {summary}")
+            lines.append("")
+
+            # Pending work
+            lines.append("## Pending Work")
+            queue_file = LOGS_DIR / "task-queue.json"
+            if queue_file.exists():
+                try:
+                    queue = json.loads(queue_file.read_text())
+                    pending = queue.get("pending", [])
+                    in_progress = queue.get("in_progress", [])
+                    if pending:
+                        for item in pending[:5]:
+                            desc = item if isinstance(item, str) else item.get("description", str(item))
+                            lines.append(f"- [ ] {desc}")
+                    if in_progress:
+                        for item in in_progress[:3]:
+                            desc = item if isinstance(item, str) else item.get("description", str(item))
+                            lines.append(f"- [~] {desc} (in progress)")
+                    if not pending and not in_progress:
+                        lines.append("- No pending tasks")
+                except Exception:
+                    lines.append("- Could not read task queue")
+            else:
+                lines.append("- No task queue file")
+            lines.append("")
+
+            # Recent crash dumps (from agent crash handler)
+            crash_dir = LOGS_DIR / "crash-dumps"
+            if crash_dir.exists():
+                crash_files = sorted(crash_dir.glob("*.json"), key=lambda f: f.stat().st_mtime, reverse=True)
+                recent_crashes = [f for f in crash_files if (now.timestamp() - f.stat().st_mtime) < 86400]  # last 24h
+                if recent_crashes:
+                    lines.append("## Recent Crashes (last 24h)")
+                    for cf in recent_crashes[:5]:
+                        try:
+                            cd = json.loads(cf.read_text(encoding="utf-8"))
+                            lines.append(f"- **{cd.get('agent', '?')}** at {cd.get('crash_time', '?')}: "
+                                         f"`{cd.get('error_type', '?')}: {cd.get('error_message', '')[:100]}`")
+                        except Exception:
+                            lines.append(f"- {cf.name} (could not parse)")
+                    lines.append("")
+
+            # Crash marker cleanup (clear if no recent crashes)
+            marker = LOGS_DIR / "CRASH-DETECTED.txt"
+            if marker.exists():
+                if not (crash_dir.exists() and any(
+                    (now.timestamp() - f.stat().st_mtime) < 3600
+                    for f in crash_dir.glob("*.json")
+                )):
+                    try:
+                        marker.unlink()
+                    except Exception:
+                        pass
+
+            # Recent observations (last 5 actionable)
+            lines.append("## Recent Observations")
+            if self.OBSERVATIONS_FILE.exists():
+                try:
+                    obs = json.loads(self.OBSERVATIONS_FILE.read_text())
+                    actionable = [o for o in obs if o.get("actionable")][-5:]
+                    if actionable:
+                        for o in actionable:
+                            lines.append(f"- **{o.get('category', '?')}**: {o.get('observation', '')}")
+                    else:
+                        lines.append("- No actionable observations")
+                except Exception:
+                    lines.append("- Could not read observations")
+            lines.append("")
+
+            # Available tools reminder
+            lines.append("## Reminder: Available Tools")
+            lines.append("Before writing custom code, check:")
+            lines.append("- `rudy-logs/capability-manifest.json` — full index of modules, packages, skills")
+            lines.append("- Cowork skills: 30+ across Engineering, Operations, Productivity, Legal, Plugin Mgmt")
+            lines.append("- MCP connectors: Gmail, Google Calendar, Notion, Canva, Chrome")
+            lines.append("- rudy/ modules: 31+ (OCR, NLP, financial, voice, network defense, etc.)")
+            lines.append("- Agent tool: spawn sub-agents for parallel research/exploration")
+            lines.append("")
+
+            # Session activity
+            lines.append("## Session Activity")
+            runner_log = LOGS_DIR / "command-runner.log"
+            if runner_log.exists():
+                age_min = (now.timestamp() - runner_log.stat().st_mtime) / 60
+                if age_min < 5:
+                    lines.append(f"- Command runner: active ({age_min:.0f} min ago)")
+                elif age_min < 30:
+                    lines.append(f"- Command runner: idle ({age_min:.0f} min since last activity)")
+                else:
+                    lines.append(f"- Command runner: **inactive** ({age_min:.0f} min since last activity)")
+            else:
+                lines.append("- Command runner: no log found")
+
+            self.BRIEFING_FILE.write_text("\n".join(lines), encoding="utf-8")
+            self._observe("briefing", "Session briefing updated")
+
+        except Exception as e:
+            self._observe("briefing_error", f"Briefing generation failed: {e}")
+
+    def _check_session_activity(self, state):
+        """Detect Cowork session inactivity and trigger handoff if needed.
+
+        Monitors the command runner log — if no new commands have been
+        processed for INACTIVITY_WARN_MINUTES, flags it. If inactive for
+        INACTIVITY_HANDOFF_MINUTES, generates a continuation prompt and
+        optionally activates offline ops.
+        """
+        try:
+            runner_log = LOGS_DIR / "command-runner.log"
+            if not runner_log.exists():
+                return
+
+            age_min = (time.time() - runner_log.stat().st_mtime) / 60
+
+            prev_inactive = state.get("session_inactive_since")
+
+            if age_min < self.INACTIVITY_WARN_MINUTES:
+                # Active — clear any inactivity state
+                if prev_inactive:
+                    self._observe("session_resumed",
+                        "Cowork session activity detected — clearing inactivity flag")
+                    state.pop("session_inactive_since", None)
+                    state.pop("handoff_triggered", None)
+                return
+
+            # Inactive for > warn threshold
+            if not prev_inactive:
+                state["session_inactive_since"] = datetime.now().isoformat()
+                self._observe("session_idle",
+                    f"No command runner activity for {age_min:.0f} min",
+                    actionable=False)
+
+            # Check if we should trigger handoff
+            if age_min >= self.INACTIVITY_HANDOFF_MINUTES and not state.get("handoff_triggered"):
+                self._trigger_handoff(state)
+                state["handoff_triggered"] = True
+
+        except Exception as e:
+            self._observe("activity_error", f"Session activity check failed: {e}")
+
+    def _trigger_handoff(self, state):
+        """Generate continuation prompt and flag for offline ops activation."""
+        try:
+            lines = []
+            lines.append("CONTINUATION PROMPT (copy into new Cowork thread):")
+            lines.append("---")
+            lines.append("Continue building Rudy/Workhorse.")
+            lines.append("")
+
+            # Summarize recent work from observations
+            if self.OBSERVATIONS_FILE.exists():
+                obs = json.loads(self.OBSERVATIONS_FILE.read_text())
+                recent = [o for o in obs[-20:] if o.get("actionable")]
+                if recent:
+                    lines.append("Pending items from recent observations:")
+                    for o in recent[-5:]:
+                        lines.append(f"  - {o.get('observation', '')}")
+                    lines.append("")
+
+            # Machine state
+            lines.append(f"Machine state: Sentinel streak {state.get('streak', 0)} healthy runs.")
+
+            # Pending queue
+            queue_file = LOGS_DIR / "task-queue.json"
+            if queue_file.exists():
+                try:
+                    queue = json.loads(queue_file.read_text())
+                    pending = queue.get("pending", [])
+                    if pending:
+                        lines.append(f"Work queue: {len(pending)} pending tasks.")
+                except Exception:
+                    pass
+
+            lines.append("")
+            lines.append("Read CLAUDE.md for full system state.")
+            lines.append("Read rudy-logs/session-briefing.md for current machine briefing.")
+            lines.append("---")
+
+            self.CONTINUATION_FILE.write_text("\n".join(lines), encoding="utf-8")
+            self._observe("handoff",
+                f"Continuation prompt generated at {self.CONTINUATION_FILE.name}",
+                actionable=True)
+            self.log.info("Session handoff triggered — continuation prompt written")
+
+        except Exception as e:
+            self._observe("handoff_error", f"Handoff failed: {e}")
 
     def _micro_improve(self, state):
         """Take small, safe improvement actions."""

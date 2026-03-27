@@ -2,12 +2,18 @@
 Base Agent — common infrastructure for all Workhorse agents.
 Each agent writes structured status to rudy-logs/<agent>-status.json
 and produces human-readable output via the command runner result protocol.
+
+Crash dumps: On unhandled exceptions, writes detailed state to
+rudy-logs/crash-dumps/<agent>-<timestamp>.json for Sentinel to pick up
+and include in session briefings. This closes the cascade failure gap
+where agent crashes caused memory loss between sessions.
 """
 import json
 import logging
 import os
 import sys
 import time
+import traceback as tb_module
 from datetime import datetime
 from pathlib import Path
 
@@ -56,7 +62,12 @@ class AgentBase:
         raise NotImplementedError
 
     def execute(self, **kwargs):
-        """Entry point — wraps run() with status management and error handling."""
+        """Entry point — wraps run() with status management and error handling.
+
+        On crash: writes a detailed dump to rudy-logs/crash-dumps/ so Sentinel
+        can surface it in the next session briefing. This prevents memory loss
+        when an agent dies between Cowork sessions.
+        """
         self.log.info(f"=== {self.name} v{self.version} starting ===")
         try:
             self.status["status"] = "running"
@@ -66,6 +77,7 @@ class AgentBase:
             self.status["status"] = "error"
             self.status["critical_alerts"].append(str(e))
             self.log.error(f"Agent error: {e}", exc_info=True)
+            self._write_crash_dump(e, kwargs)
         finally:
             elapsed = (datetime.now() - self.start_time).total_seconds()
             self.status["duration_seconds"] = round(elapsed, 1)
@@ -111,6 +123,68 @@ class AgentBase:
                     log_file.write_text("\n".join(lines[-max_lines:]) + "\n", encoding="utf-8")
         except Exception:
             pass
+
+    def _write_crash_dump(self, error: Exception, kwargs: dict):
+        """Write a detailed crash dump for Sentinel to pick up.
+
+        Dumps go to rudy-logs/crash-dumps/<agent>-<timestamp>.json.
+        Contains: error details, full traceback, agent state at crash time,
+        kwargs that were passed, and recent log lines for context.
+        """
+        try:
+            crash_dir = LOGS_DIR / "crash-dumps"
+            crash_dir.mkdir(exist_ok=True)
+
+            timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+            crash_file = crash_dir / f"{self.name}-{timestamp}.json"
+
+            # Collect recent log lines for context
+            recent_log = []
+            log_file = LOGS_DIR / f"{self.name}.log"
+            if log_file.exists():
+                try:
+                    lines = log_file.read_text(encoding="utf-8", errors="replace").splitlines()
+                    recent_log = lines[-20:]  # Last 20 lines
+                except Exception:
+                    recent_log = ["(could not read log)"]
+
+            # Sanitize kwargs (remove anything non-serializable)
+            safe_kwargs = {}
+            for k, v in kwargs.items():
+                try:
+                    json.dumps(v)
+                    safe_kwargs[k] = v
+                except (TypeError, ValueError):
+                    safe_kwargs[k] = str(v)
+
+            dump = {
+                "agent": self.name,
+                "version": self.version,
+                "crash_time": datetime.now().isoformat(),
+                "error_type": type(error).__name__,
+                "error_message": str(error),
+                "traceback": tb_module.format_exc(),
+                "kwargs": safe_kwargs,
+                "status_at_crash": self.status,
+                "recent_log_lines": recent_log,
+                "uptime_seconds": round((datetime.now() - self.start_time).total_seconds(), 1),
+            }
+
+            with open(crash_file, "w", encoding="utf-8") as f:
+                json.dump(dump, f, indent=2, default=str)
+
+            self.log.error(f"Crash dump written to {crash_file}")
+
+            # Also write a marker file for quick detection
+            marker = LOGS_DIR / "CRASH-DETECTED.txt"
+            with open(marker, "w") as f:
+                f.write(f"{self.name} crashed at {datetime.now().isoformat()}\n")
+                f.write(f"Error: {error}\n")
+                f.write(f"Dump: {crash_file}\n")
+
+        except Exception as dump_error:
+            # If even the crash dump fails, at least log it
+            self.log.error(f"Failed to write crash dump: {dump_error}")
 
     def read_status(self, agent_name: str) -> dict:
         """Read another agent's last status."""
