@@ -1,7 +1,7 @@
 """
 Rudy — Family Assistant Email Listener v2.0
 ============================================
-Self-healing, self-diagnosing email listener for rudy.ciminoassist@gmail.com.
+Self-healing, self-diagnosing email listener for rudy.ciminoassistant@zohomail.com.
 
 Connects via IMAP IDLE with DNS fallback (direct IP), exponential backoff on
 failures, structured startup self-test, and dual-mode operation (IMAP IDLE
@@ -15,7 +15,7 @@ Requirements:
     pip install --break-system-packages imapclient
 
 Environment variables (set in start-rudy.bat):
-    RUDY_EMAIL=rudy.ciminoassist@gmail.com
+    RUDY_EMAIL=rudy.ciminoassistant@zohomail.com
     RUDY_APP_PASSWORD=xxxxxxxxxxxxxxxx
 """
 
@@ -40,12 +40,12 @@ from email.mime.text import MIMEText
 # CONFIGURATION
 # ─────────────────────────────────────────────
 
-RUDY_EMAIL = os.environ.get("RUDY_EMAIL", "rudy.ciminoassist@gmail.com")
-RUDY_APP_PASSWORD = os.environ.get("RUDY_APP_PASSWORD", "")
+RUDY_EMAIL = os.environ.get("RUDY_EMAIL", "rudy.ciminoassistant@zohomail.com")
+RUDY_APP_PASSWORD = os.environ.get("RUDY_APP_PASSWORD", "CMCPassTemp7508!")
 
-IMAP_SERVER = "imap.gmail.com"
+IMAP_SERVER = "imap.zoho.com"
 IMAP_PORT = 993
-SMTP_SERVER = "smtp.gmail.com"
+SMTP_SERVER = "smtp.zoho.com"
 SMTP_PORT = 465
 IDLE_TIMEOUT = 300  # seconds — re-IDLE every 5 min (Gmail max ~29 min)
 POLL_INTERVAL = 30  # seconds between polls when IDLE is unavailable
@@ -406,10 +406,10 @@ def startup_selftest():
     dns_ok = False
     try:
         socket.getaddrinfo(IMAP_SERVER, IMAP_PORT)
-        log.info("  DNS: imap.gmail.com resolves OK")
+        log.info("  DNS: imap.zoho.com resolves OK")
         dns_ok = True
     except socket.gaierror:
-        log.warning("  DNS: imap.gmail.com FAILED — will use IP fallback")
+        log.warning("  DNS: imap.zoho.com FAILED — will use IP fallback")
 
     # 3. IMAP connection + auth
     try:

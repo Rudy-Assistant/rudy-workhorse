@@ -460,7 +460,51 @@ class ObsolescenceMonitor:
 
         return "\n".join(lines)
 
-    def execute(self, mode: str = "full") -> dict:
+    def file_github_issues(self, report: dict) -> list:
+        """
+        Auto-file GitHub issues for high-priority findings.
+        Requires rudy.integrations.github_ops to be available.
+        Returns list of created issue URLs.
+        """
+        try:
+            from rudy.integrations.github_ops import get_github
+            gh = get_github()
+            if not gh.gh_available:
+                return []
+        except ImportError:
+            return []
+
+        created = []
+        recs = report.get("recommendations", [])
+        high_recs = [r for r in recs if r.get("priority") == "high"]
+
+        # Only file issues for high-priority items
+        for rec in high_recs[:5]:  # Cap at 5 to avoid issue spam
+            action = rec.get("action", "review")
+            detail = rec.get("detail", "No details")
+            domain = rec.get("domain", "general")
+
+            # Check if a similar issue already exists
+            existing = gh.list_issues(labels=[f"priority:high", domain])
+            if any(detail[:40] in issue.get("title", "") for issue in existing):
+                continue  # Skip duplicate
+
+            title = f"[Audit] {action.title()}: {detail[:60]}"
+            body = (
+                f"## ObsolescenceMonitor Finding\n\n"
+                f"**Action**: {action}\n"
+                f"**Domain**: {domain}\n"
+                f"**Detail**: {detail}\n"
+                f"**Priority**: HIGH\n\n"
+                f"Auto-filed by ObsolescenceMonitor on {datetime.now().strftime('%Y-%m-%d %H:%M')}\n"
+            )
+            url = gh.create_issue(title, body, labels=["audit", f"priority:high"])
+            if url:
+                created.append(url)
+
+        return created
+
+    def execute(self, mode: str = "full", file_issues: bool = False) -> dict:
         """Execute audit (called by self-improvement agent)."""
         if mode == "quick":
             return self.quick_check()
@@ -468,6 +512,11 @@ class ObsolescenceMonitor:
             report = self.full_audit()
             summary = self.generate_summary(report)
             print(summary)
+            if file_issues:
+                issues = self.file_github_issues(report)
+                if issues:
+                    print(f"\nFiled {len(issues)} GitHub issue(s)")
+                    report["github_issues"] = issues
             return report
         elif mode == "packages":
             return {"outdated": self.check_packages()}

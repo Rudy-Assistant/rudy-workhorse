@@ -124,41 +124,41 @@ class ResearchIntel(AgentBase):
             self.status["recommendations"] = recommendations
             self.log.info(f"  {len(recommendations)} recommendations generated")
 
+    def _run_web_intelligence(self):
+        """Check job boards and extract new articles."""
+        try:
+            from rudy.web_intelligence import WebIntelligence
+            wi = WebIntelligence()
+            jobs = wi.search_jobs()
+            changes = wi.check_watches()
+            self.action(f"Web intel: {len(jobs)} new jobs, {len(changes)} page changes")
+            return {"new_jobs": len(jobs), "page_changes": len(changes)}
+        except Exception as e:
+            self.warn(f"Web intelligence failed: {e}")
+            return {"error": str(e)[:100]}
+
+    def _run_nlp_analysis(self):
+        """NLP analysis on latest research digest."""
+        try:
+            from rudy.nlp import NLP
+            nlp_engine = NLP()
+            import glob
+            digests = sorted(glob.glob(str(LOGS_DIR / "research-digest-*.md")))
+            if digests:
+                with open(digests[-1]) as f:
+                    text = f.read()[:3000]
+                keywords = nlp_engine.summarizer.extract_keywords(text, top_n=15)
+                sentiment = nlp_engine.get_sentiment(text[:500])
+                self.action(f"NLP: {len(keywords)} keywords, sentiment={sentiment.get('label')}")
+                return {"keywords": keywords, "sentiment": sentiment.get("label")}
+            return {"status": "no digests found"}
+        except Exception as e:
+            self.warn(f"NLP analysis failed: {e}")
+            return {"error": str(e)[:100]}
+
 
 if __name__ == "__main__":
     import sys
     mode = sys.argv[1] if len(sys.argv) > 1 else "digest"
     agent = ResearchIntel()
     agent.execute(mode=mode)
-
-
-    def _run_web_intelligence(self):
-        """Check job boards and extract new articles."""
-        try:
-            sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-            from rudy.web_intelligence import WebIntelligence
-            wi = WebIntelligence()
-            jobs = wi.search_jobs()
-            changes = wi.check_watches()
-            return {"new_jobs": len(jobs), "page_changes": len(changes)}
-        except Exception as e:
-            return {"error": str(e)[:100]}
-
-    def _run_nlp_analysis(self):
-        """NLP analysis on latest research digest."""
-        try:
-            sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-            from rudy.nlp import NLP
-            nlp = NLP()
-            # Find latest digest
-            import glob
-            digests = sorted(glob.glob(str(Path(__file__).parent.parent.parent / "rudy-logs" / "research-digest-*.md")))
-            if digests:
-                with open(digests[-1]) as f:
-                    text = f.read()[:3000]
-                keywords = nlp.summarizer.extract_keywords(text, top_n=15)
-                sentiment = nlp.get_sentiment(text[:500])
-                return {"keywords": keywords, "sentiment": sentiment.get("label")}
-            return {"status": "no digests found"}
-        except Exception as e:
-            return {"error": str(e)[:100]}

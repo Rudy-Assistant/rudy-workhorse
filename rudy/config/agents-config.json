@@ -1,33 +1,24 @@
 {
   "agents": {
     "system_master": {
+      "domain": "infrastructure",
       "schedule": "Every 5 min (via WorkhorseHealthCheck)",
       "default_mode": "full",
-      "alert_threshold": 3
-    },
-    "operations_monitor": {
-      "schedule": "Weekly Sunday 4 AM",
-      "default_mode": "full",
-      "result_retention_days": 7
-    },
-    "research_intel": {
-      "schedule": "Daily 6 AM (digest), M/W/F 10 AM (capability)",
-      "default_mode": "digest"
-    },
-    "task_master": {
-      "schedule": "Daily 7:30 AM (briefing)",
-      "default_mode": "briefing"
-    },
-    "sentinel": {
-      "schedule": "Every 15 minutes",
-      "default_mode": "full",
-      "max_runtime_seconds": 30,
-      "purpose": "Continuous awareness \u2014 noticing, learning, micro-improving"
+      "alert_threshold": 3,
+      "capabilities": [
+        "Service monitoring (RustDesk, Tailscale, CommandRunner, Listener)",
+        "Process restart and recovery",
+        "Disk space monitoring",
+        "Log rotation",
+        "Network connectivity checks",
+        "Auto-upgrade when versions are stale"
+      ]
     },
     "security_agent": {
+      "domain": "security",
       "schedule": "Every 30 minutes",
       "default_mode": "full",
-      "purpose": "Defensive intelligence \u2014 network monitoring, file integrity, breach detection, event log analysis",
+      "purpose": "Defensive intelligence — network monitoring, file integrity, breach detection, event log analysis",
       "capabilities": [
         "Network connection anomaly detection (psutil)",
         "Listening port monitoring",
@@ -35,14 +26,78 @@
         "Windows Event Log analysis (failed logins, new accounts, service installs)",
         "Breach monitoring (HIBP API)",
         "Process anomaly detection",
-        "DNS-level blocking (87K+ malware/tracking domains)"
+        "DNS-level blocking (87K+ malware/tracking domains)",
+        "ARP spoofing detection",
+        "Rogue device detection",
+        "Outbound traffic profiling"
       ],
       "planned_hardware": [
         "Flipper Zero (USB serial)",
-        "IP security camera (RTSP/OpenCV)"
+        "IP security camera (RTSP/OpenCV)",
+        "Aqara FP2 (fall detection)"
+      ]
+    },
+    "sentinel": {
+      "domain": "security",
+      "schedule": "Every 15 minutes",
+      "default_mode": "full",
+      "max_runtime_seconds": 30,
+      "purpose": "Continuous awareness — noticing, learning, micro-improving",
+      "capabilities": [
+        "Change detection across configs and logs",
+        "Opportunity spotting (new tools, better approaches)",
+        "Agent staleness tracking",
+        "GitHub issue filing for actionable observations"
+      ]
+    },
+    "task_master": {
+      "domain": "communications",
+      "schedule": "Daily 7:30 AM (briefing)",
+      "default_mode": "briefing",
+      "capabilities": [
+        "Morning briefing compilation",
+        "Agent health aggregation",
+        "Work queue management",
+        "Email notification dispatch",
+        "Calendar awareness"
+      ]
+    },
+    "research_intel": {
+      "domain": "intelligence",
+      "schedule": "Daily 6 AM (digest), M/W/F 10 AM (capability)",
+      "default_mode": "digest",
+      "capabilities": [
+        "RSS feed aggregation (20+ feeds)",
+        "Capability inventory and audit",
+        "Tool landscape comparison",
+        "Web intelligence gathering",
+        "NLP analysis of feeds",
+        "Knowledge base indexing"
+      ]
+    },
+    "operations_monitor": {
+      "domain": "operations",
+      "schedule": "Weekly Sunday 4 AM",
+      "default_mode": "full",
+      "result_retention_days": 7,
+      "capabilities": [
+        "Temp file cleanup",
+        "Cache purging",
+        "Log rotation and archiving",
+        "Privacy drift detection",
+        "Disk space auditing",
+        "Dependency freshness checking"
       ]
     }
   },
+  "governance": {
+    "orchestrator": "rudy/agents/orchestrator.py",
+    "workflow_engine": "rudy/agents/workflow_engine.py",
+    "domain_config": "rudy/config/agent-domains.json",
+    "execution_framework": "langgraph",
+    "state_store": "rudy-logs/workflow-checkpoints.sqlite"
+  },
   "created": "2026-03-26T09:31:04.221069",
-  "version": "1.2"
+  "updated": "2026-03-26T20:30:00.000000",
+  "version": "2.0"
 }

@@ -519,4 +519,25 @@ class SecurityAgent(AgentBase):
                 )
                 if r.status_code == 200:
                     breach_data = r.json()
-                    breach_names = [b.get("Name", "Unknown") for b i
+                    breach_names = [b.get("Name", "Unknown") for b in breach_data]
+                    breached.append({"email": email, "breaches": breach_names})
+                    self._security_event("alert", "breach_detected",
+                                         f"{email} found in {len(breach_names)} breach(es): {', '.join(breach_names[:5])}")
+                elif r.status_code == 404:
+                    self.log.info(f"  {email}: No breaches found")
+                else:
+                    self.log.info(f"  {email}: API returned {r.status_code}")
+            except Exception as e:
+                self.log.info(f"  Breach check error for {email}: {e}")
+
+        # Save last check timestamp
+        try:
+            with open(last_check_file, "w") as f:
+                json.dump({"last_check": datetime.now().isoformat(), "results": breached}, f)
+        except Exception:
+            pass
+
+        if breached:
+            self.log.info(f"  ALERT: {len(breached)} email(s) found in breaches!")
+        else:
+            self.log.info("  All monitored emails clear")

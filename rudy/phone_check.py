@@ -141,10 +141,15 @@ class DeviceDetector:
         return devices
 
     def _detect_ios(self) -> List[dict]:
-        """Detect iOS devices via libimobiledevice or iTunes driver."""
+        """Detect iOS devices via WSL+libimobiledevice (primary) or Windows fallback."""
         devices = []
 
-        # Try idevice_id (libimobiledevice)
+        # PRIMARY: WSL + usbipd + libimobiledevice (open-source, no Apple bloat)
+        wsl_devices = self._detect_ios_wsl()
+        if wsl_devices:
+            return wsl_devices
+
+        # FALLBACK 1: Native Windows libimobiledevice (if installed)
         stdout, stderr, rc = _run("idevice_id -l")
         if rc == 0 and stdout:
             for udid in stdout.splitlines():
@@ -156,7 +161,35 @@ class DeviceDetector:
                     devices.append(info)
             return devices
 
-        # Fallback: check for Apple USB device via PowerShell
+        # FALLBACK 2: pymobiledevice3 (pure Python, needs Apple USB driver)
+        try:
+            from pymobiledevice3.usbmux import list_devices
+            from pymobiledevice3.lockdown import create_using_usbmux
+            import asyncio
+            devs = list_devices()
+            if asyncio.iscoroutine(devs):
+                devs = asyncio.get_event_loop().run_until_complete(devs)
+            for dev in devs:
+                lockdown = create_using_usbmux(serial=dev.serial)
+                if asyncio.iscoroutine(lockdown):
+                    lockdown = asyncio.get_event_loop().run_until_complete(lockdown)
+                info = lockdown.all_values
+                devices.append({
+                    "platform": "ios",
+                    "udid": info.get("UniqueDeviceID", dev.serial),
+                    "name": info.get("DeviceName", "iPhone"),
+                    "model": info.get("ProductType", ""),
+                    "os_version": info.get("ProductVersion", ""),
+                    "serial": info.get("SerialNumber", ""),
+                    "detection_method": "pymobiledevice3",
+                })
+        except Exception:
+            pass
+
+        if devices:
+            return devices
+
+        # FALLBACK 3: PnP detection (can see device but can't interrogate)
         ps_cmd = (
             'powershell -Command "Get-PnpDevice | '
             "Where-Object { $_.FriendlyName -like '*Apple*' -or "
@@ -182,6 +215,92 @@ class DeviceDetector:
                 pass
 
         return devices
+
+    def _detect_ios_wsl(self) -> List[dict]:
+        """Detect iOS via WSL + usbipd + libimobiledevice. Primary method."""
+        devices = []
+        try:
+            # Check if WSL is available
+            _, _, rc = _run("wsl --status", timeout=5)
+            if rc != 0:
+                return devices
+
+            # Ensure iPhone is attached to WSL (bind is persistent, attach is not)
+            usbipd = r"C:\Program Files\usbipd-win\usbipd.exe"
+            if os.path.exists(usbipd):
+                # Find Apple device BUSID
+                stdout, _, rc = _run(f'"{usbipd}" list', timeout=10)
+                apple_busid = None
+                for line in stdout.splitlines():
+                    if "05ac" in line.lower() or "apple" in line.lower():
+                        parts = line.split()
+                        if parts and "-" in parts[0]:
+                            apple_busid = parts[0]
+                            break
+
+                if apple_busid:
+                    # Attach to WSL (uses PowerShell to handle spaces in path)
+                    _run(f'powershell -Command "& \'{usbipd}\' attach --wsl --busid {apple_busid}"', timeout=10)
+                    time.sleep(3)
+
+            # Fix permissions and start usbmuxd
+            _run('wsl -d Ubuntu -u root -- bash -c "chmod -R 777 /dev/bus/usb/ 2>/dev/null; killall -9 usbmuxd 2>/dev/null; sleep 1; usbmuxd"', timeout=10)
+            time.sleep(2)
+
+            # Detect devices
+            stdout, _, rc = _run('wsl -d Ubuntu -u root -- bash -c "idevice_id -l 2>&1"', timeout=10)
+            if rc == 0 and stdout.strip() and "ERROR" not in stdout:
+                for udid in stdout.strip().splitlines():
+                    udid = udid.strip()
+                    if udid and len(udid) > 10:
+                        info = self._get_ios_info_wsl(udid)
+                        info["udid"] = udid
+                        info["platform"] = "ios"
+                        info["detection_method"] = "wsl_libimobiledevice"
+                        devices.append(info)
+        except Exception:
+            pass
+        return devices
+
+    def _get_ios_info_wsl(self, udid: str) -> dict:
+        """Get iOS device info via WSL libimobiledevice."""
+        info = {"detection_method": "wsl_libimobiledevice"}
+        stdout, _, rc = _run(f'wsl -d Ubuntu -u root -- bash -c "ideviceinfo -u {udid} 2>&1"', timeout=15)
+        if rc == 0 and stdout:
+            for line in stdout.splitlines():
+                if ":" in line:
+                    key, _, val = line.partition(":")
+                    key = key.strip()
+                    val = val.strip()
+                    if key == "DeviceName":
+                        info["name"] = val
+                    elif key == "ProductType":
+                        info["model"] = val
+                    elif key == "ProductVersion":
+                        info["os_version"] = val
+                    elif key == "SerialNumber":
+                        info["serial"] = val
+                    elif key == "WiFiAddress":
+                        info["wifi_mac"] = val
+                    elif key == "BuildVersion":
+                        info["build"] = val
+                    elif key == "PhoneNumber":
+                        info["phone"] = val
+                    elif key == "InternationalMobileEquipmentIdentity":
+                        info["imei"] = val
+                    elif key == "PasswordProtected":
+                        # NOTE: PasswordProtected reports current lock state, NOT
+                        # whether a passcode is configured. An unlocked device
+                        # (user entered passcode to trust USB) will report "false"
+                        # even if a passcode exists. Only "true" is definitive.
+                        if val.lower() == "true":
+                            info["passcode_set"] = True
+                            info["passcode_status"] = "locked"
+                        else:
+                            # Device is unlocked — passcode may or may not exist
+                            info["passcode_set"] = None  # indeterminate
+                            info["passcode_status"] = "indeterminate (device unlocked during scan)"
+        return info
 
     def _get_ios_info(self, udid: str) -> dict:
         """Get detailed iOS device info."""

@@ -126,6 +126,25 @@ class Sentinel(AgentBase):
         except Exception as e:
             self._observe("analytics_error", str(e))
 
+    def _file_github_anomalies(self):
+        """File actionable observations as GitHub issues (if gh is available)."""
+        actionable = [o for o in self.observations if o.get("actionable")]
+        if not actionable:
+            return
+
+        try:
+            from rudy.integrations.github_ops import get_github
+            gh = get_github()
+            if not gh.gh_available:
+                return
+            for obs in actionable[:3]:  # Cap at 3 per run
+                gh.file_anomaly_report(
+                    obs.get("category", "unknown"),
+                    obs.get("observation", "No details")
+                )
+        except Exception:
+            pass  # GitHub integration is best-effort
+
     def _finalize(self, state):
         """Save state and observations."""
         # Update streak
@@ -136,6 +155,9 @@ class Sentinel(AgentBase):
             state["streak"] = state.get("streak", 0) + 1
 
         self._save_state(state)
+
+        # File actionable items to GitHub (best-effort)
+        self._file_github_anomalies()
 
         # Save recent observations (keep last 100)
         all_obs = []
@@ -289,69 +311,4 @@ class Sentinel(AgentBase):
             return
 
         # Clean up any stale lock files
-        lock_file = DESKTOP / "rudy-commands" / "_runner.lock"
-        if lock_file.exists():
-            try:
-                pid = int(lock_file.read_text().strip())
-                result = subprocess.run(
-                    f'tasklist /FI "PID eq {pid}" /NH',
-                    shell=True, capture_output=True, text=True, timeout=5
-                )
-                if str(pid) not in result.stdout:
-                    lock_file.unlink()
-                    self._observe("micro_fix",
-                        f"Cleaned stale lock file (PID {pid} gone)",
-                        actionable=False)
-                    self.action("Cleaned stale runner lock file")
-            except:
-                pass
-
-        # Remove empty __pycache__ dirs (harmless cleanup)
-        cleaned = 0
-        for root, dirs, files in os.walk(str(DESKTOP)):
-            for d in list(dirs):
-                full = os.path.join(root, d)
-                if d == "__pycache__":
-                    try:
-                        if not os.listdir(full):  # Only empty ones
-                            os.rmdir(full)
-                            cleaned += 1
-                    except:
-                        pass
-            if cleaned >= 3:
-                break  # Don't spend too long
-        if cleaned:
-            self.action(f"Removed {cleaned} empty __pycache__ dirs")
-
-
-if __name__ == "__main__":
-    agent = Sentinel()
-    agent.execute()
-
-
-    def _check_knowledge_base(self):
-        """Check if knowledge base needs re-indexing."""
-        try:
-            sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-            from rudy.knowledge_base import KnowledgeBase
-            kb = KnowledgeBase()
-            stats = kb.get_stats()
-            last_index = stats.get("last_full_index")
-            if not last_index:
-                return {"action": "needs_initial_index"}
-            from datetime import datetime, timedelta
-            last_dt = datetime.fromisoformat(last_index)
-            if datetime.now() - last_dt > timedelta(hours=24):
-                return {"action": "stale_index", "hours_old": (datetime.now() - last_dt).total_seconds() / 3600}
-            return {"status": "fresh", "chunks": stats.get("total_chunks", 0)}
-        except Exception as e:
-            return {"error": str(e)[:100]}
-
-    def _check_api_server(self):
-        """Check if the Rudy API server is responding."""
-        try:
-            import requests
-            resp = requests.get("http://127.0.0.1:8000/health", timeout=5)
-            return {"status": "up" if resp.status_code == 200 else "degraded"}
-        except Exception:
-            return {"status": "down"}
+     
