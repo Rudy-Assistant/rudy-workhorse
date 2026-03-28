@@ -50,7 +50,7 @@ Christopher M. Cimino (ccimino2@gmail.com). Attorney — California State Bar #2
 - Context7 (live library docs)
 - Sequential Thinking (structured reasoning)
 - Playwright (browser automation)
-- GitHub ✓ (configured in ~/.claude.json + Desktop/.claude/mcp.json, PAT expires 2026-04-25)
+- GitHub ✓ (configured in ~/.claude.json + Desktop/.claude/mcp.json, fine-grained PAT expires 2026-06-26, Contents=Read+Write)
 
 ## Cowork Connectors
 - Gmail (connected ✅) — search, read, draft, labels. Tested 2026-03-26: full access to ccimino2@gmail.com (search, read messages/threads, create drafts, list labels). Labels include: Bills, Work, Work/Google, Receipts, Notes, Andrew Lynn, Dan Moore, Matt Tracey, Law Schools, Examples, Interesting Articles, autoarchive.
