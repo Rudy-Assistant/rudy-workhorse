@@ -436,8 +436,9 @@ def _assess_threat(fp: DeviceFingerprint):
         reasons.append("No unique serial number — harder to track, common in attack devices")
 
     # 4. Suspicious manufacturer strings
-    suspicious_manufacturers = ["", "unknown", "(standard", "generic"]
-    if any(s in (fp.manufacturer or "").lower() for s in suspicious_manufacturers):
+    mfr_lower = (fp.manufacturer or "").lower().strip()
+    suspicious_manufacturers = ["unknown", "(standard", "generic"]
+    if not mfr_lower or any(s in mfr_lower for s in suspicious_manufacturers):
         score += 10
         reasons.append(f"Missing or generic manufacturer: '{fp.manufacturer}'")
 

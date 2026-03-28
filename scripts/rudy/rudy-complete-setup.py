@@ -14,7 +14,11 @@ This script will:
 - Update credentials in rudy-totp-secret.json
 - Optionally start the email listener
 """
-import imaplib, smtplib, json, sys, os
+import imaplib
+import smtplib
+import json
+import sys
+import os
 from pathlib import Path
 from email.mime.text import MIMEText
 
@@ -49,7 +53,7 @@ print("\n[2] Testing SMTP...")
 try:
     smtp = smtplib.SMTP_SSL("smtp.gmail.com", 465)
     smtp.login(EMAIL, APP_PW)
-    print(f"    SUCCESS")
+    print("    SUCCESS")
     smtp_ok = True
 
     # Send test email to self

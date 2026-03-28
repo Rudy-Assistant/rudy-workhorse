@@ -186,6 +186,73 @@ class AgentBase:
             # If even the crash dump fails, at least log it
             self.log.error(f"Failed to write crash dump: {dump_error}")
 
+    def health_check(self) -> dict:
+        """Return a standardized health report for this agent.
+
+        Returns a dict with guaranteed keys so callers never need to
+        guess the schema. Subclasses can override _health_details() to
+        add agent-specific diagnostics.
+
+        Contract:
+            {
+                "agent": str,           # agent name
+                "version": str,         # agent version
+                "status": str,          # "healthy" | "degraded" | "error" | "never_run" | "stale"
+                "last_run": str,        # ISO timestamp or "never"
+                "age_seconds": float,   # seconds since last run (inf if never)
+                "alerts": int,          # count of critical alerts from last run
+                "warnings": int,        # count of warnings from last run
+                "summary": str,         # one-line human-readable summary
+                "details": dict,        # agent-specific diagnostics (optional)
+            }
+        """
+        persisted = self.read_status(self.name)
+        last_run = persisted.get("last_run", "never")
+
+        # Calculate staleness
+        age = float("inf")
+        if last_run and last_run != "never":
+            try:
+                last_dt = datetime.fromisoformat(last_run)
+                age = (datetime.now() - last_dt).total_seconds()
+            except (ValueError, TypeError):
+                pass
+
+        # Determine effective status
+        raw_status = persisted.get("status", "unknown")
+        if raw_status == "unknown" or last_run == "never":
+            effective_status = "never_run"
+        elif age > 86400:  # More than 24h since last run = stale
+            effective_status = "stale"
+        elif raw_status == "error":
+            effective_status = "error"
+        elif persisted.get("critical_alerts"):
+            effective_status = "degraded"
+        else:
+            effective_status = "healthy"
+
+        alert_count = len(persisted.get("critical_alerts", []))
+        warn_count = len(persisted.get("warnings", []))
+
+        return {
+            "agent": self.name,
+            "version": self.version,
+            "status": effective_status,
+            "last_run": last_run,
+            "age_seconds": age,
+            "alerts": alert_count,
+            "warnings": warn_count,
+            "summary": persisted.get("summary", ""),
+            "details": self._health_details(),
+        }
+
+    def _health_details(self) -> dict:
+        """Override in subclasses to add agent-specific diagnostics.
+
+        Examples: number of feeds tracked, devices monitored, etc.
+        """
+        return {}
+
     def read_status(self, agent_name: str) -> dict:
         """Read another agent's last status."""
         status_file = LOGS_DIR / f"{agent_name}-status.json"

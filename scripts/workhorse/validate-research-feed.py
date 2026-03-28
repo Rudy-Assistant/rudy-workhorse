@@ -34,7 +34,7 @@ def check_packages():
             missing.append(pkg)
 
     if missing:
-        print(f"\nInstall missing packages:")
+        print("\nInstall missing packages:")
         print(f"  pip install {' '.join(missing)}")
         return False
     return True
@@ -88,12 +88,12 @@ def test_imports():
         script_path = base_dir / "workhorse-research-feed.py"
         with open(script_path) as f:
             ast.parse(f.read())
-        print(f"✓ workhorse-research-feed.py syntax valid")
+        print("✓ workhorse-research-feed.py syntax valid")
 
         script_path = base_dir / "workhorse-subscribe.py"
         with open(script_path) as f:
             ast.parse(f.read())
-        print(f"✓ workhorse-subscribe.py syntax valid")
+        print("✓ workhorse-subscribe.py syntax valid")
 
         return True
     except SyntaxError as e:

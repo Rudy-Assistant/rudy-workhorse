@@ -2,8 +2,8 @@ name: Module Smoke Tests
 
 on:
   push:
-    branches: [main]
-    paths: ['rudy/**']
+    branches: [main, develop]
+    paths: ['rudy/**', 'tests/**']
   pull_request:
     branches: [main]
 
@@ -21,7 +21,7 @@ jobs:
       - name: Install base dependencies
         run: |
           pip install --upgrade pip
-          pip install requests beautifulsoup4 pandas pyyaml pydantic httpx \
+          pip install pytest requests beautifulsoup4 pandas pyyaml pydantic httpx \
             psutil rich structlog jinja2 arrow tabulate python-dotenv \
             feedparser markdownify tenacity cachetools humanize tqdm colorama \
             click typer jsonschema schedule watchdog cryptography
@@ -57,6 +57,10 @@ jobs:
           else:
               print(f'\nAll {len(core_modules)} core modules imported successfully')
           "
+
+      - name: Run unit tests
+        run: |
+          python -m pytest tests/ -v --tb=short 2>&1
 
       - name: Check module file count
         run: |

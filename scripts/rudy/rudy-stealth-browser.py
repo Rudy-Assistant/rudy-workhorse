@@ -1,7 +1,10 @@
 """
 Rudy Stealth Browser - reusable module for bot-resistant Playwright automation.
 """
-import time, json, random, re
+import time
+import json
+import random
+import re
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 from playwright_stealth import stealth
@@ -84,7 +87,8 @@ def solve_captcha(page, api_key):
         iframe = page.query_selector('iframe[src*="recaptcha"]')
         if iframe:
             m = re.search(r'k=([A-Za-z0-9_-]+)', iframe.get_attribute("src") or "")
-            if m: site_key = m.group(1)
+            if m:
+                site_key = m.group(1)
     if not site_key:
         raise ValueError("reCAPTCHA site key not found")
     solver = TwoCaptcha(api_key)
@@ -108,7 +112,8 @@ def google_sign_in(page, email, password):
 
 
 def is_2fa(page):
-    if "challenge" in page.url: return True
+    if "challenge" in page.url:
+        return True
     text = page.inner_text("body")[:500].lower()
     return "verification" in text or "2-step" in text
 
@@ -139,13 +144,20 @@ def enter_sms(page, code):
             t = inp.get_attribute("type") or ""
             if t in ("tel", "text", "number", ""):
                 r = inp.get_attribute("role") or ""
-                if r != "combobox": ci = inp; break
+                if r != "combobox":
+                    ci = inp
+                    break
     if ci:
-        ci.click(); ci.fill(""); time.sleep(0.2); ci.fill(digits)
+        ci.click()
+        ci.fill("")
+        time.sleep(0.2)
+        ci.fill(digits)
         try:
             cb = page.query_selector('input[type="checkbox"]')
-            if cb and not cb.is_checked(): cb.check()
-        except: pass
+            if cb and not cb.is_checked():
+                cb.check()
+        except Exception:
+            pass
         safe_click(page, 'button:has-text("Next")', timeout=3000)
         human_delay(4000, 6000)
         return True

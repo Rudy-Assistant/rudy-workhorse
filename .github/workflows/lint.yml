@@ -2,11 +2,11 @@ name: Lint & Syntax Check
 
 on:
   push:
-    branches: [main]
-    paths: ['rudy/**', 'scripts/**']
+    branches: [main, develop]
+    paths: ['rudy/**', 'scripts/**', 'tests/**']
   pull_request:
     branches: [main]
-    paths: ['rudy/**', 'scripts/**']
+    paths: ['rudy/**', 'scripts/**', 'tests/**']
 
 jobs:
   lint:

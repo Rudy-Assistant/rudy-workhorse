@@ -1,0 +1,69 @@
+name: CI Status Reporter
+
+on:
+  workflow_run:
+    workflows: ["Lint & Syntax Check", "Module Smoke Tests"]
+    types: [completed]
+
+permissions:
+  contents: write
+
+jobs:
+  update-status:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ci-status
+          fetch-depth: 0
+
+      - name: Write status JSON
+        run: |
+          mkdir -p status
+          cat > status/${{ github.event.workflow_run.name | replace(' ', '-') }}.json << 'STATUSEOF'
+          {
+            "workflow": "${{ github.event.workflow_run.name }}",
+            "conclusion": "${{ github.event.workflow_run.conclusion }}",
+            "run_id": ${{ github.event.workflow_run.id }},
+            "run_number": ${{ github.event.workflow_run.run_number }},
+            "head_sha": "${{ github.event.workflow_run.head_sha }}",
+            "head_branch": "${{ github.event.workflow_run.head_branch }}",
+            "updated_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "url": "${{ github.event.workflow_run.html_url }}"
+          }
+          STATUSEOF
+
+          # Also write a combined status summary
+          echo '{}' > status/summary.json
+          python3 -c "
+          import json, glob, os
+          statuses = {}
+          for f in glob.glob('status/*.json'):
+            if 'summary' in f:
+              continue
+            with open(f) as fh:
+              data = json.load(fh)
+              statuses[data['workflow']] = {
+                'conclusion': data['conclusion'],
+                'run_number': data['run_number'],
+                'updated_at': data.get('updated_at', ''),
+                'url': data['url']
+              }
+          all_pass = all(s['conclusion'] == 'success' for s in statuses.values())
+          summary = {
+            'all_pass': all_pass,
+            'workflows': statuses,
+            'last_updated': '$(date -u +%Y-%m-%dT%H:%M:%SZ)'
+          }
+          with open('status/summary.json', 'w') as fh:
+            json.dump(summary, fh, indent=2)
+          print(json.dumps(summary, indent=2))
+          "
+
+      - name: Commit and push status
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add status/
+          git diff --cached --quiet || git commit -m "Update CI status: ${{ github.event.workflow_run.name }} = ${{ github.event.workflow_run.conclusion }}"
+          git push

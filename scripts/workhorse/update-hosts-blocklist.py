@@ -1,5 +1,8 @@
 """Weekly hosts file blocklist update — refreshes DNS-level threat blocking."""
-import sys, os, json, time
+import sys
+import os
+import json
+import time
 from datetime import datetime
 sys.path.insert(0, r"C:\Users\C\Desktop")
 
@@ -45,7 +48,7 @@ with open(temp, "w") as f:
     for d in sorted(domains):
         f.write(f"0.0.0.0 {d}\n")
 
-run_elevated_ps(f"""
+run_elevated_ps(rf"""
 Copy-Item "{temp}" "C:\Windows\System32\drivers\etc\hosts" -Force
 ipconfig /flushdns | Out-Null
 """)

@@ -351,7 +351,7 @@ def check_listener_process(report):
             ["tasklist", "/FI", "IMAGENAME eq python.exe", "/FO", "CSV"],
             capture_output=True, text=True, timeout=10
         )
-        python_procs = [l for l in result.stdout.strip().split("\n") if "python" in l.lower()]
+        python_procs = [line for line in result.stdout.strip().split("\n") if "python" in line.lower()]
         if python_procs:
             report.info(f"Found {len(python_procs)} Python process(es) running")
         else:
@@ -371,7 +371,7 @@ def check_listener_process(report):
             elif "Ready" in result.stdout:
                 report.warn("Scheduled task exists but is in 'Ready' state (not running)")
             else:
-                report.info(f"Scheduled task status: check Task Scheduler")
+                report.info("Scheduled task status: check Task Scheduler")
         else:
             report.warn("Scheduled task 'Rudy-FamilyAssistant' not found")
     except Exception as e:
@@ -433,8 +433,8 @@ def auto_fix_dns(report):
         return
 
     entries = [
-        f"142.250.4.108  imap.gmail.com",
-        f"142.250.4.109  smtp.gmail.com",
+        "142.250.4.108  imap.gmail.com",
+        "142.250.4.109  smtp.gmail.com",
     ]
 
     try:

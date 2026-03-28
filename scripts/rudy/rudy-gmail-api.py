@@ -143,7 +143,7 @@ def run_setup():
     print("  → Add scopes: Gmail API (all)")
     print("  → Add test user: rudy.ciminoassist@gmail.com")
     print()
-    print(f"STEP 5: Save the downloaded JSON as:")
+    print("STEP 5: Save the downloaded JSON as:")
     print(f"  {CLIENT_SECRET_FILE}")
     print()
 
@@ -345,7 +345,6 @@ def process_message(service, msg_id):
 def poll_loop(service):
     """Poll for unread messages every POLL_INTERVAL seconds."""
     log.info(f"Polling every {POLL_INTERVAL}s for new messages...")
-    last_history_id = None
 
     while True:
         try:

@@ -118,7 +118,7 @@ class FeedConfigManager:
             self.logger.error(f"Feed '{name}' not found")
             return False
 
-        url = self.config['feeds'].pop(name)
+        self.config['feeds'].pop(name)
         self.save()
         self.logger.info(f"✓ Removed feed: {name}")
         return True
@@ -167,9 +167,9 @@ class FeedValidator:
             # Check for parse errors
             if feed.bozo and isinstance(feed.bozo_exception, Exception):
                 if "401" in str(feed.bozo_exception) or "403" in str(feed.bozo_exception):
-                    return False, f"Access denied (401/403)"
+                    return False, "Access denied (401/403)"
                 if "404" in str(feed.bozo_exception):
-                    return False, f"Not found (404)"
+                    return False, "Not found (404)"
 
             # Check for entries
             if len(feed.entries) == 0:
