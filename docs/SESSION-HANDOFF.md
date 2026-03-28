@@ -19,7 +19,7 @@ Critical context that's NOT in those files:
 
 **Command Bridge:** Write `.ps1`/`.cmd`/`.bat`/`.py` files to `/mnt/claude-commands/` and read results from `/mnt/claude-results/<name>.log`. Pure ASCII only. The bridge runner v2 has a 5-min timeout per command. KNOWN ISSUE: the scheduled task on the host may still run v1 (no timeout). Run `deploy-phase1.ps1` to fix.
 
-**GitHub:** MCP connector is UNAUTHORIZED. The host machine has git creds in Windows Credential Manager for `github.com/Rudy-Assistant/rudy-workhorse` (PAT expires 2026-04-25). Use command bridge for git operations.
+**GitHub:** MCP connector is UNAUTHORIZED from Cowork (built-in server config issue). Fine-grained PAT `rudy-workhorse` has Read+Write Contents (expires 2026-06-26). Workaround from Cowork: `git clone` the public repo via bash, push with PAT in URL. From the host: git creds in Windows Credential Manager.
 
 **Mounted directories:**
 - `/mnt/Downloads/` = `%USERPROFILE%\Downloads\` on host
@@ -29,20 +29,23 @@ Critical context that's NOT in those files:
 
 **Chris's rules:** Do the work, don't describe it. Exhaust all technical paths before asking. Never create scripts for Chris to run when you can execute via bridge. Just proceed on obvious next steps.
 
-**Current state as of 2026-03-28:**
-- 7 n8n seed workflows created in `~/Downloads/Claude Stuff/n8n-workflows/`
-- n8n setup script ready: `rudy-n8n-setup.ps1`
-- Bridge v2 deployed to host filesystem but scheduled task may reference v1
-- USB drive (D:\) has Windows installer + drivers + Batcave restore scripts
-- Repo NOT yet cloned on host (git clone hangs on credential prompt via bridge)
-- `deploy-phase1.ps1` created as one-shot fix for all pending items
+**Current state as of 2026-03-28 (evening):**
+- Workhorse is OFFLINE — awaiting USB clean install + UNROLL.cmd bootstrap
+- Kill switch deployed: `Desktop\rudy-data\SECURITY-DISABLED` exists on the machine
+- USB quarantine safeguarded (all 5 Fortress Paradox safeguards) — pushed to GitHub
+- All security modules reviewed: `security_agent.py` and `network_defense.py` confirmed safe (passive only)
+- 8 n8n seed workflows in repo (`n8n/workflows/01-08`)
+- GitHub repo: 14 commits on main, latest `91121cc`
+- Cowork scheduled tasks running: morning briefing (7:30 AM daily), Workhorse watchdog (every 6h)
 
 **Immediate next steps:**
-1. Chris runs `deploy-phase1.ps1` as admin (fixes bridge, clones repo, stages USB)
-2. Run `rudy-n8n-setup.ps1` on host to install n8n
-3. Configure n8n credentials (Gmail OAuth2, Claude API key)
-4. Import seed workflows into n8n
-5. Begin Phase 2: family member communication channels
+1. When Workhorse comes back online: replace `usb_quarantine.py` with safeguarded version, verify kill switch file exists
+2. Harvey application — apply this weekend (time-sensitive, prep doc ready)
+3. Axiom profile update — deadline March 31
+4. Deploy n8n on Workhorse (`rudy-n8n-setup.ps1`)
+5. Configure n8n credentials (Gmail OAuth2, Claude API key)
+6. Import seed workflows into n8n
+7. Continue Detective Agent + Security Hardening from prior sprint
 
 **Reference docs (read only if needed):**
 - `RUDY_CODEBASE_ANALYSIS.md` — Existing repo structure and agent patterns
