@@ -31,6 +31,7 @@ import os
 import sys
 import logging
 import traceback
+from typing import Optional
 from datetime import datetime
 from pathlib import Path
 from email.mime.text import MIMEText
@@ -101,7 +102,7 @@ log = logging.getLogger("rudy.poller")
 # STATE MANAGEMENT
 # ------------------------------------
 
-def load_state():
+def load_state() -> dict:
     """Load processed message IDs and backend health."""
     if STATE_FILE.exists():
         try:
@@ -116,7 +117,7 @@ def load_state():
     }
 
 
-def save_state(state):
+def save_state(state) -> None:
     """Persist state. Keep only last 500 message IDs."""
     state["processed_ids"] = state["processed_ids"][-500:]
     STATE_FILE.write_text(json.dumps(state, indent=2))
@@ -126,7 +127,7 @@ def save_state(state):
 # EMAIL HELPERS
 # ------------------------------------
 
-def decode_header_value(raw):
+def decode_header_value(raw) -> str:
     if not raw:
         return ""
     parts = email.header.decode_header(raw)
@@ -139,7 +140,7 @@ def decode_header_value(raw):
     return "".join(decoded)
 
 
-def extract_body(msg):
+def extract_body(msg) -> str:
     if msg.is_multipart():
         for part in msg.walk():
             ct = part.get_content_type()
@@ -155,21 +156,21 @@ def extract_body(msg):
     return ""
 
 
-def get_sender_email(msg):
+def get_sender_email(msg) -> str:
     from_header = msg.get("From", "")
     if "<" in from_header and ">" in from_header:
         return from_header.split("<")[1].split(">")[0].strip().lower()
     return from_header.strip().lower()
 
 
-def get_sender_name(msg):
+def get_sender_name(msg) -> str:
     from_header = decode_header_value(msg.get("From", ""))
     if "<" in from_header:
         return from_header.split("<")[0].strip().strip('"')
     return from_header
 
 
-def determine_access_level(sender_email):
+def determine_access_level(sender_email) -> str:
     if sender_email in FULL_ACCESS:
         return "full"
     elif sender_email in FAMILY_ACCESS:
@@ -181,7 +182,7 @@ def determine_access_level(sender_email):
 # IMAP POLLING
 # ------------------------------------
 
-def poll_imap(backend_name):
+def poll_imap(backend_name) -> list:
     """Poll a single IMAP backend for unseen messages. Returns list of (uid, msg_bytes)."""
     cfg = BACKENDS.get(backend_name, {})
     if not cfg.get("enabled") or cfg.get("imap_available") is False:
@@ -219,7 +220,7 @@ def poll_imap(backend_name):
 # SMTP SENDING
 # ------------------------------------
 
-def send_reply(to_addr, subject, body):
+def send_reply(to_addr, subject, body) -> bool:
     """Send reply via configured SMTP backend."""
     cfg = BACKENDS.get(SEND_BACKEND, {})
     if not cfg:
@@ -253,7 +254,7 @@ def send_reply(to_addr, subject, body):
 # REQUEST PROCESSING
 # ------------------------------------
 
-def build_prompt(sender_name, sender_email, subject, body, access_level):
+def build_prompt(sender_name, sender_email, subject, body, access_level) -> Optional[str]:
     """Build Claude prompt (same logic as listener v2)."""
     if access_level == "full":
         perms = "FULL ACCESS -- execute with maximum agency."
@@ -273,7 +274,7 @@ def build_prompt(sender_name, sender_email, subject, body, access_level):
     )
 
 
-def run_claude(prompt):
+def run_claude(prompt) -> str:
     """Run headless Claude Code session."""
     import subprocess
     log.info("Launching Claude Code session...")
@@ -295,7 +296,7 @@ def run_claude(prompt):
         return f"Error: {e}\n\n-- Rudy"
 
 
-def process_message(uid, msg_bytes, state):
+def process_message(uid, msg_bytes, state) -> None:
     """Process a single email message."""
     msg_id = uid
     if msg_id in state["processed_ids"]:
@@ -355,7 +356,7 @@ def process_message(uid, msg_bytes, state):
 # MAIN POLL LOOP
 # ------------------------------------
 
-def poll_once():
+def poll_once() -> None:
     """Single poll cycle across all backends."""
     state = load_state()
 
@@ -387,7 +388,7 @@ def poll_once():
     save_state(state)
 
 
-def daemon():
+def daemon() -> None:
     """Continuous polling loop with exponential backoff on errors."""
     log.info("Email poller daemon starting...")
     backoff = POLL_INTERVAL
@@ -407,7 +408,7 @@ def daemon():
         time.sleep(backoff)
 
 
-def status():
+def status() -> None:
     """Print backend health status."""
     state = load_state()
     print(f"Last poll: {state.get('last_poll', 'never')}")

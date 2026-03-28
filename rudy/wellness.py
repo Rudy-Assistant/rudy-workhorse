@@ -58,7 +58,7 @@ class WellnessMonitor:
         self.routines = self._load_json(PRESENCE_ROUTINES, {})
         self.events = self._load_json(PRESENCE_LOG, [])
 
-    def _load_json(self, path, default):
+    def _load_json(self, path, default) -> dict:
         if path.exists():
             try:
                 with open(path, encoding="utf-8") as f:
@@ -67,11 +67,11 @@ class WellnessMonitor:
                 log.debug(f"Failed to load JSON from {path}: {e}")
         return default
 
-    def _save_json(self, path, data):
+    def _save_json(self, path, data) -> None:
         with open(path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, default=str)
 
-    def _default_config(self):
+    def _default_config(self) -> dict:
         return {
             "check_interval_minutes": 30,
             "inactivity_threshold_minutes": 120,  # Alert if device silent for 2+ hours during active period
@@ -346,7 +346,7 @@ class WellnessMonitor:
         return "\n".join(lines)
 
 
-def run_wellness_check():
+def run_wellness_check() -> dict:
     """Run a wellness check and print dashboard."""
     monitor = WellnessMonitor()
     findings = monitor.check()

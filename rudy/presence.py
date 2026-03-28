@@ -30,7 +30,7 @@ LOGS_DIR = DESKTOP / "rudy-logs"
 LOGS_DIR.mkdir(exist_ok=True)
 
 # Config — auto-detect subnet from active network
-def _detect_subnet():
+def _detect_subnet() -> str:
     """Detect current subnet dynamically (supports travel mode)."""
     try:
         import socket
@@ -44,7 +44,7 @@ def _detect_subnet():
         log.debug(f"Error detecting subnet: {e}")
         return "192.168.7"  # Fallback to home subnet
 
-def _detect_gateway():
+def _detect_gateway() -> str:
     """Detect default gateway."""
     try:
         result = __import__("subprocess").run(
@@ -80,7 +80,7 @@ class PresenceMonitor:
         self.event_log = self._load_json(LOG_FILE, [])
         self.routines = self._load_json(ROUTINES_FILE, {})
 
-    def _load_json(self, path, default):
+    def _load_json(self, path, default) -> dict:
         if path.exists():
             try:
                 with open(path, encoding="utf-8") as f:
@@ -89,7 +89,7 @@ class PresenceMonitor:
                 log.debug(f"Failed to load JSON from {path}: {e}")
         return default
 
-    def _save_json(self, path, data):
+    def _save_json(self, path, data) -> None:
         with open(path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, default=str)
 
@@ -162,7 +162,7 @@ class PresenceMonitor:
 
         return result
 
-    def _ping_sweep(self):
+    def _ping_sweep(self) -> None:
         """Quick parallel ping sweep to populate the ARP cache."""
         print("  Running ping sweep...")
         # Use PowerShell for parallel pinging (much faster than sequential)
@@ -290,7 +290,7 @@ class PresenceMonitor:
 
         return events
 
-    def _update_routines(self, discovered: dict):
+    def _update_routines(self, discovered: dict) -> None:
         """Learn routines — track when each device is typically present."""
         now = datetime.now()
         day_name = now.strftime("%A")  # Monday, Tuesday, etc.
@@ -313,7 +313,7 @@ class PresenceMonitor:
         self._save_json(ROUTINES_FILE, self.routines)
 
     def register_device(self, mac: str, name: str, device_type: str = "phone",
-                        owner: str = "unknown"):
+                        owner: str = "unknown") -> None:
         """Register a known device."""
         mac = mac.lower()
         self.known_devices[mac] = {
@@ -356,7 +356,7 @@ class PresenceMonitor:
 
 
 # Convenience function for command runner invocation
-def run_scan(run_analytics=True):
+def run_scan(run_analytics=True) -> dict:
     """Run a single presence scan, optionally followed by analytics."""
     monitor = PresenceMonitor()
     result = monitor.scan()

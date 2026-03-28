@@ -41,7 +41,7 @@ API_LOG = LOGS / "api-requests.json"
 COMMANDS_DIR = DESKTOP / "rudy-commands"
 
 
-def _load_config():
+def _load_config() -> dict:
     if API_CONFIG.exists():
         try:
             with open(API_CONFIG, encoding="utf-8") as f:
@@ -100,11 +100,11 @@ def create_app():
         rate_limits[ip] = window
         return len(window) <= CONFIG.get("rate_limit_per_minute", 60)
 
-    def verify_api_key(api_key: str = Header(None, alias="X-API-Key")):
+    def verify_api_key(api_key: str = Header(None, alias="X-API-Key")) -> None:
         if api_key != CONFIG.get("api_key"):
             raise HTTPException(status_code=401, detail="Invalid API key")
 
-    def log_request(request: Request, endpoint: str, data: dict = None):
+    def log_request(request: Request, endpoint: str, data: dict = None) -> None:
         log_data = []
         if API_LOG.exists():
             try:
@@ -262,7 +262,7 @@ def create_app():
     return app
 
 
-def run_server():
+def run_server() -> None:
     """Start the API server."""
     try:
         import uvicorn

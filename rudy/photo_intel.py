@@ -48,13 +48,13 @@ VIDEO_EXTENSIONS = {
 }
 
 
-def _save_json(path: Path, data):
+def _save_json(path: Path, data) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, default=str)
 
 
-def _load_json(path: Path, default=None):
+def _load_json(path: Path, default=None) -> dict:
     if path.exists():
         try:
             with open(path, encoding="utf-8") as f:
@@ -70,7 +70,7 @@ class EXIFExtractor:
     def __init__(self):
         self._pil = None
 
-    def _get_pil(self):
+    def _get_pil(self) -> Optional[tuple]:
         if self._pil is None:
             try:
                 from PIL import Image
@@ -400,7 +400,7 @@ class DuplicateDetector:
     def __init__(self):
         self._imagehash = None
 
-    def _get_imagehash(self):
+    def _get_imagehash(self) -> Optional[object]:
         if self._imagehash is None:
             try:
                 import imagehash

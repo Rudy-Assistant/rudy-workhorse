@@ -28,7 +28,7 @@ class ImageOCR:
         self.languages = languages or ["en"]
         self._reader = None
 
-    def _get_reader(self):
+    def _get_reader(self) -> object:
         if self._reader is None:
             try:
                 import easyocr
@@ -166,10 +166,10 @@ class DocumentParser:
             return parser(filepath)
         return {"error": f"Unsupported format: {ext}", "source": filepath}
 
-    def _parse_pdf(self, path):
+    def _parse_pdf(self, path) -> dict:
         return PDFExtractor().extract_text(path)
 
-    def _parse_docx(self, path):
+    def _parse_docx(self, path) -> dict:
         try:
             import docx2txt
             text = docx2txt.process(path)
@@ -183,7 +183,7 @@ class DocumentParser:
             except ImportError:
                 return {"error": "docx2txt or python-docx needed"}
 
-    def _parse_rtf(self, path):
+    def _parse_rtf(self, path) -> dict:
         try:
             from striprtf.striprtf import rtf_to_text
             with open(path, encoding="utf-8", errors="replace") as f:
@@ -192,7 +192,7 @@ class DocumentParser:
         except ImportError:
             return {"error": "striprtf not installed"}
 
-    def _parse_epub(self, path):
+    def _parse_epub(self, path) -> dict:
         try:
             import ebooklib
             from ebooklib import epub
@@ -206,7 +206,7 @@ class DocumentParser:
         except ImportError:
             return {"error": "ebooklib not installed"}
 
-    def _parse_pptx(self, path):
+    def _parse_pptx(self, path) -> dict:
         try:
             from pptx import Presentation
             prs = Presentation(path)
@@ -219,16 +219,16 @@ class DocumentParser:
         except ImportError:
             return {"error": "python-pptx not installed"}
 
-    def _parse_text(self, path):
+    def _parse_text(self, path) -> dict:
         with open(path, encoding="utf-8", errors="replace") as f:
             return {"text": f.read(), "source": path, "format": "text"}
 
-    def _parse_json(self, path):
+    def _parse_json(self, path) -> dict:
         with open(path, encoding="utf-8") as f:
             data = json.load(f)
         return {"text": json.dumps(data, indent=2), "source": path, "format": "json"}
 
-    def _parse_html(self, path):
+    def _parse_html(self, path) -> dict:
         try:
             from bs4 import BeautifulSoup
             with open(path, encoding="utf-8", errors="replace") as f:
