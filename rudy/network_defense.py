@@ -14,6 +14,7 @@ All checks are non-invasive, read-only, and designed to run every 30 minutes
 alongside the existing SecurityAgent cycle.
 """
 import json
+import logging
 import os
 import re
 import socket
@@ -34,6 +35,8 @@ DNS_BASELINE_FILE = LOGS_DIR / "defense-dns-baseline.json"
 TRAFFIC_BASELINE_FILE = LOGS_DIR / "defense-traffic-baseline.json"
 DEFENSE_ALERTS_FILE = LOGS_DIR / "defense-alerts.json"
 DEFENSE_STATE_FILE = LOGS_DIR / "defense-state.json"
+
+log = logging.getLogger(__name__)
 
 # Known-good DNS resolvers for verification
 TRUSTED_DNS = {
@@ -65,8 +68,8 @@ def _detect_current_gateway():
                     gw = match.group(1)
                     parts = gw.split(".")
                     return gw, ".".join(parts[:3])
-    except Exception:
-        pass
+    except Exception as e:
+        logging.getLogger(__name__).debug(f"Failed to detect gateway: {e}")
     return "192.168.7.1", "192.168.7"
 
 GATEWAY_IP, SUBNET = _detect_current_gateway()
@@ -91,8 +94,8 @@ class NetworkDefense:
             try:
                 with open(path, encoding="utf-8") as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as e:
+                log.debug(f"Failed to load {path}: {e}")
         return default
 
     def _save_json(self, path, data):
@@ -244,8 +247,8 @@ class NetworkDefense:
                                 ip = match.group(1)
                                 if ip != dns_server:  # Skip the DNS server's own IP
                                     trusted_ips.add(ip)
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        log.debug(f"Failed to query {dns_server} for {domain}: {e}")
 
                 # Compare — we don't need exact match (CDNs vary),
                 # but local should resolve to SOMETHING, and not to a known-bad
@@ -275,8 +278,8 @@ class NetworkDefense:
                         {"domain": domain, "trusted_ips": list(trusted_ips)}
                     )
 
-            except Exception:
-                pass  # Network issues shouldn't generate false alerts
+            except Exception as e:
+                log.debug(f"Error checking DNS for {domain}: {e}")  # Network issues shouldn't generate false alerts
 
         # Save baseline
         self.dns_baseline["last_check"] = datetime.now().isoformat()
@@ -338,8 +341,8 @@ class NetworkDefense:
                     if conn.pid:
                         try:
                             proc_name = psutil.Process(conn.pid).name()
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            log.debug(f"Failed to get process name for PID {conn.pid}: {e}")
 
                     severity = "info"
                     if remote_port not in safe_ports:
@@ -469,8 +472,8 @@ class NetworkDefense:
                         {"share": share}
                     )
 
-        except Exception:
-            pass  # net commands may need elevation
+        except Exception as e:
+            log.debug(f"SMB activity check error: {e}")  # net commands may need elevation
 
         return findings
 
@@ -511,7 +514,8 @@ class NetworkDefense:
                     "hash": state_hash,
                     "entries": len([line for line in result.stdout.splitlines() if "REG_" in line]),
                 }
-            except Exception:
+            except Exception as e:
+                log.debug(f"Failed to query registry key {name}: {e}")
                 current_state[name] = {"hash": "error", "entries": 0}
 
         # Compare to baseline
@@ -573,8 +577,8 @@ class NetworkDefense:
                         )
                         if result.stdout.strip():
                             proc_name = result.stdout.strip().split(",")[0].strip('"')
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        log.debug(f"Failed to get process name for port {port}: {e}")
 
                     severity = "warning" if port > 1024 else "alert"
                     self._alert(

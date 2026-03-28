@@ -106,8 +106,8 @@ def load_state():
     if STATE_FILE.exists():
         try:
             return json.loads(STATE_FILE.read_text())
-        except Exception:
-            pass
+        except Exception as e:
+            log.debug(f"Failed to load state file: {e}")
     return {
         "processed_ids": [],
         "last_poll": None,

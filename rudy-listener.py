@@ -532,8 +532,8 @@ def try_idle(mail):
         mail.send(b"DONE\r\n")
         try:
             mail.readline()
-        except Exception:
-            pass
+        except Exception as e:
+            log.debug(f"Error reading IDLE termination: {e}")
 
         mail.sock.settimeout(None)
         return True
@@ -542,8 +542,8 @@ def try_idle(mail):
         log.warning(f"IDLE error: {e}")
         try:
             mail.sock.settimeout(None)
-        except Exception:
-            pass
+        except Exception as e:
+            log.debug(f"Error resetting socket timeout: {e}")
         return False
 
 
@@ -661,8 +661,8 @@ if __name__ == "__main__":
             f"Rudy is now online and monitoring emails.\n"
             f"Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n— Rudy"
         )
-    except Exception:
-        log.warning("Could not send startup notification (non-fatal)")
+    except Exception as e:
+        log.debug(f"Could not send startup notification: {e}")
 
     try:
         main_loop()

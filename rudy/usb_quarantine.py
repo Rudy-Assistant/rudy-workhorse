@@ -46,6 +46,7 @@ Integration:
 """
 
 import json
+import logging
 import os
 import re
 import subprocess
@@ -55,6 +56,8 @@ from pathlib import Path
 from typing import Optional, Dict, List, Tuple
 
 from rudy.utils import atomic_json_save, safe_json_load
+
+log = logging.getLogger(__name__)
 
 DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
 LOGS_DIR = DESKTOP / "rudy-logs"
@@ -499,8 +502,8 @@ def _system_uptime_minutes() -> float:
             from datetime import datetime
             boot_time = datetime.fromisoformat(out.strip().replace('/', '-'))
             return (datetime.now() - boot_time).total_seconds() / 60
-    except Exception:
-        pass
+    except Exception as e:
+        log.debug(f"Failed to get system uptime: {e}")
     # Fallback: assume been up long enough (safe default)
     return 999
 
@@ -696,7 +699,8 @@ class USBQuarantine:
                 f"Disable-PnpDevice -InstanceId '{instance_id}' -Confirm:$false"
             )
             return ok
-        except Exception:
+        except Exception as e:
+            log.debug(f"Elevated device disable failed: {e}")
             # Fallback: try direct (may fail without elevation)
             out, err, rc = _run_ps(
                 f"Disable-PnpDevice -InstanceId '{instance_id}' -Confirm:$false"
@@ -744,7 +748,8 @@ class USBQuarantine:
                 subject=subject,
                 body=body,
             )
-        except Exception:
+        except Exception as e:
+            log.debug(f"Failed to send alert email: {e}")
             # Log the alert even if email fails
             alert_file = QUARANTINE_DIR / "PENDING-ALERT.txt"
             alert_file.write_text(f"{subject}\n\n{body}", encoding="utf-8")
@@ -788,7 +793,8 @@ class USBQuarantine:
                 f"Enable-PnpDevice -InstanceId '{instance_id}' -Confirm:$false"
             )
             return ok
-        except Exception:
+        except Exception as e:
+            log.debug(f"Elevated device enable failed: {e}")
             out, err, rc = _run_ps(
                 f"Enable-PnpDevice -InstanceId '{instance_id}' -Confirm:$false"
             )
@@ -859,8 +865,8 @@ class USBQuarantine:
                         attrs = ctypes.windll.kernel32.GetFileAttributesW(full_path)
                         if attrs != -1 and (attrs & 2):  # FILE_ATTRIBUTE_HIDDEN
                             results["hidden_files"].append(rel_path)
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        log.debug(f"Failed to check hidden attribute for {full_path}: {e}")
 
                     # Check recent modifications (within last 24 hours)
                     try:
@@ -870,8 +876,8 @@ class USBQuarantine:
                                 "path": rel_path,
                                 "modified": datetime.fromtimestamp(mtime).isoformat(),
                             })
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        log.debug(f"Failed to check modification time for {full_path}: {e}")
         except PermissionError:
             results["suspicious"].append({
                 "file": drive_path,
@@ -928,8 +934,8 @@ Write-Output "CONNS:$conns"
                     if isinstance(procs, dict):
                         procs = [procs]
                     before_procs = {p.get("Id") for p in procs}
-                except Exception:
-                    pass
+                except Exception as e:
+                    log.debug(f"Failed to parse process list: {e}")
             elif line.startswith("CONNS:"):
                 try:
                     conns = json.loads(line[6:])
@@ -939,8 +945,8 @@ Write-Output "CONNS:$conns"
                         f"{c.get('RemoteAddress')}:{c.get('RemotePort')}"
                         for c in conns
                     }
-                except Exception:
-                    pass
+                except Exception as e:
+                    log.debug(f"Failed to parse connection list: {e}")
 
         # Wait for monitoring period
         time.sleep(min(duration_seconds, 60))  # Cap at 60s
@@ -963,8 +969,8 @@ Write-Output "CONNS:$conns"
                         }
                         for p in procs
                     }
-                except Exception:
-                    pass
+                except Exception as e:
+                    log.debug(f"Failed to parse after-processes: {e}")
             elif line.startswith("CONNS:"):
                 try:
                     conns = json.loads(line[6:])
@@ -974,8 +980,8 @@ Write-Output "CONNS:$conns"
                         f"{c.get('RemoteAddress')}:{c.get('RemotePort')}"
                         for c in conns
                     }
-                except Exception:
-                    pass
+                except Exception as e:
+                    log.debug(f"Failed to parse after-connections: {e}")
 
         # Diff
         new_proc_ids = set(after_procs.keys()) - before_procs

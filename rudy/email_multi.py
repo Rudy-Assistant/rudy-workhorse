@@ -18,6 +18,7 @@ import imaplib
 import smtplib
 import email
 import json
+import logging
 import os
 import time
 from dataclasses import dataclass, field
@@ -33,6 +34,8 @@ DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Deskto
 LOGS = DESKTOP / "rudy-logs"
 CONFIG_FILE = LOGS / "email-providers.json"
 HEALTH_FILE = LOGS / "email-health.json"
+
+log = logging.getLogger(__name__)
 
 
 @dataclass
@@ -106,8 +109,8 @@ class EmailHealth:
             try:
                 with open(HEALTH_FILE, encoding="utf-8") as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as e:
+                log.debug(f"Failed to load health file: {e}")
         return {"providers": {}, "last_check": None}
 
     def _save(self):
@@ -182,8 +185,8 @@ class MultiEmail:
                         for k, v in overrides.items():
                             if hasattr(self.providers[name], k):
                                 setattr(self.providers[name], k, v)
-            except Exception:
-                pass
+            except Exception as e:
+                log.debug(f"Failed to load config file: {e}")
 
     def _get_active_providers(self) -> List[EmailProvider]:
         """Get enabled providers sorted by priority, filtered by health."""
@@ -270,7 +273,8 @@ class MultiEmail:
         for provider in providers:
             try:
                 return self._receive_via(provider, folder, limit, unread_only)
-            except Exception:
+            except Exception as e:
+                log.debug(f"Failed to receive via {provider.name}: {e}")
                 continue
         return []
 
@@ -363,8 +367,8 @@ class MultiEmail:
                 try:
                     with open(CONFIG_FILE, encoding="utf-8") as f:
                         config = json.load(f)
-                except Exception:
-                    pass
+                except Exception as e:
+                    log.debug(f"Failed to load existing config: {e}")
 
             config[name] = {"email": email_addr, "password": password, "enabled": True}
             CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
