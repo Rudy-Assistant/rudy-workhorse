@@ -174,15 +174,13 @@ class PresenceMonitor:
             # so we do targeted pings to common DHCP ranges)
             for i in [1, 2] + list(range(20, 35)) + list(range(100, 115)):
                 subprocess.Popen(
-                    f'ping -n 1 -w 500 {LOCAL_SUBNET}.{i}',
-                    shell=True,
+                    ["ping", "-n", "1", "-w", "500", f"{LOCAL_SUBNET}.{i}"],
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL,
                 )
             # Also ping the broadcast address
             subprocess.Popen(
-                f'ping -n 1 -w 500 {LOCAL_SUBNET}.255',
-                shell=True,
+                ["ping", "-n", "1", "-w", "500", f"{LOCAL_SUBNET}.255"],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )

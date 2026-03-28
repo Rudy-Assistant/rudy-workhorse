@@ -286,8 +286,8 @@ class IntruderProfiler:
         hostname = None
         try:
             result = subprocess.run(
-                f"nbtstat -A {ip}",
-                shell=True, capture_output=True, text=True, timeout=5
+                ["nbtstat", "-A", ip],
+                capture_output=True, text=True, timeout=5
             )
             for line in result.stdout.splitlines():
                 if "<00>" in line and "UNIQUE" in line:
@@ -300,8 +300,8 @@ class IntruderProfiler:
         if not hostname:
             try:
                 hostname = subprocess.run(
-                    f"nslookup {ip}",
-                    shell=True, capture_output=True, text=True, timeout=5
+                    ["nslookup", ip],
+                    capture_output=True, text=True, timeout=5
                 ).stdout
                 match = re.search(r'Name:\s+(\S+)', hostname)
                 hostname = match.group(1) if match else None
@@ -331,8 +331,8 @@ class IntruderProfiler:
         # 5. TTL fingerprinting (OS family detection)
         try:
             result = subprocess.run(
-                f"ping -n 1 -w 1000 {ip}",
-                shell=True, capture_output=True, text=True, timeout=5
+                ["ping", "-n", "1", "-w", "1000", ip],
+                capture_output=True, text=True, timeout=5
             )
             ttl_match = re.search(r'TTL=(\d+)', result.stdout)
             if ttl_match:

@@ -138,8 +138,8 @@ class NetworkFingerprint:
         """Get current WiFi SSID (if connected via WiFi)."""
         try:
             result = subprocess.run(
-                'netsh wlan show interfaces',
-                shell=True, capture_output=True, text=True, timeout=10
+                ["netsh", "wlan", "show", "interfaces"],
+                capture_output=True, text=True, timeout=10
             )
             for line in result.stdout.splitlines():
                 if "SSID" in line and "BSSID" not in line:
@@ -422,14 +422,14 @@ class TravelMode:
             # Ping sweep to populate ARP
             for i in list(range(1, 255)):
                 subprocess.Popen(
-                    f'ping -n 1 -w 300 {subnet}.{i}',
-                    shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+                    ["ping", "-n", "1", "-w", "300", f"{subnet}.{i}"],
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
                 )
             import time
             time.sleep(5)  # Wait for ARP table to populate
 
             result = subprocess.run(
-                'arp -a', shell=True, capture_output=True, text=True, timeout=10
+                ["arp", "-a"], capture_output=True, text=True, timeout=10
             )
             for line in result.stdout.splitlines():
                 match = re.match(
@@ -465,8 +465,8 @@ class TravelMode:
             # Hostname
             try:
                 result = subprocess.run(
-                    f'nbtstat -A {ip}',
-                    shell=True, capture_output=True, text=True, timeout=3
+                    ["nbtstat", "-A", ip],
+                    capture_output=True, text=True, timeout=3
                 )
                 for line in result.stdout.splitlines():
                     if "<00>" in line and "UNIQUE" in line:
@@ -491,8 +491,8 @@ class TravelMode:
             # TTL-based OS detection
             try:
                 result = subprocess.run(
-                    f'ping -n 1 -w 500 {ip}',
-                    shell=True, capture_output=True, text=True, timeout=3
+                    ["ping", "-n", "1", "-w", "500", ip],
+                    capture_output=True, text=True, timeout=3
                 )
                 ttl_match = re.search(r'TTL=(\d+)', result.stdout)
                 if ttl_match:
@@ -514,8 +514,8 @@ class TravelMode:
         # Check for captive portal (common in hotels/Airbnbs)
         try:
             result = subprocess.run(
-                'nslookup connectivitycheck.gstatic.com',
-                shell=True, capture_output=True, text=True, timeout=5
+                ["nslookup", "connectivitycheck.gstatic.com"],
+                capture_output=True, text=True, timeout=5
             )
             # If this resolves to a private IP, there's a captive portal
             if any(x in result.stdout for x in ["192.168.", "10.", "172.16."]):

@@ -238,8 +238,8 @@ class NetworkDefense:
                 for dns_server in list(TRUSTED_DNS.keys())[:2]:  # Check 2 servers
                     try:
                         result = subprocess.run(
-                            f"nslookup {domain} {dns_server}",
-                            shell=True, capture_output=True, text=True, timeout=5
+                            ["nslookup", domain, dns_server],
+                            capture_output=True, text=True, timeout=5
                         )
                         for line in result.stdout.splitlines():
                             match = re.search(r'Address:\s*(\d+\.\d+\.\d+\.\d+)', line)
@@ -549,8 +549,8 @@ class NetworkDefense:
 
         try:
             result = subprocess.run(
-                "netstat -ano -p TCP",
-                shell=True, capture_output=True, text=True, timeout=10
+                ["netstat", "-ano", "-p", "TCP"],
+                capture_output=True, text=True, timeout=10
             )
             current_ports = {}
             for line in result.stdout.splitlines():

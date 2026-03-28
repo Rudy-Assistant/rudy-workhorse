@@ -11,6 +11,7 @@ Provides a clean interface for agents to interact with GitHub:
 All operations go through the `gh` CLI or git commands.
 """
 import subprocess
+import shlex
 import json
 import os
 import logging
@@ -37,8 +38,8 @@ class GitHubOps:
         if self._gh_available is None:
             try:
                 r = subprocess.run(
-                    "gh auth status",
-                    shell=True, capture_output=True, text=True, timeout=10
+                    ["gh", "auth", "status"],
+                    capture_output=True, text=True, timeout=10
                 )
                 self._gh_available = r.returncode == 0
             except Exception as e:
@@ -50,8 +51,8 @@ class GitHubOps:
         """Run a gh CLI command."""
         try:
             r = subprocess.run(
-                f"gh {args}",
-                shell=True, capture_output=True, text=True,
+                ["gh"] + shlex.split(args),
+                capture_output=True, text=True,
                 cwd=self.cwd, timeout=timeout
             )
             if r.returncode == 0:
@@ -70,8 +71,8 @@ class GitHubOps:
         """Run a git command."""
         try:
             r = subprocess.run(
-                f"git {args}",
-                shell=True, capture_output=True, text=True,
+                ["git"] + shlex.split(args),
+                capture_output=True, text=True,
                 cwd=self.cwd, timeout=timeout
             )
             return r.returncode == 0, r.stdout.strip()
