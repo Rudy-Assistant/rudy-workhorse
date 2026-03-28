@@ -44,13 +44,6 @@ class ResearchIntel(AgentBase):
 
         self.summarize(f"Research cycle complete (mode={mode})")
 
-    def _run_cmd(self, cmd, timeout=60):
-        try:
-            r = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=timeout)
-            return r.returncode == 0, r.stdout.strip()
-        except Exception:
-            return False, ""
-
     def _generate_digest(self):
         """Run the existing research feed script."""
         self.log.info("Generating research digest...")

@@ -54,6 +54,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional, Dict, List, Tuple
 
+from rudy.utils import atomic_json_save, safe_json_load
+
 DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
 LOGS_DIR = DESKTOP / "rudy-logs"
 QUARANTINE_DIR = LOGS_DIR / "usb-quarantine"
@@ -204,18 +206,13 @@ def _run_ps(script, timeout=15):
 
 
 def _load_json(path, default=None):
-    if path.exists():
-        try:
-            return json.loads(path.read_text(encoding="utf-8"))
-        except Exception:
-            pass
-    return default if default is not None else {}
+    """Load JSON from a file using safe_json_load utility."""
+    return safe_json_load(path, default)
 
 
 def _save_json(path, data):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, default=str)
+    """Save JSON to a file using atomic_json_save utility."""
+    atomic_json_save(path, data)
 
 
 # ── Core: Device Fingerprinting ──────────────────────────────

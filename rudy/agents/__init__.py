@@ -11,6 +11,7 @@ where agent crashes caused memory loss between sessions.
 import json
 import logging
 import os
+import subprocess
 import sys
 import time
 import traceback as tb_module
@@ -103,6 +104,57 @@ class AgentBase:
     def summarize(self, text: str):
         """Set the human-readable summary."""
         self.status["summary"] = text
+
+    def _run_cmd(self, cmd, timeout=30):
+        """Execute a command and return (success, output).
+
+        Args:
+            cmd: Command to run. Can be a string (for backward compatibility with
+                 deprecation warning) or a list of strings (preferred).
+            timeout: Command timeout in seconds. Default: 30.
+
+        Returns:
+            Tuple of (success: bool, output: str).
+            - success is True if returncode == 0, False otherwise.
+            - output is stdout stripped, or error message if an exception occurs.
+
+        Note:
+            - String commands are executed with shell=True (legacy behavior).
+            - List commands are executed without shell (more secure).
+            - TimeoutExpired exceptions are logged separately from other exceptions.
+        """
+        if isinstance(cmd, str):
+            # Backward compatibility: shell=True for string commands
+            self.log.warning(
+                f"_run_cmd() with string is deprecated; use a list instead. "
+                f"Command: {cmd}"
+            )
+            try:
+                r = subprocess.run(
+                    cmd, shell=True, capture_output=True, text=True, timeout=timeout
+                )
+                return r.returncode == 0, r.stdout.strip()
+            except subprocess.TimeoutExpired:
+                self.log.error(f"Command timed out after {timeout}s: {cmd}")
+                return False, f"Timeout after {timeout}s"
+            except Exception as e:
+                self.log.error(f"Command failed: {cmd} — {e}")
+                return False, str(e)
+        else:
+            # Preferred: list command without shell
+            try:
+                r = subprocess.run(
+                    cmd, capture_output=True, text=True, timeout=timeout
+                )
+                return r.returncode == 0, r.stdout.strip()
+            except subprocess.TimeoutExpired:
+                cmd_str = " ".join(cmd) if isinstance(cmd, list) else str(cmd)
+                self.log.error(f"Command timed out after {timeout}s: {cmd_str}")
+                return False, f"Timeout after {timeout}s"
+            except Exception as e:
+                cmd_str = " ".join(cmd) if isinstance(cmd, list) else str(cmd)
+                self.log.error(f"Command failed: {cmd_str} — {e}")
+                return False, str(e)
 
     def _write_status(self):
         """Write agent status to JSON file."""

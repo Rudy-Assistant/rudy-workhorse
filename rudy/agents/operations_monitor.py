@@ -33,13 +33,6 @@ class OperationsMonitor(AgentBase):
 
         self.summarize(f"Maintenance complete: cleaned {cleaned} items")
 
-    def _run_cmd(self, cmd, timeout=30):
-        try:
-            r = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=timeout)
-            return r.returncode == 0, r.stdout.strip()
-        except Exception:
-            return False, ""
-
     def _clean_temp_files(self):
         """Remove temp files from various locations."""
         self.log.info("Cleaning temp files...")

@@ -66,13 +66,6 @@ class SystemMaster(AgentBase):
             summary_parts.append(f"CPU {psutil.cpu_percent()}%, RAM {psutil.virtual_memory().percent}%")
         self.summarize("Health check: " + " | ".join(summary_parts))
 
-    def _run_cmd(self, cmd, timeout=15):
-        try:
-            r = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=timeout)
-            return r.returncode == 0, r.stdout.strip()
-        except Exception as e:
-            return False, str(e)
-
     def _check_services(self):
         self.log.info("Checking Windows services...")
         for svc in self.SERVICES:
