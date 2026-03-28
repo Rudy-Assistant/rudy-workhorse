@@ -60,6 +60,8 @@ QUARANTINE_DIR = LOGS_DIR / "usb-quarantine"
 DATA_DIR = DESKTOP / "rudy-data"
 WHITELIST_FILE = DATA_DIR / "usb-whitelist.json"
 QUARANTINE_STATE = QUARANTINE_DIR / "quarantine-state.json"
+KILL_SWITCH_FILE = DATA_DIR / "SECURITY-DISABLED"
+DEPLOYMENT_PHASE = 1  # 1=log-only, 2=prompt, 3=auto-block+safeguards, 4=full autonomous
 
 
 # ── Risk classification by USB device class ───────────────────
@@ -484,6 +486,82 @@ def _assess_threat(fp: DeviceFingerprint):
     fp.risk_reasons = reasons
 
 
+# ── Fortress Paradox Safeguards ────────────────────────────────
+
+def _is_kill_switch_active() -> bool:
+    """Check if the emergency kill switch file exists."""
+    return KILL_SWITCH_FILE.exists()
+
+
+def _system_uptime_minutes() -> float:
+    """Get system uptime in minutes."""
+    try:
+        out, _, rc = _run_ps("(Get-CimInstance Win32_OperatingSystem).LastBootUpTime", timeout=10)
+        if rc == 0 and out:
+            from datetime import datetime
+            boot_time = datetime.fromisoformat(out.strip().replace('/', '-'))
+            return (datetime.now() - boot_time).total_seconds() / 60
+    except Exception:
+        pass
+    # Fallback: assume been up long enough (safe default)
+    return 999
+
+
+def _is_hid_device(device_class: str, device_classes: list = None) -> bool:
+    """Check if a device is a Human Interface Device."""
+    hid_classes = {'HIDClass', 'Keyboard', 'Mouse'}
+    if device_class in hid_classes:
+        return True
+    if device_classes and any(c in hid_classes for c in device_classes):
+        return True
+    return False
+
+
+def _has_whitelisted_hid_connected(whitelist: dict) -> bool:
+    """Check if at least one whitelisted HID device is currently connected."""
+    hid_classes = {'HIDClass', 'Keyboard', 'Mouse'}
+    for key, info in whitelist.get("devices", {}).items():
+        if info.get("class") in hid_classes or info.get("device_class") in hid_classes:
+            return True
+    return False
+
+
+def _should_block_device(fp, whitelist: dict) -> tuple:
+    """Determine if a device should be blocked, with all Fortress Paradox safeguards.
+
+    Returns (should_block: bool, reason: str)
+    """
+    # Safeguard 1: Kill switch
+    if _is_kill_switch_active():
+        return False, "KILL_SWITCH: Security disabled via kill switch file"
+
+    # Safeguard 5: Deployment phase
+    if DEPLOYMENT_PHASE <= 1:
+        return False, f"PHASE_{DEPLOYMENT_PHASE}: Log-only mode — no blocking"
+
+    if DEPLOYMENT_PHASE == 2:
+        return False, "PHASE_2: Prompt mode — alert sent, no auto-block"
+
+    # Safeguard 2: Boot grace period for HID
+    if _is_hid_device(fp.device_class, fp.device_classes):
+        uptime = _system_uptime_minutes()
+        if uptime < 10:
+            return False, f"BOOT_GRACE: System uptime {uptime:.0f}min < 10min — HID allowed"
+
+        # Safeguard 3: Never block HID without whitelisted HID present
+        if not _has_whitelisted_hid_connected(whitelist):
+            return False, "FORTRESS_PARADOX: No whitelisted HID devices — allowing all HID"
+
+    # Safeguard 4: Never block remote access
+    remote_keywords = ['tailscale', 'rustdesk', 'rdp', 'ssh', 'remote']
+    device_desc = f"{fp.friendly_name} {fp.description} {fp.driver} {fp.manufacturer}".lower()
+    if any(kw in device_desc for kw in remote_keywords):
+        return False, f"REMOTE_SACRED: Device appears related to remote access"
+
+    # Phase 3+ with safeguards passed: allow blocking
+    return True, "All safeguards passed — blocking authorized"
+
+
 # ── Core: Quarantine Protocol ─────────────────────────────────
 
 class USBQuarantine:
@@ -565,12 +643,20 @@ class USBQuarantine:
                 }
                 report["threats"].append(threat)
 
-                # Take action
+                # Take action (with Fortress Paradox safeguards)
                 if fp.recommended_action == "block_and_alert":
-                    blocked = self._disable_device(instance_id)
-                    if blocked:
+                    should_block, safeguard_reason = _should_block_device(fp, self.whitelist)
+                    if should_block:
+                        blocked = self._disable_device(instance_id)
+                        if blocked:
+                            report["actions_taken"].append(
+                                f"BLOCKED: {fp.friendly_name or device_key} (score={fp.threat_score})"
+                            )
+                    else:
+                        blocked = False
                         report["actions_taken"].append(
-                            f"BLOCKED: {fp.friendly_name or device_key} (score={fp.threat_score})"
+                            f"SAFEGUARD: {safeguard_reason} — {fp.friendly_name or device_key} "
+                            f"(score={fp.threat_score}, would have blocked)"
                         )
                     self._send_alert(fp, blocked)
                     report["actions_taken"].append(
