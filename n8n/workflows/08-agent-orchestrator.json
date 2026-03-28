@@ -1,0 +1,169 @@
+{
+  "name": "Rudy Agent Orchestrator - Run Python Agents via n8n",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 */6 * * *"
+            }
+          ]
+        }
+      },
+      "id": "agent-cron",
+      "name": "Every 6 Hours",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [250, 400]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "run-agent",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook - Run Agent",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 600],
+      "webhookId": "run-agent"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Determine which agent to run\n// From cron: run ALL agents\n// From webhook: run the requested agent\n\nconst item = $input.first();\nlet agentName = 'ALL';\nlet mode = 'full';\n\nif (item.json.body) {\n  // Webhook trigger\n  agentName = item.json.body.agent || 'health';\n  mode = item.json.body.mode || 'full';\n} else {\n  // Cron trigger - run all agents\n  agentName = 'ALL';\n  mode = 'full';\n}\n\nreturn [{ json: { agentName, mode } }];"
+      },
+      "id": "determine-agent",
+      "name": "Determine Agent",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 500]
+    },
+    {
+      "parameters": {
+        "command": "=powershell.exe -NoProfile -Command \"cd $env:USERPROFILE\\Desktop\\rudy-workhorse; python -m rudy.agents.runner {{ $json.agentName }} --mode {{ $json.mode }} 2>&1 | Out-String\""
+      },
+      "id": "run-agent",
+      "name": "Run Python Agent",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [720, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "const output = $input.first().json.stdout || '';\nconst exitCode = $input.first().json.exitCode;\n\n// Try to parse agent aggregate status\nlet agentStatus = null;\ntry {\n  const statusFile = process.env.USERPROFILE + '\\\\Desktop\\\\rudy-logs\\\\agent-aggregate-status.json';\n  const fs = require('fs');\n  if (fs.existsSync(statusFile)) {\n    agentStatus = JSON.parse(fs.readFileSync(statusFile, 'utf8'));\n  }\n} catch (e) {\n  // Status file not available from n8n context\n}\n\nconst result = {\n  timestamp: new Date().toISOString(),\n  exitCode: exitCode,\n  output: output.substring(0, 3000),\n  agentStatus: agentStatus,\n  hasAlerts: output.includes('ALERT') || output.includes('alerts') || exitCode !== 0\n};\n\nreturn [{ json: result }];"
+      },
+      "id": "parse-results",
+      "name": "Parse Agent Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [940, 500]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-alerts",
+              "leftValue": "={{ $json.hasAlerts }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-alerts",
+      "name": "Has Alerts?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1160, 400]
+    },
+    {
+      "parameters": {
+        "sendTo": "ccimino2@gmail.com",
+        "subject": "=[Rudy] Agent Alert",
+        "message": "=One or more agents reported issues during their scheduled run.\n\nTimestamp: {{ $json.timestamp }}\nExit code: {{ $json.exitCode }}\n\nOutput (truncated):\n{{ $json.output }}",
+        "options": {}
+      },
+      "id": "alert-email",
+      "name": "Alert Chris",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1380, 300],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "",
+          "name": "Rudy Gmail OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "webhook-response",
+      "name": "Webhook Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1380, 600]
+    }
+  ],
+  "connections": {
+    "Every 6 Hours": {
+      "main": [
+        [{ "node": "Determine Agent", "type": "main", "index": 0 }]
+      ]
+    },
+    "Webhook - Run Agent": {
+      "main": [
+        [{ "node": "Determine Agent", "type": "main", "index": 0 }]
+      ]
+    },
+    "Determine Agent": {
+      "main": [
+        [{ "node": "Run Python Agent", "type": "main", "index": 0 }]
+      ]
+    },
+    "Run Python Agent": {
+      "main": [
+        [{ "node": "Parse Agent Results", "type": "main", "index": 0 }]
+      ]
+    },
+    "Parse Agent Results": {
+      "main": [
+        [
+          { "node": "Has Alerts?", "type": "main", "index": 0 },
+          { "node": "Webhook Response", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Has Alerts?": {
+      "main": [
+        [{ "node": "Alert Chris", "type": "main", "index": 0 }],
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    { "name": "rudy-core" },
+    { "name": "phase-1" },
+    { "name": "bridge" }
+  ]
+}
