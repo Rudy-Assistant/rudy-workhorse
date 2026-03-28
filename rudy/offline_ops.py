@@ -41,7 +41,7 @@ STATE_FILE = OFFLINE_DIR / "offline-state.json"
 DECISION_LOG = OFFLINE_DIR / "decisions.json"
 
 
-def _load_json(path, default=None):
+def _load_json(path, default=None) -> dict:
     if Path(path).exists():
         try:
             with open(path, encoding="utf-8") as f:
@@ -51,7 +51,7 @@ def _load_json(path, default=None):
     return default if default is not None else {}
 
 
-def _save_json(path, data):
+def _save_json(path, data) -> None:
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, default=str)
@@ -75,6 +75,7 @@ class ConnectivityChecker:
 
     def check_dns(self) -> bool:
         """Quick DNS socket check."""
+        """Quick DNS socket check."""
         for host, port in self.DNS_TARGETS:
             try:
                 sock = socket.create_connection((host, port), timeout=3)
@@ -86,6 +87,7 @@ class ConnectivityChecker:
         return False
 
     def check_http(self) -> bool:
+        """HTTP connectivity check."""
         """HTTP connectivity check."""
         try:
             import requests
@@ -103,6 +105,7 @@ class ConnectivityChecker:
 
     def check_dns_resolution(self) -> bool:
         """Try to resolve a well-known domain."""
+        """Try to resolve a well-known domain."""
         try:
             socket.getaddrinfo("www.google.com", 443, socket.AF_INET, socket.SOCK_STREAM)
             return True
@@ -111,6 +114,7 @@ class ConnectivityChecker:
             return False
 
     def full_check(self) -> dict:
+        """Run all connectivity checks."""
         """Run all connectivity checks."""
         dns = self.check_dns()
         http = self.check_http() if dns else False
@@ -137,7 +141,8 @@ class ActionQueue:
         OFFLINE_DIR.mkdir(parents=True, exist_ok=True)
         self.queue = _load_json(QUEUE_FILE, {"actions": [], "replayed": []})
 
-    def add(self, action_type: str, payload: dict, priority: int = 5):
+    def add(self, action_type: str, payload: dict, priority: int = 5) -> None:
+        """Add an action to the queue."""
         """Add an action to the queue."""
         self.queue["actions"].append({
             "id": f"{action_type}_{int(time.time())}",
@@ -150,6 +155,7 @@ class ActionQueue:
         _save_json(QUEUE_FILE, self.queue)
 
     def drain(self) -> List[dict]:
+        """Execute all pending actions (called when back online)."""
         """Execute all pending actions (called when back online)."""
         results = []
         pending = [a for a in self.queue["actions"] if a["status"] == "pending"]
@@ -175,6 +181,7 @@ class ActionQueue:
         return results
 
     def _execute(self, action: dict) -> dict:
+        """Execute a single queued action."""
         """Execute a single queued action."""
         action_type = action["type"]
         payload = action["payload"]
@@ -217,6 +224,7 @@ class ActionQueue:
         return sum(1 for a in self.queue["actions"] if a["status"] == "pending")
 
     def get_summary(self) -> dict:
+        """Get summary of queue status."""
         return {
             "pending": self.pending_count,
             "total_queued": len(self.queue["actions"]),
@@ -231,7 +239,8 @@ class DecisionLogger:
         self.decisions = _load_json(DECISION_LOG, {"log": []})
 
     def log(self, context: str, decision: str, ai_reasoning: str = "",
-            action_taken: str = ""):
+            action_taken: str = "") -> None:
+        """Log a decision made during offline operation."""
         self.decisions["log"].append({
             "time": datetime.now().isoformat(),
             "context": context,
@@ -244,6 +253,7 @@ class DecisionLogger:
         _save_json(DECISION_LOG, self.decisions)
 
     def get_recent(self, n: int = 20) -> List[dict]:
+        """Get recent logged decisions."""
         return self.decisions["log"][-n:]
 
 
@@ -285,7 +295,8 @@ class OfflineController:
         })
         self._ai = None
 
-    def _get_ai(self):
+    def _get_ai(self) -> Optional[object]:
+        """Lazy-load the local AI."""
         """Lazy-load the local AI."""
         if self._ai is None:
             try:
@@ -296,6 +307,8 @@ class OfflineController:
         return self._ai
 
     def heartbeat(self) -> dict:
+        """Called periodically. Checks connectivity and manages mode transitions.
+        Returns current status."""
         """
         Called periodically. Checks connectivity and manages mode transitions.
         Returns current status.
@@ -331,7 +344,8 @@ class OfflineController:
             "connectivity": check,
         }
 
-    def _handle_outage_start(self):
+    def _handle_outage_start(self) -> None:
+        """Transition to offline mode."""
         """Transition to offline mode."""
         self.state["mode"] = "offline"
         self.state["offline_since"] = datetime.now().isoformat()
@@ -356,7 +370,8 @@ class OfflineController:
             ),
         }, priority=2)
 
-    def _handle_recovery(self):
+    def _handle_recovery(self) -> None:
+        """Transition back to online mode."""
         """Transition back to online mode."""
         outage_duration = self.state.get("current_outage_minutes", 0)
         self.state["mode"] = "online"
@@ -376,6 +391,7 @@ class OfflineController:
         self.queue.drain()
 
     def ai_decide(self, situation: str) -> dict:
+        """Use local AI to make a decision about a situation."""
         """Use local AI to make a decision about a situation."""
         ai = self._get_ai()
         if ai and ai.ensure_ready():
@@ -401,11 +417,13 @@ class OfflineController:
         )
         return decision
 
-    def queue_action(self, action_type: str, payload: dict, priority: int = 5):
+    def queue_action(self, action_type: str, payload: dict, priority: int = 5) -> None:
+        """Queue an action for when connectivity returns."""
         """Queue an action for when connectivity returns."""
         self.queue.add(action_type, payload, priority)
 
     def get_status(self) -> dict:
+        """Full offline controller status."""
         """Full offline controller status."""
         return {
             "mode": self.state["mode"],
@@ -422,10 +440,12 @@ class OfflineController:
 # Convenience function for other modules
 def is_online() -> bool:
     """Quick check: are we online?"""
+    """Quick check: are we online?"""
     return ConnectivityChecker().check_dns()
 
 
 def get_controller() -> OfflineController:
+    """Get the singleton offline controller."""
     """Get the singleton offline controller."""
     return OfflineController()
 

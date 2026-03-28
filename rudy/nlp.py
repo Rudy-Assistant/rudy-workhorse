@@ -33,7 +33,7 @@ class SentimentAnalyzer:
         self._vader = None
         self._textblob = None
 
-    def _get_vader(self):
+    def _get_vader(self) -> Optional[object]:
         if self._vader is None:
             try:
                 from nltk.sentiment.vader import SentimentIntensityAnalyzer
@@ -48,7 +48,7 @@ class SentimentAnalyzer:
                     log.debug(f"Error downloading VADER lexicon: {e}")
         return self._vader
 
-    def analyze(self, text: str) -> dict:
+    def analyze(self, text: str) -> Dict:
         """
         Analyze sentiment. Returns compound score (-1 to 1)
         and label (positive/negative/neutral).
@@ -94,7 +94,7 @@ class SentimentAnalyzer:
         except ImportError:
             return {"error": "No sentiment engine available (install nltk or textblob)"}
 
-    def analyze_batch(self, texts: List[str]) -> List[dict]:
+    def analyze_batch(self, texts: List[str]) -> List[Dict]:
         return [self.analyze(t) for t in texts]
 
 
@@ -104,7 +104,7 @@ class EntityExtractor:
     def __init__(self):
         self._nlp = None
 
-    def _get_nlp(self):
+    def _get_nlp(self) -> Optional[object]:
         if self._nlp is None:
             try:
                 import spacy
@@ -113,7 +113,7 @@ class EntityExtractor:
                 pass
         return self._nlp
 
-    def extract(self, text: str) -> dict:
+    def extract(self, text: str) -> Dict:
         """Extract entities: people, organizations, dates, money, locations."""
         nlp = self._get_nlp()
         if nlp:
@@ -138,7 +138,7 @@ class EntityExtractor:
         # Regex fallback for basic entities
         return self._regex_extract(text)
 
-    def _regex_extract(self, text: str) -> dict:
+    def _regex_extract(self, text: str) -> Dict:
         """Basic regex-based entity extraction."""
         entities = {}
 
@@ -196,7 +196,7 @@ class TextSummarizer:
             sentences = re.split(r'(?<=[.!?])\s+', text)
             return " ".join(sentences[:sentence_count])
 
-    def extract_keywords(self, text: str, top_n: int = 10) -> List[Tuple[str, int]]:
+    def extract_keywords(self, text: str, top_n: int = 10) -> List[Tuple]:
         """Extract key terms from text."""
         # Simple TF-based extraction
         words = re.findall(r'\b[a-zA-Z]{3,}\b', text.lower())
@@ -220,7 +220,7 @@ class TextSummarizer:
 class LanguageDetector:
     """Detect the language of text."""
 
-    def detect(self, text: str) -> dict:
+    def detect(self, text: str) -> Dict:
         """Detect language."""
         try:
             from textblob import TextBlob
@@ -252,7 +252,7 @@ class NLP:
         self.summarizer = TextSummarizer()
         self.language = LanguageDetector()
 
-    def analyze(self, text: str) -> dict:
+    def analyze(self, text: str) -> Dict:
         """Full NLP analysis of text."""
         return {
             "sentiment": self.sentiment.analyze(text),
@@ -266,10 +266,10 @@ class NLP:
     def summarize(self, text: str, sentences: int = 3) -> str:
         return self.summarizer.summarize(text, sentences)
 
-    def get_sentiment(self, text: str) -> dict:
+    def get_sentiment(self, text: str) -> Dict:
         return self.sentiment.analyze(text)
 
-    def get_entities(self, text: str) -> dict:
+    def get_entities(self, text: str) -> Dict:
         return self.entities.extract(text)
 
 

@@ -69,6 +69,7 @@ COLLECTIONS = {
 
 def _file_hash(filepath: Path) -> str:
     """Quick hash of file for change detection."""
+    """Quick hash of file for change detection."""
     h = hashlib.md5()
     h.update(str(filepath).encode())
     h.update(str(filepath.stat().st_mtime).encode())
@@ -77,6 +78,7 @@ def _file_hash(filepath: Path) -> str:
 
 
 def _chunk_text(text: str, chunk_size: int = 500, overlap: int = 50) -> List[str]:
+    """Split text into overlapping chunks for embedding."""
     """Split text into overlapping chunks for embedding."""
     if len(text) <= chunk_size:
         return [text] if text.strip() else []
@@ -102,6 +104,7 @@ def _chunk_text(text: str, chunk_size: int = 500, overlap: int = 50) -> List[str
 
 
 def _read_file(filepath: Path) -> str:
+    """Read a file's content for indexing."""
     """Read a file's content for indexing."""
     try:
         if filepath.suffix == ".json":
@@ -135,6 +138,7 @@ class KnowledgeBase:
         self._state = self._load_state()
 
     def _load_state(self) -> dict:
+        """Load index state from file."""
         if INDEX_STATE.exists():
             try:
                 with open(INDEX_STATE, encoding="utf-8") as f:
@@ -143,12 +147,12 @@ class KnowledgeBase:
                 log.debug(f"Error loading index state from {INDEX_STATE}: {e}")
         return {"indexed_files": {}, "last_full_index": None, "total_chunks": 0}
 
-    def _save_state(self):
+    def _save_state(self) -> None:
         INDEX_STATE.parent.mkdir(parents=True, exist_ok=True)
         with open(INDEX_STATE, "w", encoding="utf-8") as f:
             json.dump(self._state, f, indent=2, default=str)
 
-    def _get_chroma(self):
+    def _get_chroma(self) -> Optional[object]:
         """Lazy-load ChromaDB client."""
         if self._chroma is None:
             try:
@@ -159,7 +163,7 @@ class KnowledgeBase:
                 return None
         return self._chroma
 
-    def _get_embedder(self):
+    def _get_embedder(self) -> Optional[object]:
         """Lazy-load sentence transformer."""
         if self._embedder is None:
             try:
@@ -173,6 +177,7 @@ class KnowledgeBase:
 
     def _embed(self, texts: List[str]) -> List[List[float]]:
         """Generate embeddings for a list of texts."""
+        """Generate embeddings for a list of texts."""
         embedder = self._get_embedder()
         if embedder is None:
             return []
@@ -180,6 +185,7 @@ class KnowledgeBase:
         return embeddings.tolist()
 
     def index_collection(self, collection_name: str) -> dict:
+        """Index or re-index a specific collection."""
         """Index or re-index a specific collection."""
         chroma = self._get_chroma()
         if chroma is None:
@@ -258,6 +264,7 @@ class KnowledgeBase:
         }
 
     def _collection_exists(self, name: str) -> bool:
+        """Check if a collection exists."""
         try:
             self._get_chroma().get_collection(name)
             return True
@@ -267,6 +274,7 @@ class KnowledgeBase:
 
     def index_all(self) -> dict:
         """Index all collections."""
+        """Index all collections."""
         results = {}
         for name in COLLECTIONS:
             results[name] = self.index_collection(name)
@@ -274,8 +282,12 @@ class KnowledgeBase:
         self._save_state()
         return results
 
-    def search(self, query: str, collection: str = None,
+    def search(self, query: str, collection: Optional[str] = None,
                n_results: int = 5) -> List[dict]:
+        """Semantic search across the knowledge base.
+
+        Returns list of results with score, text, and source.
+        """
         """
         Semantic search across the knowledge base.
 
@@ -323,7 +335,8 @@ class KnowledgeBase:
         return results[:n_results]
 
     def add_text(self, text: str, collection: str = "documents",
-                 source: str = "manual", metadata: dict = None):
+                 source: str = "manual", metadata: Optional[dict] = None) -> None:
+        """Manually add text to the knowledge base."""
         """Manually add text to the knowledge base."""
         chroma = self._get_chroma()
         if chroma is None:
@@ -347,6 +360,7 @@ class KnowledgeBase:
         col.upsert(ids=ids, embeddings=embeddings, documents=chunks, metadatas=metadatas)
 
     def get_stats(self) -> dict:
+        """Get knowledge base statistics."""
         """Get knowledge base statistics."""
         chroma = self._get_chroma()
         collections_info = {}

@@ -80,7 +80,7 @@ class IntruderProfiler:
         self.cleared = self._load_json(CLEARED_DEVICES, {})
         self.timeline = self._load_json(THREAT_TIMELINE, [])
 
-    def _load_json(self, path, default):
+    def _load_json(self, path, default) -> dict:
         if path.exists():
             try:
                 with open(path, encoding="utf-8") as f:
@@ -90,11 +90,18 @@ class IntruderProfiler:
                 pass
         return default
 
-    def _save_json(self, path, data):
+    def _save_json(self, path, data) -> None:
         with open(path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, default=str)
 
     def process_scan(self, current_devices: dict, known_devices: dict) -> dict:
+        """Process a presence scan result. Identifies unknowns, profiles them,
+        updates dossiers, and returns threat assessment.
+
+        Args:
+            current_devices: {mac: {ip, last_seen, ...}} from presence scan
+            known_devices: {mac: {name, owner, ...}} registered devices
+        """
         """
         Process a presence scan result. Identifies unknowns, profiles them,
         updates dossiers, and returns threat assessment.
@@ -239,6 +246,7 @@ class IntruderProfiler:
 
     def _new_dossier(self, mac: str, ip: str) -> dict:
         """Create a new intruder dossier."""
+        """Create a new intruder dossier."""
         return {
             "mac": mac,
             "first_seen": datetime.now().isoformat(),
@@ -258,6 +266,9 @@ class IntruderProfiler:
         }
 
     def _deep_profile(self, dossier: dict, ip: str) -> dict:
+        """Deep-profile a new device using passive network observation.
+        All techniques are standard network administration.
+        """
         """
         Deep-profile a new device using passive network observation.
         All techniques are standard network administration.
@@ -353,6 +364,7 @@ class IntruderProfiler:
 
     def _compute_threat_score(self, dossier: dict, is_night: bool) -> int:
         """Compute composite threat score from multiple signals."""
+        """Compute composite threat score from multiple signals."""
         score = 0
         factors = []
         profile = dossier.get("profile", {})
@@ -406,13 +418,17 @@ class IntruderProfiler:
         dossier["threat_factors"] = factors
         return max(score, 0)
 
-    def _write_dossier_file(self, mac: str, dossier: dict):
+    def _write_dossier_file(self, mac: str, dossier: dict) -> None:
+        """Write individual dossier file for the intruder."""
         """Write individual dossier file for the intruder."""
         safe_mac = mac.replace(":", "-")
         filepath = DOSSIER_DIR / f"dossier-{safe_mac}.json"
         self._save_json(filepath, dossier)
 
-    def clear_device(self, mac: str, reason: str, cleared_by: str = "Chris"):
+    def clear_device(self, mac: str, reason: str, cleared_by: str = "Chris") -> None:
+        """Clear a device — move it from unknown/hostile to approved.
+        Keeps the dossier for historical reference.
+        """
         """
         Clear a device — move it from unknown/hostile to approved.
         Keeps the dossier for historical reference.
@@ -435,6 +451,7 @@ class IntruderProfiler:
         print(f"Device {mac} cleared: {reason}")
 
     def get_threat_summary(self) -> str:
+        """Generate a human-readable threat summary."""
         """Generate a human-readable threat summary."""
         lines = ["=" * 55]
         lines.append("  COUNTER-INTELLIGENCE THREAT BOARD")
@@ -476,7 +493,8 @@ class IntruderProfiler:
         return "\n".join(lines)
 
 
-def run_intruder_scan():
+def run_intruder_scan() -> dict:
+    """Run intruder profiling against current presence data."""
     """Run intruder profiling against current presence data."""
     from rudy.presence import PresenceMonitor
 

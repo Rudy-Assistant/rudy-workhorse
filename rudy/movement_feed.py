@@ -30,6 +30,7 @@ import logging
 from collections import defaultdict
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Optional
 
 log = logging.getLogger(__name__)
 
@@ -54,7 +55,7 @@ MOVEMENT_FEED = LOGS_DIR / "movement-feed.json"
 MOVEMENT_SUMMARY = LOGS_DIR / "movement-summary.json"
 
 
-def _load_json(path, default=None):
+def _load_json(path, default=None) -> dict:
     if path.exists():
         try:
             with open(path, encoding="utf-8") as f:
@@ -64,7 +65,7 @@ def _load_json(path, default=None):
     return default if default is not None else {}
 
 
-def _save_json(path, data):
+def _save_json(path, data) -> None:
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, default=str)
 
@@ -188,6 +189,7 @@ class MovementFeed:
 
     def _generate_snapshot(self) -> dict:
         """Current state: who's home, device counts, etc."""
+        """Current state: who's home, device counts, etc."""
         now = datetime.now()
         devices_present = len(self.current)
         known_present = sum(1 for m in self.current if m in self.devices)
@@ -247,6 +249,7 @@ class MovementFeed:
 
     def _get_device_name(self, mac: str) -> str:
         """Get human-readable device name."""
+        """Get human-readable device name."""
         if mac in self.devices:
             return self.devices[mac].get("name", mac)
         # Check intruder dossiers
@@ -255,7 +258,8 @@ class MovementFeed:
             return intruder_devices[mac].get("label", mac)
         return f"Device [{mac[-8:]}]"
 
-    def _get_cluster_label(self, mac: str) -> str:
+    def _get_cluster_label(self, mac: str) -> Optional[str]:
+        """Get the person-cluster label for a device."""
         """Get the person-cluster label for a device."""
         clusters = self.analytics.get("clusters", [])
         for cluster in clusters:
@@ -274,7 +278,8 @@ class MovementFeed:
         return None
 
     def _format_presence_event(self, event: dict, device_name: str,
-                                 cluster_label: str) -> str:
+                                 cluster_label: Optional[str]) -> str:
+        """Format a presence event for human display."""
         """Format a presence event for human display."""
         etype = event.get("type", "?")
         ip = event.get("ip", "?")
@@ -295,6 +300,7 @@ class MovementFeed:
 
     def _format_threat_event(self, event: dict) -> str:
         """Format a threat timeline event."""
+        """Format a threat timeline event."""
         etype = event.get("event", "?")
         mac = event.get("mac", "?")
         if etype == "new_intruder":
@@ -306,6 +312,7 @@ class MovementFeed:
         return f"Threat event: {etype} [{mac[-8:]}]"
 
     def _get_household_summary(self) -> dict:
+        """Brief household context for the feed header."""
         """Brief household context for the feed header."""
         ctx = self.household.get("context", {})
         return {
@@ -319,6 +326,8 @@ class MovementFeed:
         }
 
     def get_activity_heatmap(self) -> dict:
+        """Generate an activity heatmap: per-device, per-hour presence counts.
+        Useful for visualizing daily patterns."""
         """
         Generate an activity heatmap: per-device, per-hour presence counts.
         Useful for visualizing daily patterns.
@@ -357,7 +366,8 @@ class MovementFeed:
 
         return heatmap
 
-    def print_feed(self, hours: int = 24):
+    def print_feed(self, hours: int = 24) -> None:
+        """Print a human-readable movement feed."""
         """Print a human-readable movement feed."""
         feed = self.generate_feed(hours)
 
@@ -408,7 +418,8 @@ class MovementFeed:
         print("\n" + "=" * 60)
 
 
-def generate_movement_feed(hours: int = 24):
+def generate_movement_feed(hours: int = 24) -> dict:
+    """Generate and print the movement feed."""
     """Generate and print the movement feed."""
     mf = MovementFeed()
     mf.print_feed(hours)

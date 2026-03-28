@@ -52,13 +52,13 @@ for _d in [DATA_DIR, HISTORY_DIR]:
 
 # ── Helpers ───────────────────────────────────────────────────
 
-def _save_json(path: Path, data):
+def _save_json(path: Path, data) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, default=str)
 
 
-def _load_json(path: Path, default=None):
+def _load_json(path: Path, default=None) -> dict:
     if path.exists():
         try:
             return json.loads(path.read_text(encoding="utf-8"))
@@ -126,6 +126,14 @@ class ICloudAuth:
           2. TOTP if configured
           3. Prompt and wait
         """
+        """Handle 2FA challenge.
+
+        First attempt uses stored session cookies (no re-auth needed if recent).
+        If that fails, we need a 2FA code — which means either:
+          1. Chris provides it via email/command
+          2. TOTP if configured
+          3. Prompt and wait
+        """
         if self._api.is_trusted_session:
             return True
 
@@ -158,6 +166,7 @@ class ICloudAuth:
 
     def _handle_2sa(self) -> bool:
         """Handle 2-Step Authentication (older method)."""
+        """Handle 2-Step Authentication (older method)."""
         # Similar to 2FA but uses trusted devices list
         return self._handle_2fa()
 
@@ -181,7 +190,7 @@ class ICloudAuth:
             return False
 
     @property
-    def api(self):
+    def api(self) -> Optional[object]:
         return self._api
 
 
@@ -243,6 +252,7 @@ class FindMyFriends:
 
     def _format_name(self, friend: dict) -> str:
         """Extract a readable name from the friend dict."""
+        """Extract a readable name from the friend dict."""
         first = friend.get("firstName", "")
         last = friend.get("lastName", "")
         if first or last:
@@ -250,6 +260,11 @@ class FindMyFriends:
         return friend.get("id", "Unknown")
 
     def poll_and_analyze(self) -> Dict:
+        """Fetch locations, compare to history, detect anomalies.
+
+        This is the main method called by the scheduled task.
+        Returns a report with locations and any alerts.
+        """
         """Fetch locations, compare to history, detect anomalies.
 
         This is the main method called by the scheduled task.
@@ -329,6 +344,7 @@ class FindMyFriends:
 
     def _check_geofences(self, name: str, lat: float, lng: float) -> List[Dict]:
         """Check if person is inside/outside defined geofences."""
+        """Check if person is inside/outside defined geofences."""
         alerts = []
         geofences = _load_json(GEOFENCES_FILE, {"fences": []})
 
@@ -383,6 +399,7 @@ class FindMyFriends:
 
     def _check_stale(self, name: str, timestamp) -> Optional[Dict]:
         """Alert if location data is too old."""
+        """Alert if location data is too old."""
         if not timestamp:
             return None
 
@@ -410,6 +427,7 @@ class FindMyFriends:
         return None
 
     def _check_speed_anomaly(self, name: str, lat: float, lng: float, timestamp) -> Optional[Dict]:
+        """Detect impossibly fast travel between location updates."""
         """Detect impossibly fast travel between location updates."""
         state_key = f"last_loc_{name}"
         prev = self.state.get(state_key)
@@ -446,6 +464,12 @@ class FindMyFriends:
         return None
 
     def _check_routine(self, name: str, lat: float, lng: float) -> Optional[Dict]:
+        """Detect deviation from established routine patterns.
+
+        This learns over time by building a model of where a person typically
+        is at each hour of the week. After sufficient data (7+ days),
+        it can flag unusual locations.
+        """
         """Detect deviation from established routine patterns.
 
         This learns over time by building a model of where a person typically
@@ -500,7 +524,8 @@ class FindMyFriends:
             }
         return None
 
-    def _record_location(self, name: str, loc: Dict):
+    def _record_location(self, name: str, loc: Dict) -> None:
+        """Append location to history file for pattern learning."""
         """Append location to history file for pattern learning."""
         history_file = HISTORY_DIR / f"{name.replace(' ', '_').lower()}_history.json"
         history = _load_json(history_file, {"locations": []})
@@ -519,7 +544,8 @@ class FindMyFriends:
 
         _save_json(history_file, history)
 
-    def _send_alerts(self, alerts: List[Dict]):
+    def _send_alerts(self, alerts: List[Dict]) -> None:
+        """Send alert email for significant location events."""
         """Send alert email for significant location events."""
         # Only send for WARNING and ALERT severity
         serious = [a for a in alerts if a.get("severity") in ("WARNING", "ALERT")]
@@ -550,7 +576,8 @@ class FindMyFriends:
     @staticmethod
     def add_geofence(name: str, lat: float, lng: float,
                      radius_km: float = 0.5, fence_type: str = "safe_zone",
-                     applies_to: List[str] = None) -> Dict:
+                     applies_to: Optional[List[str]] = None) -> Dict:
+        """Add a geofence zone."""
         """Add a geofence zone."""
         geofences = _load_json(GEOFENCES_FILE, {"fences": []})
         fence = {
@@ -569,6 +596,7 @@ class FindMyFriends:
     @staticmethod
     def remove_geofence(name: str) -> bool:
         """Remove a geofence by name."""
+        """Remove a geofence by name."""
         geofences = _load_json(GEOFENCES_FILE, {"fences": []})
         before = len(geofences["fences"])
         geofences["fences"] = [f for f in geofences["fences"] if f["name"] != name]
@@ -580,12 +608,14 @@ class FindMyFriends:
     @staticmethod
     def list_geofences() -> List[Dict]:
         """List all geofences."""
+        """List all geofences."""
         return _load_json(GEOFENCES_FILE, {"fences": []}).get("fences", [])
 
 
 # ── Convenience Functions ────────────────────────────────────
 
 def setup(apple_id: str, password: str) -> bool:
+    """Initial setup: store credentials and attempt authentication."""
     """Initial setup: store credentials and attempt authentication."""
     config = _load_json(CONFIG_FILE, {})
     config["apple_id"] = apple_id
@@ -615,6 +645,7 @@ def setup(apple_id: str, password: str) -> bool:
 
 
 def poll() -> Dict:
+    """Run a polling cycle: authenticate, fetch locations, analyze."""
     """Run a polling cycle: authenticate, fetch locations, analyze."""
     config = _load_json(CONFIG_FILE, {})
     apple_id = config.get("apple_id")
@@ -646,6 +677,7 @@ def poll() -> Dict:
 
 def verify_2fa(code: str) -> bool:
     """Submit a 2FA code to complete authentication."""
+    """Submit a 2FA code to complete authentication."""
     config = _load_json(CONFIG_FILE, {})
     apple_id = config.get("apple_id")
     password = None
@@ -668,7 +700,8 @@ def verify_2fa(code: str) -> bool:
 
 # ── Pre-configured Geofences ────────────────────────────────
 
-def setup_default_geofences():
+def setup_default_geofences() -> None:
+    """Set up the family's standard geofences."""
     """Set up the family's standard geofences."""
     # Kansas Ave farm (family home)
     FindMyFriends.add_geofence(
