@@ -591,7 +591,7 @@ class PresenceAnalytics:
             try:
                 with open(path) as f:
                     return json.load(f)
-            except:
+            except Exception:
                 pass
         return default
 
@@ -746,7 +746,7 @@ class PresenceAnalytics:
 
             try:
                 dt = datetime.fromisoformat(t)
-            except:
+            except Exception:
                 continue
 
             window = dt.strftime("%Y-%m-%dT%H:%M")[:15] + "0"  # 10-min buckets

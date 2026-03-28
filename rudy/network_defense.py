@@ -65,7 +65,7 @@ def _detect_current_gateway():
                     gw = match.group(1)
                     parts = gw.split(".")
                     return gw, ".".join(parts[:3])
-    except:
+    except Exception:
         pass
     return "192.168.7.1", "192.168.7"
 
@@ -91,7 +91,7 @@ class NetworkDefense:
             try:
                 with open(path) as f:
                     return json.load(f)
-            except:
+            except Exception:
                 pass
         return default
 
@@ -244,7 +244,7 @@ class NetworkDefense:
                                 ip = match.group(1)
                                 if ip != dns_server:  # Skip the DNS server's own IP
                                     trusted_ips.add(ip)
-                    except:
+                    except Exception:
                         pass
 
                 # Compare — we don't need exact match (CDNs vary),
@@ -338,7 +338,7 @@ class NetworkDefense:
                     if conn.pid:
                         try:
                             proc_name = psutil.Process(conn.pid).name()
-                        except:
+                        except Exception:
                             pass
 
                     severity = "info"
@@ -511,7 +511,7 @@ class NetworkDefense:
                     "hash": state_hash,
                     "entries": len([l for l in result.stdout.splitlines() if "REG_" in l]),
                 }
-            except:
+            except Exception:
                 current_state[name] = {"hash": "error", "entries": 0}
 
         # Compare to baseline
@@ -573,7 +573,7 @@ class NetworkDefense:
                         )
                         if result.stdout.strip():
                             proc_name = result.stdout.strip().split(",")[0].strip('"')
-                    except:
+                    except Exception:
                         pass
 
                     severity = "warning" if port > 1024 else "alert"

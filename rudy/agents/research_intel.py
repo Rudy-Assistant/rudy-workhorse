@@ -48,7 +48,7 @@ class ResearchIntel(AgentBase):
         try:
             r = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=timeout)
             return r.returncode == 0, r.stdout.strip()
-        except:
+        except Exception:
             return False, ""
 
     def _generate_digest(self):
@@ -90,7 +90,7 @@ class ResearchIntel(AgentBase):
                     for p in packages
                 ]
                 self.log.info(f"  {len(packages)} Python packages installed")
-            except:
+            except Exception:
                 pass
 
         # Check scheduled tasks
@@ -118,7 +118,7 @@ class ResearchIntel(AgentBase):
         if ok:
             try:
                 packages = {p["name"].lower() for p in json.loads(out)}
-            except:
+            except Exception:
                 packages = set()
 
             desired = {
@@ -205,7 +205,7 @@ class ResearchIntel(AgentBase):
         if ok:
             try:
                 installed = {p["name"].lower(): p["version"] for p in json.loads(out)}
-            except:
+            except Exception:
                 pass
 
         for pkg, info in SUPERSEDED.items():

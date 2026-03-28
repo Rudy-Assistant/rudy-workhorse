@@ -37,7 +37,7 @@ class OperationsMonitor(AgentBase):
         try:
             r = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=timeout)
             return r.returncode == 0, r.stdout.strip()
-        except:
+        except Exception:
             return False, ""
 
     def _clean_temp_files(self):
@@ -62,7 +62,7 @@ class OperationsMonitor(AgentBase):
                             else:
                                 os.unlink(path)
                             cleaned += 1
-                    except:
+                    except Exception:
                         pass
 
         if cleaned:
@@ -83,7 +83,7 @@ class OperationsMonitor(AgentBase):
                 try:
                     shutil.move(str(f), str(archive_dir / f.name))
                     archived += 1
-                except:
+                except Exception:
                     pass
 
         # Also clean result.json files
@@ -93,7 +93,7 @@ class OperationsMonitor(AgentBase):
                 try:
                     shutil.move(str(f), str(archive_dir / f.name))
                     archived += 1
-                except:
+                except Exception:
                     pass
 
         # Clean old archive files (> 7 days)
@@ -104,7 +104,7 @@ class OperationsMonitor(AgentBase):
                 if age > 86400 * 7:
                     f.unlink()
                     old_cleaned += 1
-            except:
+            except Exception:
                 pass
 
         if archived or old_cleaned:
@@ -120,7 +120,7 @@ class OperationsMonitor(AgentBase):
                     try:
                         shutil.rmtree(os.path.join(root, d), ignore_errors=True)
                         cleaned += 1
-                    except:
+                    except Exception:
                         pass
         if cleaned:
             self.action(f"Removed {cleaned} __pycache__ directories")

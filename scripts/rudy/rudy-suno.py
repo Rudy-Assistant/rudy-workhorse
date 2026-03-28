@@ -183,7 +183,7 @@ class SunoClient:
                     "prompt": data.get("prompt"),
                     "instrumental": data.get("instrumental", False)
                 })
-            except:
+            except Exception:
                 pass
         return songs
 

@@ -141,7 +141,7 @@ class SecurityAgent(AgentBase):
             try:
                 with open(self.BASELINE_FILE) as f:
                     return json.load(f)
-            except:
+            except Exception:
                 pass
         return {
             "first_run": datetime.now().isoformat(),
@@ -172,7 +172,7 @@ class SecurityAgent(AgentBase):
         try:
             with open(self.THREAT_LOG, "a", encoding="utf-8") as f:
                 f.write(f"{event['time']} [{severity.upper()}] [{category}] {detail}\n")
-        except:
+        except Exception:
             pass
 
         if severity in ("alert", "critical"):
@@ -189,7 +189,7 @@ class SecurityAgent(AgentBase):
             try:
                 with open(self.ALERTS_FILE) as f:
                     all_events = json.load(f)
-            except:
+            except Exception:
                 pass
         all_events.extend(self.security_events)
         all_events = all_events[-500:]  # Keep last 500 events
@@ -226,7 +226,7 @@ class SecurityAgent(AgentBase):
                         try:
                             proc = psutil.Process(conn.pid)
                             proc_name = proc.name()
-                        except:
+                        except Exception:
                             pass
 
                     # Not necessarily bad, but worth logging on first sight
@@ -263,7 +263,7 @@ class SecurityAgent(AgentBase):
                     try:
                         proc = psutil.Process(conn.pid)
                         proc_name = proc.name()
-                    except:
+                    except Exception:
                         pass
                 listeners.append({"port": port, "process": proc_name, "pid": conn.pid})
 
@@ -361,7 +361,7 @@ class SecurityAgent(AgentBase):
                 if count > 0:
                     self._security_event("warning", "failed_logins",
                         f"{count} failed login attempts in recent event log")
-        except:
+        except Exception:
             pass
 
         # Check for new user accounts created (Event ID 4720)
@@ -373,7 +373,7 @@ class SecurityAgent(AgentBase):
             if r.stdout.strip() and "TimeCreated" in r.stdout:
                 self._security_event("alert", "new_account",
                     "New user account was created!")
-        except:
+        except Exception:
             pass
 
         # Check for service installations (Event ID 7045)
@@ -387,7 +387,7 @@ class SecurityAgent(AgentBase):
                 if "TimeCreated" in r.stdout:
                     self._security_event("info", "service_installed",
                         "Recent service installation detected (check details)")
-        except:
+        except Exception:
             pass
 
     # === WIFI PRESENCE ===
@@ -495,7 +495,7 @@ class SecurityAgent(AgentBase):
                 if (datetime.now() - last).total_seconds() < 86400:
                     self.log.info("  Breach check: skipping (checked within 24h)")
                     return
-            except:
+            except Exception:
                 pass
 
         try:

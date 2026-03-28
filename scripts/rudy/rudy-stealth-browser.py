@@ -62,7 +62,7 @@ def safe_click(page, sel, timeout=5000):
         page.click(sel, timeout=timeout)
         human_delay(500, 1500)
         return True
-    except:
+    except Exception:
         return False
 
 

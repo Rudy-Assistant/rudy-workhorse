@@ -82,7 +82,7 @@ class IntruderProfiler:
             try:
                 with open(path) as f:
                     return json.load(f)
-            except:
+            except Exception:
                 pass
         return default
 
@@ -196,7 +196,7 @@ class IntruderProfiler:
                     try:
                         last = datetime.fromisoformat(dossier["last_seen"])
                         duration = (now - last).total_seconds() / 60
-                    except:
+                    except Exception:
                         pass
                 dossier["currently_present"] = False
                 dossier["departures"] = dossier.get("departures", 0) + 1
@@ -288,7 +288,7 @@ class IntruderProfiler:
                 if "<00>" in line and "UNIQUE" in line:
                     hostname = line.split()[0].strip()
                     break
-        except:
+        except Exception:
             pass
 
         if not hostname:
@@ -299,7 +299,7 @@ class IntruderProfiler:
                 ).stdout
                 match = re.search(r'Name:\s+(\S+)', hostname)
                 hostname = match.group(1) if match else None
-            except:
+            except Exception:
                 pass
 
         profile["hostname"] = hostname
@@ -316,7 +316,7 @@ class IntruderProfiler:
                 if result == 0:
                     open_ports.append(port)
                 sock.close()
-            except:
+            except Exception:
                 pass
         profile["open_ports"] = open_ports
 
@@ -336,7 +336,7 @@ class IntruderProfiler:
                     profile["os_family"] = "Windows"
                 else:
                     profile["os_family"] = "Unknown"
-        except:
+        except Exception:
             pass
 
         dossier["profile"] = profile

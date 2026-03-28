@@ -79,5 +79,5 @@ def is_elevated() -> bool:
     try:
         result = subprocess.run("net session", shell=True, capture_output=True, text=True, timeout=5)
         return result.returncode == 0
-    except:
+    except Exception:
         return False

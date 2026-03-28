@@ -129,7 +129,7 @@ class Sentinel(AgentBase):
             try:
                 with open(self.STATE_FILE) as f:
                     return json.load(f)
-            except:
+            except Exception:
                 pass
         return {
             "run_count": 0,
@@ -449,7 +449,7 @@ class Sentinel(AgentBase):
             try:
                 with open(self.OBSERVATIONS_FILE) as f:
                     all_obs = json.load(f)
-            except:
+            except Exception:
                 pass
         all_obs.extend(self.observations)
         all_obs = all_obs[-100:]
@@ -491,7 +491,7 @@ class Sentinel(AgentBase):
                         self._observe("staleness",
                             f"{agent_name} hasn't run in {age_hours:.1f} hours",
                             actionable=True)
-                except:
+                except Exception:
                     pass
 
             prev[agent_name] = {"status": agent_status, "last_run": last_run}
@@ -520,7 +520,7 @@ class Sentinel(AgentBase):
                             f"{name} was modified since last check",
                             actionable=False)
                     prev_hashes[name] = current_hash
-                except:
+                except Exception:
                     pass
 
         state["file_hashes"] = prev_hashes
@@ -569,7 +569,7 @@ class Sentinel(AgentBase):
                 self._observe("active_alert",
                     f"Unresolved alert: {content}",
                     actionable=True)
-            except:
+            except Exception:
                 pass
 
     def _scan_work_queue(self, state):
@@ -584,7 +584,7 @@ class Sentinel(AgentBase):
                     self._observe("work_pending",
                         f"{pending} items in work queue",
                         actionable=False)
-            except:
+            except Exception:
                 pass
 
     # === SESSION GUARDIAN (ADR-001) ===

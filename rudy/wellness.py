@@ -60,7 +60,7 @@ class WellnessMonitor:
             try:
                 with open(path) as f:
                     return json.load(f)
-            except:
+            except Exception:
                 pass
         return default
 
@@ -217,7 +217,7 @@ class WellnessMonitor:
                                 last_alert_dt = datetime.fromisoformat(last_alert)
                                 if (now - last_alert_dt).total_seconds() < 3600:
                                     should_alert = False
-                            except:
+                            except Exception:
                                 pass
 
                         if should_alert:
@@ -237,7 +237,7 @@ class WellnessMonitor:
                             self.alerts.append(alert)
                             person_state["last_alert_time"] = now.isoformat()
                             status["wellness"] = "concern"
-                except:
+                except Exception:
                     pass
 
         # === NIGHTTIME ACTIVITY ===

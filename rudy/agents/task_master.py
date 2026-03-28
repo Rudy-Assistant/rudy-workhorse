@@ -35,7 +35,7 @@ class TaskMaster(AgentBase):
             try:
                 with open(self.QUEUE_FILE) as f:
                     return json.load(f)
-            except:
+            except Exception:
                 pass
         return {"pending": [], "in_progress": [], "completed": [], "last_updated": None}
 

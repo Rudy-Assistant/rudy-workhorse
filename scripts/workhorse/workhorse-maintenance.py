@@ -99,7 +99,7 @@ for name, cache_dir in browser_dirs.items():
             mb = size / 1024 / 1024
             cache_freed += mb
             log.info(f"   {name}: {mb:.1f} MB cleared")
-        except:
+        except Exception:
             pass
 
 # Also clean Edge/Chrome cookies and site data (NOT Playwright sessions)
@@ -115,7 +115,7 @@ for name, cookie_file in cookie_dirs.items():
             mb = size / 1024 / 1024
             cache_freed += mb
             log.info(f"   {name}: {mb:.2f} MB cleared")
-        except:
+        except Exception:
             log.info(f"   {name}: locked (browser running?)")
 
 results["tasks"]["browser_cache"] = {"freed_mb": round(cache_freed, 1)}
@@ -143,7 +143,7 @@ log.info("5. Flushing DNS cache")
 try:
     subprocess.run(["ipconfig", "/flushdns"], capture_output=True, timeout=10)
     log.info("   DNS cache flushed")
-except:
+except Exception:
     pass
 
 # === 6. Disk usage report ===
@@ -158,7 +158,7 @@ try:
         if line.strip():
             log.info(f"   {line.strip()}")
     results["tasks"]["disk_usage"] = out.strip()
-except:
+except Exception:
     pass
 
 # === 7. Defender definitions check ===
@@ -172,7 +172,7 @@ try:
     for line in out.strip().split("\n"):
         if line.strip():
             log.info(f"   {line.strip()}")
-except:
+except Exception:
     log.info("   Could not query Defender status")
 
 # === 8. Verify privacy settings ===
@@ -195,7 +195,7 @@ for name, (key, value, expected) in privacy_checks.items():
         else:
             log.warning(f"   DRIFT: {name} — may have been reset by Windows Update!")
             drift_found = True
-    except:
+    except Exception:
         log.warning(f"   MISSING: {name} — registry key not set")
         drift_found = True
 

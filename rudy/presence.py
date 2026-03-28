@@ -37,7 +37,7 @@ def _detect_subnet():
         s.close()
         parts = local_ip.split(".")
         return ".".join(parts[:3])
-    except:
+    except Exception:
         return "192.168.7"  # Fallback to home subnet
 
 def _detect_gateway():
@@ -52,7 +52,7 @@ def _detect_gateway():
                 match = re.search(r"(\d+\.\d+\.\d+\.\d+)", line)
                 if match:
                     return match.group(1)
-    except:
+    except Exception:
         pass
     return "192.168.7.1"
 
@@ -81,7 +81,7 @@ class PresenceMonitor:
             try:
                 with open(path) as f:
                     return json.load(f)
-            except:
+            except Exception:
                 pass
         return default
 
@@ -188,7 +188,7 @@ class PresenceMonitor:
                 stderr=subprocess.DEVNULL,
             )
             time.sleep(3)  # Wait for pings to complete and ARP table to populate
-        except:
+        except Exception:
             pass
 
     def _read_arp_table(self) -> dict:
@@ -230,7 +230,7 @@ class PresenceMonitor:
                 "getmac /v /fo csv", shell=True, capture_output=True, text=True, timeout=10
             )
             # This gives us the local machine's MACs too
-        except:
+        except Exception:
             pass
 
         return discovered
