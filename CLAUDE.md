@@ -27,7 +27,7 @@ Christopher M. Cimino (ccimino2@gmail.com). Attorney — California State Bar #2
 | **Hardware** | Ace Magician AM06 Pro Mini PC |
 | **OS** | Windows 11 |
 | **Display** | Headless by default (iPad via Orion temporary only) — configured for monitor-less operation |
-| **Remote** | RustDesk (password: CMCPassTemp7508!, password-only, unattended) + Tailscale (100.83.49.9) |
+| **Remote** | RustDesk (password in RUDY_SYSTEM_PASSWORD env var, password-only, unattended) + Tailscale (100.83.49.9) |
 | **Local IP** | 192.168.7.25 (DHCP, gateway 192.168.7.1) |
 | **ISP** | Xfinity (gateway at 10.0.0.1, no web admin — app only) |
 | **Node** | v24.14.1 |
@@ -71,9 +71,9 @@ Christopher M. Cimino (ccimino2@gmail.com). Attorney — California State Bar #2
 | Detail | Value |
 |--------|-------|
 | **Email** | rudy.ciminoassist@gmail.com |
-| **Password** | CMCPassTemp7508! (Google web login) |
+| **Password** | (in RUDY_SYSTEM_PASSWORD env var — Google web login) |
 | **2FA** | ON — phone SMS to (209) 324-6760. TOTP not yet added. |
-| **App Password** | bviu yjdp tufr tnys (created 2026-03-26, needs IMAP enabled) |
+| **App Password** | (in RUDY_GMAIL_APP_PASSWORD env var, created 2026-03-26, needs IMAP enabled) |
 | **Listener v2** | rudy-listener.py (IMAP IDLE + poll fallback, self-healing) — **patched to Zoho** (was Gmail, now locked out). Needs Zoho IMAP enabled in account settings. |
 | **Gmail API alt** | rudy-gmail-api.py (HTTPS-only, no IMAP needed) |
 | **Command Runner v2** | rudy-command-runner.py (Cowork-to-Windows bridge, rename-before-execute, lock file) |
@@ -234,8 +234,8 @@ SystemMaster().execute(mode="full")
 | Provider | Status | IMAP/SMTP | Priority |
 |----------|--------|-----------|----------|
 | **Gmail** | Locked out (recovery pending) | imap.gmail.com / smtp.gmail.com | 0 (primary) |
-| **Zoho** | Active — SMTP only (rudy.ciminoassistant@zohomail.com / CMCPassTemp7508!) | smtp.zoho.com ONLY | 1 (sending) |
-| **Outlook** | Account creation in progress (rudy.ciminoassist@outlook.com / CMCPassTemp7508!) | imap-mail.outlook.com / smtp-mail.outlook.com | 2 (listener) |
+| **Zoho** | Active — SMTP only (rudy.ciminoassistant@zohomail.com / $RUDY_SYSTEM_PASSWORD) | smtp.zoho.com ONLY | 1 (sending) |
+| **Outlook** | Account creation in progress (rudy.ciminoassist@outlook.com / $RUDY_SYSTEM_PASSWORD) | imap-mail.outlook.com / smtp-mail.outlook.com | 2 (listener) |
 
 **CRITICAL**: Zoho Mail free plan does NOT include IMAP/POP access (paid-only feature since 2023). SMTP sending works. Outlook.com account being created for IMAP receiving.
 
@@ -262,7 +262,7 @@ from rudy_stealth_browser import create_stealth_page, save_session, google_sign_
 from playwright.sync_api import sync_playwright
 with sync_playwright() as pw:
     page, ctx, br = create_stealth_page(pw, session_name="google-rudy")
-    google_sign_in(page, "rudy.ciminoassist@gmail.com", "CMCPassTemp7508!")
+    google_sign_in(page, "rudy.ciminoassist@gmail.com", "$RUDY_SYSTEM_PASSWORD")
     save_session(ctx, "google-rudy")  # Reuse next time without re-login
     br.close()
 ```
@@ -419,7 +419,7 @@ Aliases: `system`, `security`, `ops`, `research`, `task`, `intel`
 | n8n | Self-hosted workflow automation (can run on The Workhorse) |
 
 ## Rudy Service Accounts
-All registered with `rudy.ciminoassistant@zohomail.com` / `CMCPassTemp7508!`
+All registered with `rudy.ciminoassistant@zohomail.com` / `$RUDY_SYSTEM_PASSWORD`
 
 | Service | Status | API Key / Token | Unlocks |
 |---------|--------|----------------|---------|
