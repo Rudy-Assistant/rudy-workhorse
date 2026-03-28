@@ -64,7 +64,7 @@ BACKENDS = {
         "smtp_port": 465,
         "smtp_starttls": False,
         "email": "rudy.ciminoassistant@zohomail.com",
-        "password": os.environ.get("RUDY_APP_PASSWORD", "CMCPassTemp7508!"),
+        "password": os.environ.get("RUDY_ZOHO_APP_PASSWORD", ""),
         "imap_available": False,  # Free plan -- SMTP only
     },
 }

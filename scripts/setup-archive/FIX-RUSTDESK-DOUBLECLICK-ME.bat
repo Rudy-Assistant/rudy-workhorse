@@ -16,7 +16,13 @@ echo ============================================================
 echo   RUSTDESK PERMANENT UNATTENDED ACCESS FIX
 echo ============================================================
 
-set PW=CMCPassTemp7508!
+:: Password must be set in environment: set RUDY_SYSTEM_PASSWORD=...
+set PW=%RUDY_SYSTEM_PASSWORD%
+if not defined RUDY_SYSTEM_PASSWORD (
+    echo ERROR: RUDY_SYSTEM_PASSWORD not set.
+    pause
+    exit /b 1
+)
 set RDEXE="C:\Program Files\RustDesk\rustdesk.exe"
 set USERCONFIG=C:\Users\C\AppData\Roaming\RustDesk\config
 set LOGDIR=C:\Users\C\Desktop\rudy-logs
@@ -63,7 +69,7 @@ echo [6/7] Creating boot-time enforcement task...
 powershell -ExecutionPolicy Bypass -Command ^
   "$s = @'`n" ^
   "Start-Sleep 10`n" ^
-  "& 'C:\Program Files\RustDesk\rustdesk.exe' --password CMCPassTemp7508! 2>&1 | Out-Null`n" ^
+  "& 'C:\Program Files\RustDesk\rustdesk.exe' --password %RUDY_SYSTEM_PASSWORD% 2>&1 | Out-Null`n" ^
   "$src = 'C:\Users\C\AppData\Roaming\RustDesk\config'`n" ^
   "@(`n" ^
   "  'C:\Windows\System32\config\systemprofile\AppData\Roaming\RustDesk\config',`n" ^

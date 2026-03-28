@@ -53,7 +53,7 @@ BOT_DETECTION_LOG = LOGS_DIR / "bot-detection-log.json"
 def _load_json(path, default=None):
     if path.exists():
         try:
-            with open(path) as f:
+            with open(path, encoding="utf-8") as f:
                 return json.load(f)
         except Exception:
             pass
@@ -1233,7 +1233,7 @@ class HumanSimulator:
 
             with smtplib.SMTP("smtp.gmail.com", 587) as server:
                 server.starttls()
-                server.login("rudy.ciminoassist@gmail.com", "bviu yjdp tufr tnys")
+                server.login("rudy.ciminoassist@gmail.com", os.environ.get("RUDY_GMAIL_APP_PASSWORD", ""))
                 server.send_message(msg)
         except Exception:
             # Best-effort — don't crash on alert failure

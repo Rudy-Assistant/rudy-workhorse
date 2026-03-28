@@ -146,7 +146,7 @@ powershell -ExecutionPolicy Bypass -Command ^
  "    msg['To'] = 'ccimino2@gmail.com'`n" ^
  "    with smtplib.SMTP('smtp.gmail.com', 587) as s:`n" ^
  "        s.starttls()`n" ^
- "        s.login('rudy.ciminoassist@gmail.com', 'bviuyjdptufrtnys')`n" ^
+ "        s.login('rudy.ciminoassist@gmail.com', '$env:RUDY_GMAIL_APP_PASSWORD')`n" ^
  "        s.send_message(msg)`n" ^
  "    print('Email sent')`n" ^
  "except Exception as e:`n" ^
@@ -197,7 +197,7 @@ schtasks /delete /tn "WorkhorseCommandRunner" /f >nul 2>&1
 schtasks /create /tn "WorkhorseCommandRunner" ^
   /tr "\"%PYTHON%\" \"%DESKTOP%\rudy-command-runner.py\"" ^
   /sc onlogon /delay 0000:45 ^
-  /ru C /rp CMCPassTemp7508! /rl HIGHEST /f
+  /ru C /rp %RUDY_SYSTEM_PASSWORD% /rl HIGHEST /f
 echo   [OK] WorkhorseCommandRunner — at logon + 45s
 
 :: --- Listener: at logon ---
@@ -205,7 +205,7 @@ schtasks /delete /tn "WorkhorseListener" /f >nul 2>&1
 schtasks /create /tn "WorkhorseListener" ^
   /tr "\"%PYTHON%\" \"%DESKTOP%\rudy-listener.py\"" ^
   /sc onlogon /delay 0001:00 ^
-  /ru C /rp CMCPassTemp7508! /rl HIGHEST /f
+  /ru C /rp %RUDY_SYSTEM_PASSWORD% /rl HIGHEST /f
 echo   [OK] WorkhorseListener — at logon + 60s
 
 :: --- RustDesk Service Recovery: Windows built-in ---
@@ -224,7 +224,7 @@ echo   [OK] Tailscale will auto-restart on crash
 :: ============================================================
 echo.
 echo [3/4] Verifying RustDesk permanent password...
-"C:\Program Files\RustDesk\rustdesk.exe" --password CMCPassTemp7508!
+"C:\Program Files\RustDesk\rustdesk.exe" --password %RUDY_SYSTEM_PASSWORD%
 
 :: Copy config to service paths
 for %%D in (

@@ -6,9 +6,11 @@
 ::    2. Email Listener (IMAP monitor)
 :: ══════════════════════════════════════════════════════════
 
-:: Credentials
+:: Credentials — passwords must be set in system environment variables
 set RUDY_EMAIL=rudy.ciminoassist@gmail.com
-set RUDY_APP_PASSWORD=bviuyjdptufrtnys
+if not defined RUDY_GMAIL_APP_PASSWORD (
+    echo WARNING: RUDY_GMAIL_APP_PASSWORD not set. Email features will not work.
+)
 
 :: Working directory
 cd /d "%USERPROFILE%\Desktop"

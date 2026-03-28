@@ -41,7 +41,7 @@ from email.mime.text import MIMEText
 # ─────────────────────────────────────────────
 
 RUDY_EMAIL = os.environ.get("RUDY_EMAIL", "rudy.ciminoassistant@zohomail.com")
-RUDY_APP_PASSWORD = os.environ.get("RUDY_APP_PASSWORD", "CMCPassTemp7508!")
+RUDY_APP_PASSWORD = os.environ.get("RUDY_ZOHO_APP_PASSWORD", "")
 
 IMAP_SERVER = "imap.zoho.com"
 IMAP_PORT = 993
@@ -116,7 +116,7 @@ def connect_imap_robust():
             ctx = ssl.create_default_context()
             # Must set server_hostname for SNI so the cert validates
             sock = socket.create_connection((ip, IMAP_PORT), timeout=15)
-            ssl_sock = ctx.wrap_socket(sock, server_hostname=IMAP_SERVER)
+            ctx.wrap_socket(sock, server_hostname=IMAP_SERVER)
             mail = imaplib.IMAP4_SSL(host=ip, port=IMAP_PORT)
             return mail, ip
         except Exception as e:
@@ -517,14 +517,12 @@ def try_idle(mail):
             return False
 
         mail.sock.settimeout(IDLE_TIMEOUT)
-        got_exists = False
         try:
             while True:
                 line = mail.readline().decode()
                 if "EXISTS" in line:
                     log.info(f"IDLE notification: {line.strip()}")
-                    got_exists = True
-                    break
+                    break  # Got EXISTS notification
                 elif not line:
                     break
         except (socket.timeout, TimeoutError, OSError):

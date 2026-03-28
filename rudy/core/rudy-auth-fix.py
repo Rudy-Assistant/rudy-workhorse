@@ -27,7 +27,7 @@ LOG_DIR = DESKTOP / "rudy-logs"
 LOG_DIR.mkdir(exist_ok=True)
 
 RUDY_EMAIL = "rudy.ciminoassist@gmail.com"
-RUDY_APP_PASSWORD = os.environ.get("RUDY_APP_PASSWORD", "bviuyjdptufrtnys")
+RUDY_APP_PASSWORD = os.environ.get("RUDY_GMAIL_APP_PASSWORD", "")
 
 EDGE_USER_DATA = Path(os.environ.get("LOCALAPPDATA", "")) / "Microsoft" / "Edge" / "User Data"
 TEMP_PROFILE = Path(os.environ.get("TEMP", "")) / "rudy-edge-profile"
@@ -287,7 +287,7 @@ def write_results(imap_result, twofa_result, profile_result):
     }
 
     report_file = LOG_DIR / "auth-diagnostic.json"
-    with open(report_file, "w") as f:
+    with open(report_file, "w", encoding="utf-8") as f:
         json.dump(results, f, indent=2)
 
     print(f"\n[*] Results saved to {report_file}")

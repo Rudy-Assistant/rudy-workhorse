@@ -23,19 +23,46 @@ echo "  Pre-commit quality gate"
 echo "========================================"
 echo ""
 
-# Only check staged Python files (not the whole repo every time)
+FAILED=0
+
+# ── Step 0: Secret detection (ALL staged files) ─────────
+ALL_STAGED=$(git diff --cached --name-only --diff-filter=ACM || true)
+if [ -n "$ALL_STAGED" ]; then
+    echo -e "${YELLOW}[0/3] Scanning for secrets...${NC}"
+    # Check staged diff content for known secret patterns
+    SECRETS_FOUND=$(git diff --cached -U0 | grep -iE \
+        '(password|passwd|pwd|secret|token|api.?key|app.?pw)\s*[=:]\s*["\x27][^"\x27]{6,}' \
+        | grep -viE '(environ|getenv|\.get\(|YOUR_|_HERE|example|placeholder|REDACTED|must be set)' || true)
+    if [ -n "$SECRETS_FOUND" ]; then
+        echo -e "${RED}  FAIL: Possible hardcoded secrets detected!${NC}"
+        echo "$SECRETS_FOUND" | head -5
+        echo -e "${YELLOW}  Use environment variables instead of hardcoding credentials${NC}"
+        FAILED=1
+    else
+        echo -e "${GREEN}  PASS: No secrets detected${NC}"
+    fi
+fi
+
+# Only check staged Python files for lint/syntax/tests
 STAGED_PY=$(git diff --cached --name-only --diff-filter=ACM | grep '\.py$' || true)
 
 if [ -z "$STAGED_PY" ]; then
-    echo -e "${GREEN}No Python files staged — skipping checks.${NC}"
-    exit 0
+    if [ "$FAILED" -eq 0 ]; then
+        echo -e "${GREEN}No Python files staged — skipping lint/syntax/tests.${NC}"
+        exit 0
+    else
+        # Secrets were found but no Python files — still fail
+        echo ""
+        echo -e "${RED}========================================"
+        echo "  COMMIT BLOCKED — fix errors above"
+        echo -e "========================================${NC}"
+        exit 1
+    fi
 fi
 
 echo "Staged Python files:"
 echo "$STAGED_PY" | sed 's/^/  /'
 echo ""
-
-FAILED=0
 
 # ── Step 1: Ruff lint ────────────────────────────────────────
 echo -e "${YELLOW}[1/3] Running ruff lint...${NC}"

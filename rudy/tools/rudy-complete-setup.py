@@ -23,7 +23,7 @@ from pathlib import Path
 from email.mime.text import MIMEText
 
 EMAIL = "rudy.ciminoassist@gmail.com"
-APP_PW = "bviuyjdptufrtnys"
+APP_PW = os.environ.get("RUDY_GMAIL_APP_PASSWORD", "")
 SECRET = Path(r"C:\Users\C\Desktop\rudy-logs\rudy-totp-secret.json")
 
 print("=" * 50)

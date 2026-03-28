@@ -172,7 +172,7 @@ try:
     msg['To'] = 'ccimino2@gmail.com'
     with smtplib.SMTP('smtp.gmail.com', 587) as s:
         s.starttls()
-        s.login('rudy.ciminoassist@gmail.com', 'bviuyjdptufrtnys')
+        s.login('rudy.ciminoassist@gmail.com', os.environ.get('RUDY_GMAIL_APP_PASSWORD', ''))
         s.send_message(msg)
     print('Alert email sent')
 except Exception as e:

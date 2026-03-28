@@ -56,7 +56,12 @@ echo [Phase 2] Running auth diagnostic...
 echo.
 
 set RUDY_EMAIL=rudy.ciminoassist@gmail.com
-set RUDY_APP_PASSWORD=bviuyjdptufrtnys
+:: RUDY_APP_PASSWORD must be set in environment before running this script
+if not defined RUDY_APP_PASSWORD (
+    echo ERROR: RUDY_APP_PASSWORD not set. Set it before running this script.
+    pause
+    exit /b 1
+)
 
 python rudy-auth-fix.py
 

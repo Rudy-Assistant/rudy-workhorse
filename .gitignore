@@ -18,6 +18,7 @@ env/
 # Credentials & secrets (CRITICAL - never commit)
 .env
 *.env
+.claude/mcp.json
 rudy-totp-secret.json
 rudy-logs/api-tokens.json
 rudy-logs/api-server-config.json

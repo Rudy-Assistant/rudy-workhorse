@@ -59,8 +59,8 @@ class EmailProvider:
 DEFAULT_PROVIDERS = {
     "gmail": EmailProvider(
         name="gmail",
-        email="rudy.ciminoassist@gmail.com",
-        password="bviu yjdp tufr tnys",
+        email=os.environ.get("RUDY_GMAIL_ADDRESS", "rudy.ciminoassist@gmail.com"),
+        password=os.environ.get("RUDY_GMAIL_APP_PASSWORD", ""),
         imap_host="imap.gmail.com",
         imap_port=993,
         smtp_host="smtp.gmail.com",
@@ -71,7 +71,7 @@ DEFAULT_PROVIDERS = {
     "zoho": EmailProvider(
         name="zoho",
         email="rudy.ciminoassistant@zoho.com",
-        password="CMCPassTemp7508!",
+        password=os.environ.get("RUDY_ZOHO_APP_PASSWORD", ""),
         imap_host="imap.zoho.com",
         imap_port=993,
         smtp_host="smtp.zoho.com",
@@ -104,7 +104,7 @@ class EmailHealth:
     def _load(self):
         if HEALTH_FILE.exists():
             try:
-                with open(HEALTH_FILE) as f:
+                with open(HEALTH_FILE, encoding="utf-8") as f:
                     return json.load(f)
             except Exception:
                 pass
@@ -112,7 +112,7 @@ class EmailHealth:
 
     def _save(self):
         HEALTH_FILE.parent.mkdir(parents=True, exist_ok=True)
-        with open(HEALTH_FILE, "w") as f:
+        with open(HEALTH_FILE, "w", encoding="utf-8") as f:
             json.dump(self.data, f, indent=2, default=str)
 
     def record_send(self, provider_name: str, success: bool):
@@ -175,7 +175,7 @@ class MultiEmail:
         """Load any saved provider overrides."""
         if CONFIG_FILE.exists():
             try:
-                with open(CONFIG_FILE) as f:
+                with open(CONFIG_FILE, encoding="utf-8") as f:
                     config = json.load(f)
                 for name, overrides in config.items():
                     if name in self.providers:
@@ -361,14 +361,14 @@ class MultiEmail:
             config = {}
             if CONFIG_FILE.exists():
                 try:
-                    with open(CONFIG_FILE) as f:
+                    with open(CONFIG_FILE, encoding="utf-8") as f:
                         config = json.load(f)
                 except Exception:
                     pass
 
             config[name] = {"email": email_addr, "password": password, "enabled": True}
             CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
-            with open(CONFIG_FILE, "w") as f:
+            with open(CONFIG_FILE, "w", encoding="utf-8") as f:
                 json.dump(config, f, indent=2)
 
     def get_status(self) -> dict:
