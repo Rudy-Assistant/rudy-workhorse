@@ -20,7 +20,8 @@ jobs:
       - name: Write status JSON
         run: |
           mkdir -p status
-          cat > status/${{ github.event.workflow_run.name | replace(' ', '-') }}.json << 'STATUSEOF'
+          WORKFLOW_SLUG=$(echo "${{ github.event.workflow_run.name }}" | tr ' ' '-')
+          cat > "status/${WORKFLOW_SLUG}.json" << 'STATUSEOF'
           {
             "workflow": "${{ github.event.workflow_run.name }}",
             "conclusion": "${{ github.event.workflow_run.conclusion }}",

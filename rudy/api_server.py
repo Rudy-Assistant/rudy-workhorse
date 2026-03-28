@@ -41,7 +41,7 @@ COMMANDS_DIR = DESKTOP / "rudy-commands"
 def _load_config():
     if API_CONFIG.exists():
         try:
-            with open(API_CONFIG) as f:
+            with open(API_CONFIG, encoding="utf-8") as f:
                 return json.load(f)
         except Exception:
             pass
@@ -56,7 +56,7 @@ def _load_config():
         "created": datetime.now().isoformat(),
     }
     API_CONFIG.parent.mkdir(parents=True, exist_ok=True)
-    with open(API_CONFIG, "w") as f:
+    with open(API_CONFIG, "w", encoding="utf-8") as f:
         json.dump(config, f, indent=2)
     return config
 
@@ -105,7 +105,7 @@ def create_app():
         log = []
         if API_LOG.exists():
             try:
-                with open(API_LOG) as f:
+                with open(API_LOG, encoding="utf-8") as f:
                     log = json.load(f)
             except Exception:
                 pass
@@ -117,7 +117,7 @@ def create_app():
         })
         if len(log) > 1000:
             log = log[-500:]
-        with open(API_LOG, "w") as f:
+        with open(API_LOG, "w", encoding="utf-8") as f:
             json.dump(log, f, indent=2)
 
     # ── Health ──────────────────────────────────────────────
@@ -213,7 +213,7 @@ def create_app():
 
         # Save trigger data
         trigger_file = LOGS / f"zapier-trigger-{int(time.time())}.json"
-        with open(trigger_file, "w") as f:
+        with open(trigger_file, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
 
         return {"status": "received", "trigger_file": str(trigger_file)}
@@ -226,7 +226,7 @@ def create_app():
         data = await request.json()
 
         hook_file = LOGS / f"webhook-{int(time.time())}.json"
-        with open(hook_file, "w") as f:
+        with open(hook_file, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
 
         return {"status": "received"}
@@ -247,10 +247,10 @@ def create_app():
         # Write command to the command runner directory
         cmd_file = COMMANDS_DIR / f"api-cmd-{int(time.time())}.py"
         if script_content:
-            with open(cmd_file, "w") as f:
+            with open(cmd_file, "w", encoding="utf-8") as f:
                 f.write(script_content)
         else:
-            with open(cmd_file, "w") as f:
+            with open(cmd_file, "w", encoding="utf-8") as f:
                 f.write(f"import subprocess\nsubprocess.run({repr(command)}, shell=True)\n")
 
         return {"status": "queued", "command_file": str(cmd_file)}

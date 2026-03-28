@@ -33,7 +33,7 @@ class TaskMaster(AgentBase):
         """Load work queue from disk."""
         if self.QUEUE_FILE.exists():
             try:
-                with open(self.QUEUE_FILE) as f:
+                with open(self.QUEUE_FILE, encoding="utf-8") as f:
                     return json.load(f)
             except Exception:
                 pass

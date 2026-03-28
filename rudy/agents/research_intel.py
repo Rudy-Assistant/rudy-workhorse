@@ -879,7 +879,7 @@ class ResearchIntel(AgentBase):
             import glob
             digests = sorted(glob.glob(str(LOGS_DIR / "research-digest-*.md")))
             if digests:
-                with open(digests[-1]) as f:
+                with open(digests[-1], encoding="utf-8") as f:
                     text = f.read()[:3000]
                 keywords = nlp_engine.summarizer.extract_keywords(text, top_n=15)
                 sentiment = nlp_engine.get_sentiment(text[:500])

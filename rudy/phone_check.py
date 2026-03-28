@@ -57,14 +57,14 @@ def _run(cmd: str, timeout: int = 30) -> Tuple[str, str, int]:
 
 def _save_json(path: Path, data):
     path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w") as f:
+    with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, default=str)
 
 
 def _load_json(path: Path, default=None):
     if path.exists():
         try:
-            with open(path) as f:
+            with open(path, encoding="utf-8") as f:
                 return json.load(f)
         except Exception:
             pass
@@ -944,7 +944,7 @@ class MVTIntegration:
             resp = requests.get(ioc_url, timeout=30)
             if resp.status_code == 200:
                 ioc_file = IOC_DIR / "pegasus.stix2"
-                with open(ioc_file, "w") as f:
+                with open(ioc_file, "w", encoding="utf-8") as f:
                     f.write(resp.text)
                 return {"success": True, "iocs_updated": True, "source": "amnesty_tech"}
         except Exception as e:

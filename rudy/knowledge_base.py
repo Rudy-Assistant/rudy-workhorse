@@ -102,7 +102,7 @@ def _read_file(filepath: Path) -> str:
     """Read a file's content for indexing."""
     try:
         if filepath.suffix == ".json":
-            with open(filepath) as f:
+            with open(filepath, encoding="utf-8") as f:
                 data = json.load(f)
             return json.dumps(data, indent=2, default=str)[:10000]
         else:
@@ -133,7 +133,7 @@ class KnowledgeBase:
     def _load_state(self) -> dict:
         if INDEX_STATE.exists():
             try:
-                with open(INDEX_STATE) as f:
+                with open(INDEX_STATE, encoding="utf-8") as f:
                     return json.load(f)
             except Exception:
                 pass
@@ -141,7 +141,7 @@ class KnowledgeBase:
 
     def _save_state(self):
         INDEX_STATE.parent.mkdir(parents=True, exist_ok=True)
-        with open(INDEX_STATE, "w") as f:
+        with open(INDEX_STATE, "w", encoding="utf-8") as f:
             json.dump(self._state, f, indent=2, default=str)
 
     def _get_chroma(self):

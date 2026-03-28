@@ -224,7 +224,7 @@ class DocumentParser:
             return {"text": f.read(), "source": path, "format": "text"}
 
     def _parse_json(self, path):
-        with open(path) as f:
+        with open(path, encoding="utf-8") as f:
             data = json.load(f)
         return {"text": json.dumps(data, indent=2), "source": path, "format": "json"}
 

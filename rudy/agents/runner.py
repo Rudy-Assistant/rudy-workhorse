@@ -106,7 +106,7 @@ def run_all(mode: str = "full") -> dict:
         "total_actions": sum(r.get("actions", 0) for r in results.values()),
         "all_healthy": all(r.get("status") == "healthy" for r in results.values()),
     }
-    with open(summary_file, "w") as f:
+    with open(summary_file, "w", encoding="utf-8") as f:
         json.dump(aggregate, f, indent=2)
 
     return aggregate
@@ -119,7 +119,7 @@ def health_summary() -> dict:
         status_file = LOGS_DIR / f"{name}-status.json"
         if status_file.exists():
             try:
-                with open(status_file) as f:
+                with open(status_file, encoding="utf-8") as f:
                     data = json.load(f)
                 results[name] = {
                     "status": data.get("status", "unknown"),

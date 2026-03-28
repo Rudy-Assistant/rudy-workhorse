@@ -139,7 +139,7 @@ class SecurityAgent(AgentBase):
     def _load_baseline(self) -> dict:
         if self.BASELINE_FILE.exists():
             try:
-                with open(self.BASELINE_FILE) as f:
+                with open(self.BASELINE_FILE, encoding="utf-8") as f:
                     return json.load(f)
             except Exception:
                 pass
@@ -187,7 +187,7 @@ class SecurityAgent(AgentBase):
         all_events = []
         if self.ALERTS_FILE.exists():
             try:
-                with open(self.ALERTS_FILE) as f:
+                with open(self.ALERTS_FILE, encoding="utf-8") as f:
                     all_events = json.load(f)
             except Exception:
                 pass
@@ -487,7 +487,7 @@ class SecurityAgent(AgentBase):
         last_check_file = LOGS_DIR / "breach-last-check.json"
         if last_check_file.exists():
             try:
-                with open(last_check_file) as f:
+                with open(last_check_file, encoding="utf-8") as f:
                     data = json.load(f)
                 last = datetime.fromisoformat(data.get("last_check", "2000-01-01"))
                 if (datetime.now() - last).total_seconds() < 86400:
@@ -530,7 +530,7 @@ class SecurityAgent(AgentBase):
 
         # Save last check timestamp
         try:
-            with open(last_check_file, "w") as f:
+            with open(last_check_file, "w", encoding="utf-8") as f:
                 json.dump({"last_check": datetime.now().isoformat(), "results": breached}, f)
         except Exception:
             pass

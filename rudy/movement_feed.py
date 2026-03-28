@@ -54,7 +54,7 @@ MOVEMENT_SUMMARY = LOGS_DIR / "movement-summary.json"
 def _load_json(path, default=None):
     if path.exists():
         try:
-            with open(path) as f:
+            with open(path, encoding="utf-8") as f:
                 return json.load(f)
         except Exception:
             pass

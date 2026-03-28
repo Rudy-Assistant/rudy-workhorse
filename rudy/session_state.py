@@ -124,7 +124,7 @@ class SessionState:
             return
         for status_file in LOGS_DIR.glob("*-status.json"):
             try:
-                with open(status_file) as f:
+                with open(status_file, encoding="utf-8") as f:
                     status = json.load(f)
                 agent_name = status.get("agent", status_file.stem.replace("-status", ""))
                 self.data["agents"][agent_name] = {

@@ -1,0 +1,29 @@
+[project]
+name = "rudy-workhorse"
+version = "0.1.0"
+description = "Autonomous assistant infrastructure for the Workhorse mini PC"
+requires-python = ">=3.11"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+
+[tool.ruff.lint]
+# Standard rule set — matches CI and pre-commit hook
+select = ["E", "F", "W"]
+ignore = [
+    "E501",   # Line too long — handled by line-length above for new code
+    "E402",   # Module-level import not at top — needed for path setup
+    "F401",   # Unused imports — many are re-exports
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Test files can have unused imports for fixtures
+"tests/*" = ["F401"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+addopts = "-v --tb=short"

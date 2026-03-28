@@ -177,7 +177,7 @@ class AgentBase:
 
             # Also write a marker file for quick detection
             marker = LOGS_DIR / "CRASH-DETECTED.txt"
-            with open(marker, "w") as f:
+            with open(marker, "w", encoding="utf-8") as f:
                 f.write(f"{self.name} crashed at {datetime.now().isoformat()}\n")
                 f.write(f"Error: {error}\n")
                 f.write(f"Dump: {crash_file}\n")
@@ -258,7 +258,7 @@ class AgentBase:
         status_file = LOGS_DIR / f"{agent_name}-status.json"
         try:
             if status_file.exists():
-                with open(status_file) as f:
+                with open(status_file, encoding="utf-8") as f:
                     return json.load(f)
         except Exception:
             pass

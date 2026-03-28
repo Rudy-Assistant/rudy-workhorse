@@ -41,7 +41,7 @@ DECISION_LOG = OFFLINE_DIR / "decisions.json"
 def _load_json(path, default=None):
     if Path(path).exists():
         try:
-            with open(path) as f:
+            with open(path, encoding="utf-8") as f:
                 return json.load(f)
         except Exception:
             pass
@@ -50,7 +50,7 @@ def _load_json(path, default=None):
 
 def _save_json(path, data):
     Path(path).parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w") as f:
+    with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, default=str)
 
 

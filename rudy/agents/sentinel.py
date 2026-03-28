@@ -139,7 +139,7 @@ class Sentinel(AgentBase):
     def _load_state(self) -> dict:
         if self.STATE_FILE.exists():
             try:
-                with open(self.STATE_FILE) as f:
+                with open(self.STATE_FILE, encoding="utf-8") as f:
                     return json.load(f)
             except Exception:
                 pass
@@ -285,7 +285,7 @@ class Sentinel(AgentBase):
         try:
             presence_file = LOGS_DIR / "presence-latest.json"
             if presence_file.exists():
-                with open(presence_file) as f:
+                with open(presence_file, encoding="utf-8") as f:
                     data = json.load(f)
                 current_macs = set(d.get("mac", "") for d in data.get("devices", []))
                 prev_macs = set(state.get("known_network_devices", []))
@@ -403,7 +403,7 @@ class Sentinel(AgentBase):
         try:
             analytics_file = LOGS_DIR / "presence-analytics.json"
             if analytics_file.exists():
-                with open(analytics_file) as f:
+                with open(analytics_file, encoding="utf-8") as f:
                     data = json.load(f)
                 ts = data.get("timestamp", "")
                 if ts:
@@ -459,7 +459,7 @@ class Sentinel(AgentBase):
         all_obs = []
         if self.OBSERVATIONS_FILE.exists():
             try:
-                with open(self.OBSERVATIONS_FILE) as f:
+                with open(self.OBSERVATIONS_FILE, encoding="utf-8") as f:
                     all_obs = json.load(f)
             except Exception:
                 pass
@@ -589,7 +589,7 @@ class Sentinel(AgentBase):
         queue_file = LOGS_DIR / "task-queue.json"
         if queue_file.exists():
             try:
-                with open(queue_file) as f:
+                with open(queue_file, encoding="utf-8") as f:
                     queue = json.load(f)
                 pending = len(queue.get("pending", []))
                 if pending > 0:
