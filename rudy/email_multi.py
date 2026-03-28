@@ -52,7 +52,7 @@ class EmailProvider:
     daily_limit: int = 500
     use_tls: bool = True
 
-    def to_dict(self):
+    def to_dict(self) -> dict[str, object]:
         d = self.__dict__.copy()
         d["password"] = "***"  # Never log passwords
         return d
@@ -104,7 +104,7 @@ class EmailHealth:
     def __init__(self):
         self.data = self._load()
 
-    def _load(self):
+    def _load(self) -> dict:
         if HEALTH_FILE.exists():
             try:
                 with open(HEALTH_FILE, encoding="utf-8") as f:
@@ -113,12 +113,12 @@ class EmailHealth:
                 log.debug(f"Failed to load health file: {e}")
         return {"providers": {}, "last_check": None}
 
-    def _save(self):
+    def _save(self) -> None:
         HEALTH_FILE.parent.mkdir(parents=True, exist_ok=True)
         with open(HEALTH_FILE, "w", encoding="utf-8") as f:
             json.dump(self.data, f, indent=2, default=str)
 
-    def record_send(self, provider_name: str, success: bool):
+    def record_send(self, provider_name: str, success: bool) -> None:
         today = datetime.now().strftime("%Y-%m-%d")
         if provider_name not in self.data["providers"]:
             self.data["providers"][provider_name] = {}
@@ -169,12 +169,12 @@ class MultiEmail:
         )
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.providers = dict(DEFAULT_PROVIDERS)
         self.health = EmailHealth()
         self._load_config()
 
-    def _load_config(self):
+    def _load_config(self) -> None:
         """Load any saved provider overrides."""
         if CONFIG_FILE.exists():
             try:
@@ -224,7 +224,7 @@ class MultiEmail:
         return {"success": False, "provider": None, "error": last_error}
 
     def _send_via(self, provider: EmailProvider, to: str, subject: str,
-                  body: str, html: bool, attachments: List[str], cc: str, bcc: str):
+                  body: str, html: bool, attachments: List[str], cc: str, bcc: str) -> None:
         """Send via a specific provider."""
         msg = MIMEMultipart()
         msg["From"] = provider.email
@@ -317,7 +317,7 @@ class MultiEmail:
         conn.logout()
         return emails
 
-    def test_all(self) -> dict:
+    def test_all(self) -> dict[str, dict]:
         """Test all configured providers."""
         results = {}
         for name, provider in self.providers.items():
@@ -354,7 +354,7 @@ class MultiEmail:
 
         return results
 
-    def configure_provider(self, name: str, email_addr: str, password: str):
+    def configure_provider(self, name: str, email_addr: str, password: str) -> None:
         """Configure a provider's credentials."""
         if name in self.providers:
             self.providers[name].email = email_addr

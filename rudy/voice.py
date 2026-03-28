@@ -16,7 +16,7 @@ import subprocess
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, List
+from typing import Optional, List, Dict
 
 log = logging.getLogger(__name__)
 
@@ -78,7 +78,7 @@ class TextToSpeech:
 class SpeechToText:
     """Transcribe audio to text using OpenAI Whisper (local)."""
 
-    def __init__(self, model_size: str = "base"):
+    def __init__(self, model_size: str = "base") -> None:
         """
         model_size: tiny, base, small, medium, large
         Smaller = faster + less VRAM, larger = more accurate.
@@ -96,7 +96,7 @@ class SpeechToText:
                 raise RuntimeError("openai-whisper not installed. Run: pip install openai-whisper")
         return self._model
 
-    def transcribe(self, audio_path: str, language: str = "en") -> dict:
+    def transcribe(self, audio_path: str, language: str = "en") -> Dict:
         """
         Transcribe an audio file.
         Returns: {"text": str, "segments": [...], "language": str}
@@ -187,7 +187,7 @@ class AudioProcessor:
         adjusted.export(output_path)
         return output_path
 
-    def get_info(self, audio_path: str) -> dict:
+    def get_info(self, audio_path: str) -> Dict:
         """Get audio file metadata."""
         from pydub import AudioSegment
         audio = AudioSegment.from_file(audio_path)
@@ -222,7 +222,7 @@ class AudioProcessor:
 class VoiceModule:
     """Unified voice/audio interface."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.tts = TextToSpeech()
         self.stt = SpeechToText()
         self.processor = AudioProcessor()
@@ -230,7 +230,7 @@ class VoiceModule:
     def text_to_audio(self, text: str, **kwargs) -> str:
         return self.tts.speak(text, **kwargs)
 
-    def audio_to_text(self, audio_path: str, **kwargs) -> dict:
+    def audio_to_text(self, audio_path: str, **kwargs) -> Dict:
         return self.stt.transcribe(audio_path, **kwargs)
 
     def voice_alert(self, message: str, save: bool = True) -> str:

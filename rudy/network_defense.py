@@ -505,8 +505,8 @@ class NetworkDefense:
         for name, key in registry_checks.items():
             try:
                 result = subprocess.run(
-                    f'reg query "{key}"',
-                    shell=True, capture_output=True, text=True, timeout=10
+                    ["reg", "query", key],
+                    capture_output=True, text=True, timeout=10
                 )
                 # Hash the output for change detection
                 state_hash = hashlib.sha256(result.stdout.encode()).hexdigest()[:16]
@@ -572,8 +572,8 @@ class NetworkDefense:
                     proc_name = "unknown"
                     try:
                         result = subprocess.run(
-                            f'tasklist /fi "PID eq {pid}" /fo csv /nh',
-                            shell=True, capture_output=True, text=True, timeout=5
+                            ["tasklist", "/fi", f"PID eq {pid}", "/fo", "csv", "/nh"],
+                            capture_output=True, text=True, timeout=5
                         )
                         if result.stdout.strip():
                             proc_name = result.stdout.strip().split(",")[0].strip('"')

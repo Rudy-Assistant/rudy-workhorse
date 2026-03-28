@@ -18,6 +18,7 @@ Schedule: Integrated into self-improvement task (Mon/Wed/Fri 10 AM)
 import json
 import logging
 import os
+import shlex
 import subprocess
 import sys
 import importlib
@@ -33,13 +34,13 @@ LOGS = DESKTOP / "rudy-logs"
 DATA_DIR = DESKTOP / "rudy-data" / "obsolescence"
 
 
-def _save_json(path: Path, data):
+def _save_json(path: Path, data) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, default=str)
 
 
-def _load_json(path: Path, default=None):
+def _load_json(path: Path, default=None) -> dict:
     if path.exists():
         try:
             with open(path, encoding="utf-8") as f:
@@ -49,9 +50,9 @@ def _load_json(path: Path, default=None):
     return default if default is not None else {}
 
 
-def _run(cmd: str, timeout: int = 60):
+def _run(cmd: str, timeout: int = 60) -> tuple[str, str, int]:
     try:
-        r = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=timeout)
+        r = subprocess.run(shlex.split(cmd), capture_output=True, text=True, timeout=timeout)
         return r.stdout.strip(), r.stderr.strip(), r.returncode
     except Exception as e:
         return "", str(e), -1
@@ -154,7 +155,7 @@ RUDY_MODULES = [
 class PackageAuditor:
     """Check installed packages for updates."""
 
-    def check_outdated(self) -> List[dict]:
+    def check_outdated(self) -> List[Dict]:
         """Get list of outdated pip packages."""
         stdout, _, rc = _run("pip list --outdated --format=json", timeout=120)
         if rc == 0 and stdout:
@@ -164,7 +165,7 @@ class PackageAuditor:
                 pass
         return []
 
-    def check_specific(self, packages: List[str]) -> List[dict]:
+    def check_specific(self, packages: List[str]) -> List[Dict]:
         """Check specific packages for updates."""
         all_outdated = self.check_outdated()
         names = {p.lower() for p in packages}
@@ -183,7 +184,7 @@ class PackageAuditor:
 class ModuleHealthChecker:
     """Verify all Rudy modules can import and their dependencies work."""
 
-    def check_all(self) -> dict:
+    def check_all(self) -> Dict:
         """Test importing every Rudy module."""
         results = {"timestamp": datetime.now().isoformat(), "modules": {}}
 
@@ -224,7 +225,7 @@ class LandscapeScanner:
     Identifies gaps, alternatives, and upgrade opportunities.
     """
 
-    def scan(self) -> dict:
+    def scan(self) -> Dict:
         """Full landscape scan."""
         results = {
             "timestamp": datetime.now().isoformat(),
@@ -257,7 +258,7 @@ class LandscapeScanner:
 
         return results
 
-    def generate_recommendations(self, scan_result: dict) -> List[dict]:
+    def generate_recommendations(self, scan_result: Dict) -> List[Dict]:
         """Generate actionable upgrade recommendations."""
         recommendations = []
 
@@ -287,11 +288,11 @@ class LandscapeScanner:
 class UsageTracker:
     """Track which capabilities are actually being used."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.usage_file = DATA_DIR / "usage-stats.json"
         self.stats = _load_json(self.usage_file, {"modules": {}, "last_reset": datetime.now().isoformat()})
 
-    def record_use(self, module: str, function: str = ""):
+    def record_use(self, module: str, function: str = "") -> None:
         """Record a capability usage."""
         if module not in self.stats["modules"]:
             self.stats["modules"][module] = {"count": 0, "functions": {}, "last_used": None}
@@ -317,7 +318,7 @@ class UsageTracker:
                 unused.append(mod)
         return unused
 
-    def get_report(self) -> dict:
+    def get_report(self) -> Dict:
         """Generate usage report."""
         return {
             "total_modules": len(RUDY_MODULES),
@@ -343,14 +344,14 @@ class ObsolescenceMonitor:
         outdated = monitor.check_packages()
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         DATA_DIR.mkdir(parents=True, exist_ok=True)
         self.packages = PackageAuditor()
         self.health = ModuleHealthChecker()
         self.landscape = LandscapeScanner()
         self.usage = UsageTracker()
 
-    def quick_check(self) -> dict:
+    def quick_check(self) -> Dict:
         """Fast health check — module imports + critical package versions."""
         return {
             "timestamp": datetime.now().isoformat(),
@@ -358,11 +359,11 @@ class ObsolescenceMonitor:
             "python_version": sys.version,
         }
 
-    def check_packages(self) -> List[dict]:
+    def check_packages(self) -> List[Dict]:
         """Check for outdated packages."""
         return self.packages.check_outdated()
 
-    def full_audit(self) -> dict:
+    def full_audit(self) -> Dict:
         """
         Comprehensive capability audit:
         1. Module health check (imports)
@@ -425,7 +426,7 @@ class ObsolescenceMonitor:
 
         return report
 
-    def generate_summary(self, report: dict) -> str:
+    def generate_summary(self, report: Dict) -> str:
         """Human-readable audit summary."""
         lines = []
         lines.append("=" * 55)
@@ -464,7 +465,7 @@ class ObsolescenceMonitor:
 
         return "\n".join(lines)
 
-    def file_github_issues(self, report: dict) -> list:
+    def file_github_issues(self, report: Dict) -> List[str]:
         """
         Auto-file GitHub issues for high-priority findings.
         Requires rudy.integrations.github_ops to be available.
@@ -508,7 +509,7 @@ class ObsolescenceMonitor:
 
         return created
 
-    def execute(self, mode: str = "full", file_issues: bool = False) -> dict:
+    def execute(self, mode: str = "full", file_issues: bool = False) -> Dict:
         """Execute audit (called by self-improvement agent)."""
         if mode == "quick":
             return self.quick_check()

@@ -45,13 +45,13 @@ for _d in [DATA_DIR, SNAPSHOTS_DIR, RECORDINGS_DIR]:
     _d.mkdir(parents=True, exist_ok=True)
 
 
-def _save_json(path, data):
+def _save_json(path: Path, data: Dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, default=str)
 
 
-def _load_json(path, default=None):
+def _load_json(path: Path, default: Optional[Dict] = None) -> Dict:
     if path.exists():
         try:
             return json.loads(path.read_text(encoding="utf-8"))
@@ -175,7 +175,7 @@ class CameraDiscovery:
 class MotionDetector:
     """Detect motion in camera feed using frame differencing."""
 
-    def __init__(self, sensitivity: float = 0.02, min_area: int = 500):
+    def __init__(self, sensitivity: float = 0.02, min_area: int = 500) -> None:
         """
         Args:
             sensitivity: Fraction of frame that must change to trigger (0.0-1.0)
@@ -186,7 +186,7 @@ class MotionDetector:
         self._prev_frame = None
         self._bg_subtractor = None
 
-    def _init_bg_subtractor(self):
+    def _init_bg_subtractor(self) -> None:
         """Initialize background subtractor."""
         try:
             import cv2
@@ -251,10 +251,10 @@ class MotionDetector:
 class PersonDetector:
     """Detect people in frames using HOG descriptor."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._hog = None
 
-    def _init_hog(self):
+    def _init_hog(self) -> None:
         import cv2
         self._hog = cv2.HOGDescriptor()
         self._hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
@@ -303,7 +303,7 @@ class PersonDetector:
 class SurveillanceController:
     """Main surveillance controller — manages cameras, motion detection, alerts."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.config = _load_json(CONFIG_FILE, {
             "enabled": True,
             "cameras": [],  # Will be populated on first scan
@@ -503,7 +503,7 @@ class SurveillanceController:
         return False
 
     def _send_motion_alert(self, snapshot_path: Optional[str],
-                           person_count: int, change_pct: float):
+                           person_count: int, change_pct: float) -> None:
         """Send alert email with snapshot attachment."""
         subject = f"[RUDY] Motion Alert: {person_count} person(s) detected"
         body = (
@@ -522,7 +522,7 @@ class SurveillanceController:
             log.debug(f"context: {e}")
             pass
 
-    def cleanup_old_footage(self, max_gb: float = None):
+    def cleanup_old_footage(self, max_gb: float = None) -> Dict:
         """Delete old snapshots/recordings to stay within storage limit."""
         max_gb = max_gb or self.config.get("max_storage_gb", 10)
         max_bytes = max_gb * 1024 * 1024 * 1024

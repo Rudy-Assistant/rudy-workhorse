@@ -30,6 +30,7 @@ import json
 import logging
 import os
 import re
+import shlex
 import subprocess
 import time
 from datetime import datetime
@@ -49,7 +50,7 @@ def _run(cmd: str, timeout: int = 30) -> Tuple[str, str, int]:
     """Run a command, return (stdout, stderr, returncode)."""
     try:
         result = subprocess.run(
-            cmd, shell=True, capture_output=True, text=True, timeout=timeout
+            shlex.split(cmd), capture_output=True, text=True, timeout=timeout
         )
         return result.stdout.strip(), result.stderr.strip(), result.returncode
     except subprocess.TimeoutExpired:

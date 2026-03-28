@@ -49,6 +49,7 @@ import json
 import logging
 import os
 import re
+import shlex
 import subprocess
 import time
 from datetime import datetime
@@ -185,10 +186,10 @@ KNOWN_MALICIOUS_DEVICES = {
 
 # ── Helpers ───────────────────────────────────────────────────
 
-def _run(cmd, timeout=15):
+def _run(cmd: str, timeout: int = 15) -> Tuple[str, str, int]:
     """Run a command and return (stdout, stderr, returncode)."""
     try:
-        r = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=timeout)
+        r = subprocess.run(shlex.split(cmd), capture_output=True, text=True, timeout=timeout)
         return r.stdout.strip(), r.stderr.strip(), r.returncode
     except subprocess.TimeoutExpired:
         return "", "timeout", -1
@@ -196,7 +197,7 @@ def _run(cmd, timeout=15):
         return "", str(e), -1
 
 
-def _run_ps(script, timeout=15):
+def _run_ps(script: str, timeout: int = 15) -> Tuple[str, str, int]:
     """Run a PowerShell script."""
     cmd = ["powershell", "-NoProfile", "-Command", script]
     try:
@@ -208,12 +209,12 @@ def _run_ps(script, timeout=15):
         return "", str(e), -1
 
 
-def _load_json(path, default=None):
+def _load_json(path: Path, default: Optional[Dict] = None) -> Dict:
     """Load JSON from a file using safe_json_load utility."""
     return safe_json_load(path, default)
 
 
-def _save_json(path, data):
+def _save_json(path: Path, data: Dict) -> None:
     """Save JSON to a file using atomic_json_save utility."""
     atomic_json_save(path, data)
 
@@ -223,7 +224,7 @@ def _save_json(path, data):
 class DeviceFingerprint:
     """Complete fingerprint of a USB device."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.instance_id = ""
         self.vid = ""  # Vendor ID (hex)
         self.pid = ""  # Product ID (hex)
@@ -255,7 +256,7 @@ class DeviceFingerprint:
         """Unique identifier for whitelist matching."""
         return f"{self.vid}:{self.pid}:{self.serial or 'no-serial'}"
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> Dict:
         return {
             "instance_id": self.instance_id,
             "vid": self.vid,
@@ -568,7 +569,7 @@ def _should_block_device(fp, whitelist: dict) -> tuple:
 class USBQuarantine:
     """Full quarantine protocol for USB device management."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         QUARANTINE_DIR.mkdir(parents=True, exist_ok=True)
         DATA_DIR.mkdir(parents=True, exist_ok=True)
         self.whitelist = _load_json(WHITELIST_FILE, {"devices": {}, "updated": ""})
@@ -707,7 +708,7 @@ class USBQuarantine:
             )
             return rc == 0
 
-    def _send_alert(self, fp: DeviceFingerprint, blocked: bool):
+    def _send_alert(self, fp: DeviceFingerprint, blocked: bool) -> None:
         """Send email alert about a suspicious device."""
         subject = f"[RUDY {'🚨' if fp.risk_level == 'CRITICAL' else '⚠️'}] USB {fp.risk_level}: {fp.friendly_name or f'{fp.vid}:{fp.pid}'}"
 
@@ -754,7 +755,7 @@ class USBQuarantine:
             alert_file = QUARANTINE_DIR / "PENDING-ALERT.txt"
             alert_file.write_text(f"{subject}\n\n{body}", encoding="utf-8")
 
-    def _log_device(self, fp: DeviceFingerprint):
+    def _log_device(self, fp: DeviceFingerprint) -> None:
         """Write detailed device log."""
         log_file = QUARANTINE_DIR / f"device-{fp.vid}-{fp.pid}-{datetime.now().strftime('%Y%m%d-%H%M%S')}.json"
         _save_json(log_file, fp.to_dict())

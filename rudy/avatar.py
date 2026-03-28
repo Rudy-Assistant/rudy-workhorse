@@ -21,6 +21,7 @@ All processing is LOCAL — no cloud API needed, full privacy.
 import json
 import logging
 import os
+import shlex
 import shutil
 import subprocess
 import time
@@ -38,15 +39,15 @@ TEMP_DIR = AVATAR_DIR / "temp"
 LOGS = DESKTOP / "rudy-logs"
 
 
-def _save_json(path: Path, data):
+def _save_json(path: Path, data) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, default=str)
 
 
-def _run(cmd: str, timeout: int = 300):
+def _run(cmd: str, timeout: int = 300) -> tuple[str, str, int]:
     try:
-        r = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=timeout)
+        r = subprocess.run(shlex.split(cmd), capture_output=True, text=True, timeout=timeout)
         return r.stdout.strip(), r.stderr.strip(), r.returncode
     except subprocess.TimeoutExpired:
         return "", "Timeout", -1
@@ -63,7 +64,7 @@ class SadTalkerEngine:
     Requires: pip install sadtalker (or clone from GitHub)
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.available = self._check()
         self.sadtalker_dir = MODELS_DIR / "SadTalker"
 
@@ -142,7 +143,7 @@ class Wav2LipEngine:
     Match mouth movements to any audio on any face video/image.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.available = self._check()
 
     def _check(self) -> bool:
@@ -180,7 +181,7 @@ class FaceSwapEngine:
     Swap a face from a source image onto a target image/video.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.insightface_available = self._check_insightface()
         self.roop_available = self._check_roop()
         self.available = self.insightface_available or self.roop_available
@@ -278,7 +279,7 @@ class MoviePyCompositor:
     Can create basic presenter videos with image overlay + audio.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.available = self._check()
 
     def _check(self) -> bool:
@@ -382,7 +383,7 @@ class AvatarStudio:
         studio.presenter_video("host.jpg", "narration.wav")
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         for d in [AVATAR_DIR, MODELS_DIR, OUTPUT_DIR, TEMP_DIR]:
             d.mkdir(parents=True, exist_ok=True)
 
