@@ -95,6 +95,15 @@ def main():
         "overall": "unknown",
     }
 
+    # Step 0: Ensure git hooks are installed
+    hooks_script = REPO_DIR / "scripts" / "hooks" / "install-hooks.sh"
+    if hooks_script.exists():
+        out, err, rc = run_cmd(["bash", str(hooks_script)], timeout=10)
+        if rc == 0:
+            print("[0] Git hooks installed")
+        else:
+            print(f"[0] Hook install skipped ({err})")
+
     # Step 1: Git pull
     print("[1/3] Pulling latest from GitHub...")
     pull = git_pull()
