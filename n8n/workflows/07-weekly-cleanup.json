@@ -1,0 +1,62 @@
+{
+  "name": "Rudy Weekly Cleanup - Disk Maintenance",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 3 * * 0"
+            }
+          ]
+        }
+      },
+      "id": "weekly-cron",
+      "name": "Sundays 3:00 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [250, 400]
+    },
+    {
+      "parameters": {
+        "command": "powershell.exe -NoProfile -Command \"$results = @(); $disk = Get-CimInstance Win32_LogicalDisk -Filter \\\"DeviceID='C:'\\\"; $beforeFree = $disk.FreeSpace; $results += \\\"Disk before: $([math]::Round($beforeFree/1073741824,2)) GB free\\\"; $tempDirs = @($env:TEMP, 'C:\\Windows\\Temp', (Join-Path $env:USERPROFILE 'AppData\\Local\\Temp')); foreach ($td in $tempDirs) { if (Test-Path $td) { $items = Get-ChildItem $td -Recurse -Force -ErrorAction SilentlyContinue | Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-7) }; $count = ($items | Measure-Object).Count; $items | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue; $results += \\\"Cleaned $td`: $count old items\\\" } }; $crashDumps = Join-Path $env:USERPROFILE 'AppData\\Local\\CrashDumps'; if (Test-Path $crashDumps) { $dumps = Get-ChildItem $crashDumps -ErrorAction SilentlyContinue; if ($dumps) { $dumps | Remove-Item -Force -ErrorAction SilentlyContinue; $results += \\\"Removed $($dumps.Count) crash dumps\\\" } }; $npm = Join-Path $env:APPDATA 'npm-cache'; if (Test-Path $npm) { $cacheSize = (Get-ChildItem $npm -Recurse -Force -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum; if ($cacheSize -gt 524288000) { npm cache clean --force 2>&1 | Out-Null; $results += \\\"Cleaned npm cache (was $([math]::Round($cacheSize/1048576))MB)\\\" } }; $disk2 = Get-CimInstance Win32_LogicalDisk -Filter \\\"DeviceID='C:'\\\"; $afterFree = $disk2.FreeSpace; $freed = $afterFree - $beforeFree; $results += \\\"Disk after: $([math]::Round($afterFree/1073741824,2)) GB free\\\"; $results += \\\"Freed: $([math]::Round($freed/1048576,1)) MB\\\"; $results -join \\\"`n\\\"\""
+      },
+      "id": "run-cleanup",
+      "name": "Run Disk Cleanup",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [470, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const output = $input.first().json.stdout || 'No output';\nconst exitCode = $input.first().json.exitCode;\n\nreturn [{\n  json: {\n    timestamp: new Date().toISOString(),\n    success: exitCode === 0,\n    report: output\n  }\n}];"
+      },
+      "id": "log-cleanup",
+      "name": "Log Cleanup Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [690, 400]
+    }
+  ],
+  "connections": {
+    "Sundays 3:00 AM": {
+      "main": [
+        [{ "node": "Run Disk Cleanup", "type": "main", "index": 0 }]
+      ]
+    },
+    "Run Disk Cleanup": {
+      "main": [
+        [{ "node": "Log Cleanup Result", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    { "name": "rudy-core" },
+    { "name": "phase-1" },
+    { "name": "maintenance" }
+  ]
+}

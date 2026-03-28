@@ -1,0 +1,214 @@
+{
+  "name": "Rudy Watchdog - System Health Monitor",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      },
+      "id": "cron-trigger",
+      "name": "Every 5 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "command": "powershell.exe -NoProfile -Command \"$services = @('RustDesk','Tailscale'); $results = @(); foreach ($svc in $services) { $s = Get-Service -Name $svc -ErrorAction SilentlyContinue; if ($s) { $results += @{Name=$svc; Status=$s.Status.ToString()} } else { $results += @{Name=$svc; Status='NotFound'} } }; $results | ConvertTo-Json -Compress\""
+      },
+      "id": "check-services",
+      "name": "Check Services",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [470, 200]
+    },
+    {
+      "parameters": {
+        "command": "powershell.exe -NoProfile -Command \"try { $r = Invoke-WebRequest -Uri 'http://localhost:11434/api/tags' -UseBasicParsing -TimeoutSec 5; @{Status='Running'; Models=($r.Content | ConvertFrom-Json).models.name} | ConvertTo-Json -Compress } catch { @{Status='Down'; Error=$_.Exception.Message} | ConvertTo-Json -Compress }\""
+      },
+      "id": "check-ollama",
+      "name": "Check Ollama",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [470, 400]
+    },
+    {
+      "parameters": {
+        "command": "powershell.exe -NoProfile -Command \"$cpu = (Get-CimInstance Win32_Processor | Measure-Object -Property LoadPercentage -Average).Average; $os = Get-CimInstance Win32_OperatingSystem; $ramTotal = [math]::Round($os.TotalVisibleMemorySize/1048576,1); $ramFree = [math]::Round($os.FreePhysicalMemory/1048576,1); $ramUsed = $ramTotal - $ramFree; $disk = Get-CimInstance Win32_LogicalDisk -Filter \\\"DeviceID='C:'\\\"; $diskTotal = [math]::Round($disk.Size/1073741824,1); $diskFree = [math]::Round($disk.FreeSpace/1073741824,1); $diskPct = [math]::Round(($disk.Size - $disk.FreeSpace)/$disk.Size*100,1); $uptime = (Get-Date) - $os.LastBootUpTime; @{CPU=$cpu; RAM_GB=@{Total=$ramTotal;Used=$ramUsed;Free=$ramFree}; Disk_GB=@{Total=$diskTotal;Free=$diskFree;UsedPct=$diskPct}; Uptime=$uptime.ToString('d\\.hh\\:mm\\:ss')} | ConvertTo-Json -Compress\""
+      },
+      "id": "system-stats",
+      "name": "System Stats",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [470, 600]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merge all health data into a single report\nconst services = JSON.parse($input.all()[0].json.stdout || '[]');\nconst ollama = JSON.parse($input.all()[1].json.stdout || '{}');\nconst stats = JSON.parse($input.all()[2].json.stdout || '{}');\n\nconst now = new Date().toISOString();\n\n// Check for any issues\nconst issues = [];\nconst servicesArr = Array.isArray(services) ? services : [services];\nfor (const svc of servicesArr) {\n  if (svc.Status !== 'Running') {\n    issues.push(`Service ${svc.Name} is ${svc.Status}`);\n  }\n}\nif (ollama.Status !== 'Running') {\n  issues.push('Ollama is down');\n}\nif (stats.Disk_GB && stats.Disk_GB.UsedPct > 85) {\n  issues.push(`Disk usage critical: ${stats.Disk_GB.UsedPct}%`);\n}\nif (stats.CPU > 90) {\n  issues.push(`CPU usage high: ${stats.CPU}%`);\n}\n\nconst health = {\n  timestamp: now,\n  status: issues.length === 0 ? 'HEALTHY' : 'DEGRADED',\n  issues: issues,\n  services: servicesArr,\n  ollama: ollama,\n  system: stats,\n  needsRestart: servicesArr.some(s => s.Status !== 'Running'),\n  needsCleanup: stats.Disk_GB && stats.Disk_GB.UsedPct > 85\n};\n\nreturn [{ json: health }];"
+      },
+      "id": "compile-health",
+      "name": "Compile Health Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [700, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "restart-check",
+              "leftValue": "={{ $json.needsRestart }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-restart-needed",
+      "name": "Services Down?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [920, 300]
+    },
+    {
+      "parameters": {
+        "command": "powershell.exe -NoProfile -Command \"$services = @('RustDesk','Tailscale'); foreach ($svc in $services) { $s = Get-Service -Name $svc -ErrorAction SilentlyContinue; if ($s -and $s.Status -ne 'Running') { Write-Output \\\"Restarting $svc...\\\"; Start-Service -Name $svc -ErrorAction SilentlyContinue; Start-Sleep -Seconds 3; $s2 = Get-Service -Name $svc; Write-Output \\\"$svc is now $($s2.Status)\\\" } }\""
+      },
+      "id": "restart-services",
+      "name": "Restart Down Services",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1140, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cleanup-check",
+              "leftValue": "={{ $json.needsCleanup }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-cleanup-needed",
+      "name": "Disk Critical?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [920, 500]
+    },
+    {
+      "parameters": {
+        "command": "powershell.exe -NoProfile -Command \"Write-Output 'Cleaning temp files...'; $before = (Get-CimInstance Win32_LogicalDisk -Filter \\\"DeviceID='C:'\\\").FreeSpace; Remove-Item -Path \\\"$env:TEMP\\*\\\" -Recurse -Force -ErrorAction SilentlyContinue; Remove-Item -Path 'C:\\Windows\\Temp\\*' -Recurse -Force -ErrorAction SilentlyContinue; $after = (Get-CimInstance Win32_LogicalDisk -Filter \\\"DeviceID='C:'\\\").FreeSpace; $freed = [math]::Round(($after - $before)/1048576, 1); Write-Output \\\"Freed: ${freed} MB\\\"\""
+      },
+      "id": "disk-cleanup",
+      "name": "Disk Cleanup",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1140, 500]
+    },
+    {
+      "parameters": {
+        "fileName": "={{ $env.USERPROFILE + '\\\\Desktop\\\\rudy-data\\\\health-latest.json' }}",
+        "options": {}
+      },
+      "id": "write-health",
+      "name": "Save Health Report",
+      "type": "n8n-nodes-base.writeFile",
+      "typeVersion": 1,
+      "position": [1360, 400]
+    }
+  ],
+  "connections": {
+    "Every 5 Minutes": {
+      "main": [
+        [
+          { "node": "Check Services", "type": "main", "index": 0 },
+          { "node": "Check Ollama", "type": "main", "index": 0 },
+          { "node": "System Stats", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Check Services": {
+      "main": [
+        [{ "node": "Compile Health Report", "type": "main", "index": 0 }]
+      ]
+    },
+    "Check Ollama": {
+      "main": [
+        [{ "node": "Compile Health Report", "type": "main", "index": 0 }]
+      ]
+    },
+    "System Stats": {
+      "main": [
+        [{ "node": "Compile Health Report", "type": "main", "index": 0 }]
+      ]
+    },
+    "Compile Health Report": {
+      "main": [
+        [
+          { "node": "Services Down?", "type": "main", "index": 0 },
+          { "node": "Disk Critical?", "type": "main", "index": 0 },
+          { "node": "Save Health Report", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Services Down?": {
+      "main": [
+        [{ "node": "Restart Down Services", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Disk Critical?": {
+      "main": [
+        [{ "node": "Disk Cleanup", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Restart Down Services": {
+      "main": [
+        [{ "node": "Save Health Report", "type": "main", "index": 0 }]
+      ]
+    },
+    "Disk Cleanup": {
+      "main": [
+        [{ "node": "Save Health Report", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    { "name": "rudy-core" },
+    { "name": "phase-1" },
+    { "name": "self-maintenance" }
+  ]
+}

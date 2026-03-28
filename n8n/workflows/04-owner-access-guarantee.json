@@ -1,0 +1,184 @@
+{
+  "name": "Rudy Owner Access Guarantee - Fortress Paradox",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "id": "fortress-cron",
+      "name": "Every 15 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [250, 400]
+    },
+    {
+      "parameters": {
+        "command": "powershell.exe -NoProfile -Command \"$paths = @(); $ts = Get-Service -Name 'Tailscale' -ErrorAction SilentlyContinue; if ($ts -and $ts.Status -eq 'Running') { $paths += 'Tailscale' }; $rd = Get-Service -Name 'RustDesk' -ErrorAction SilentlyContinue; if ($rd -and $rd.Status -eq 'Running') { $paths += 'RustDesk' }; $rdp = (Get-ItemProperty 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Terminal Server' -Name fDenyTSConnections -ErrorAction SilentlyContinue).fDenyTSConnections; if ($rdp -eq 0) { $paths += 'RDP' }; $paths += 'LocalConsole'; @{ActivePaths=$paths; Count=$paths.Count; Minimum=3; BelowMinimum=($paths.Count -lt 3)} | ConvertTo-Json -Compress\""
+      },
+      "id": "check-access-paths",
+      "name": "Check Access Paths",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [470, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const result = JSON.parse($input.first().json.stdout || '{}');\n\n// If below minimum, try to restart missing services\nconst actions = [];\nconst activePaths = result.ActivePaths || [];\n\nif (!activePaths.includes('Tailscale')) {\n  actions.push('Tailscale is DOWN - will attempt restart');\n}\nif (!activePaths.includes('RustDesk')) {\n  actions.push('RustDesk is DOWN - will attempt restart');\n}\n\nreturn [{\n  json: {\n    ...result,\n    actions: actions,\n    needsRestart: actions.length > 0,\n    needsAlert: result.BelowMinimum,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "evaluate-fortress",
+      "name": "Evaluate Fortress Status",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [690, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "restart-check",
+              "leftValue": "={{ $json.needsRestart }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-restart",
+      "name": "Needs Restart?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [910, 300]
+    },
+    {
+      "parameters": {
+        "command": "powershell.exe -NoProfile -Command \"$results = @(); foreach ($svc in @('Tailscale','RustDesk')) { $s = Get-Service -Name $svc -ErrorAction SilentlyContinue; if ($s -and $s.Status -ne 'Running') { Start-Service -Name $svc -ErrorAction SilentlyContinue; Start-Sleep -Seconds 5; $s2 = Get-Service -Name $svc; $results += \\\"$svc`: restarted -> $($s2.Status)\\\" } }; $results -join '; '\""
+      },
+      "id": "restart-access",
+      "name": "Restart Access Services",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1130, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "alert-check",
+              "leftValue": "={{ $json.needsAlert }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-alert",
+      "name": "Below Minimum?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [910, 500]
+    },
+    {
+      "parameters": {
+        "sendTo": "ccimino2@gmail.com",
+        "subject": "=[FORTRESS ALERT] Rudy Access Paths Below Minimum",
+        "message": "=ALERT: Owner access paths are below the minimum threshold of 3.\n\nActive paths ({{ $json.Count }}): {{ $json.ActivePaths.join(', ') }}\nMinimum required: {{ $json.Minimum }}\n\nActions taken: {{ $json.actions.join('; ') || 'None' }}\n\nTimestamp: {{ $json.timestamp }}\n\nIf you cannot reach Rudy remotely, the local console is always available.\nUSB recovery drive can restore full access if needed.",
+        "options": {}
+      },
+      "id": "alert-chris",
+      "name": "Alert Chris - Fortress Breach",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1130, 500],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "",
+          "name": "Rudy Gmail OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "command": "powershell.exe -NoProfile -Command \"$logFile = Join-Path $env:USERPROFILE 'Desktop\\rudy-data\\fortress-log.jsonl'; $entry = @{timestamp=(Get-Date -Format o); paths=$args} | ConvertTo-Json -Compress; $entry | Out-File -Append -FilePath $logFile -Encoding UTF8\""
+      },
+      "id": "log-fortress",
+      "name": "Log Fortress Check",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1350, 400]
+    }
+  ],
+  "connections": {
+    "Every 15 Minutes": {
+      "main": [
+        [{ "node": "Check Access Paths", "type": "main", "index": 0 }]
+      ]
+    },
+    "Check Access Paths": {
+      "main": [
+        [{ "node": "Evaluate Fortress Status", "type": "main", "index": 0 }]
+      ]
+    },
+    "Evaluate Fortress Status": {
+      "main": [
+        [
+          { "node": "Needs Restart?", "type": "main", "index": 0 },
+          { "node": "Below Minimum?", "type": "main", "index": 0 },
+          { "node": "Log Fortress Check", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Needs Restart?": {
+      "main": [
+        [{ "node": "Restart Access Services", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Below Minimum?": {
+      "main": [
+        [{ "node": "Alert Chris - Fortress Breach", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Restart Access Services": {
+      "main": [
+        [{ "node": "Log Fortress Check", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    { "name": "rudy-core" },
+    { "name": "phase-1" },
+    { "name": "fortress" },
+    { "name": "security" }
+  ]
+}

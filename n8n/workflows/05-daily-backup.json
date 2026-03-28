@@ -1,0 +1,120 @@
+{
+  "name": "Rudy Daily Backup - 2 AM",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 2 * * *"
+            }
+          ]
+        }
+      },
+      "id": "backup-cron",
+      "name": "Daily 2:00 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [250, 400]
+    },
+    {
+      "parameters": {
+        "command": "powershell.exe -NoProfile -Command \"$backupDir = Join-Path $env:USERPROFILE 'Desktop\\rudy-backups'; $wfDir = Join-Path $backupDir 'workflows'; $dbDir = Join-Path $backupDir 'database'; foreach ($d in @($wfDir, $dbDir)) { if (-not (Test-Path $d)) { New-Item -ItemType Directory -Force -Path $d | Out-Null } }; $datestamp = Get-Date -Format 'yyyy-MM-dd'; Write-Output \\\"Starting backup for $datestamp\\\"; n8n export:workflow --all --output=\\\"$wfDir\\\" 2>&1; Write-Output \\\"Workflows exported\\\"; $n8nDb = Join-Path $env:USERPROFILE '.n8n\\database.sqlite'; if (Test-Path $n8nDb) { Copy-Item $n8nDb \\\"$dbDir\\database-$datestamp.sqlite\\\" -Force; Write-Output \\\"Database backed up\\\" } else { Write-Output \\\"Database file not found at $n8nDb\\\" }; $oldBackups = Get-ChildItem $dbDir -Filter 'database-*.sqlite' | Sort-Object Name -Descending | Select-Object -Skip 7; foreach ($old in $oldBackups) { Remove-Item $old.FullName -Force; Write-Output \\\"Rotated: $($old.Name)\\\" }; Write-Output \\\"Backup complete\\\"\""
+      },
+      "id": "run-backup",
+      "name": "Export Workflows & Backup DB",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [470, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const output = $input.first().json.stdout || '';\nconst exitCode = $input.first().json.exitCode;\nconst success = exitCode === 0;\n\nreturn [{\n  json: {\n    timestamp: new Date().toISOString(),\n    success: success,\n    exitCode: exitCode,\n    output: output.substring(0, 500),\n    needsAlert: !success\n  }\n}];"
+      },
+      "id": "evaluate-backup",
+      "name": "Evaluate Backup Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [690, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "backup-failed",
+              "leftValue": "={{ $json.needsAlert }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-failed",
+      "name": "Backup Failed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [910, 400]
+    },
+    {
+      "parameters": {
+        "sendTo": "ccimino2@gmail.com",
+        "subject": "=[Rudy] Backup FAILED",
+        "message": "=Daily backup failed at {{ $json.timestamp }}.\n\nExit code: {{ $json.exitCode }}\nOutput: {{ $json.output }}\n\nPlease check the backup system.",
+        "options": {}
+      },
+      "id": "alert-backup-fail",
+      "name": "Alert Chris - Backup Failed",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1130, 300],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "",
+          "name": "Rudy Gmail OAuth2"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Daily 2:00 AM": {
+      "main": [
+        [{ "node": "Export Workflows & Backup DB", "type": "main", "index": 0 }]
+      ]
+    },
+    "Export Workflows & Backup DB": {
+      "main": [
+        [{ "node": "Evaluate Backup Result", "type": "main", "index": 0 }]
+      ]
+    },
+    "Evaluate Backup Result": {
+      "main": [
+        [{ "node": "Backup Failed?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Backup Failed?": {
+      "main": [
+        [{ "node": "Alert Chris - Backup Failed", "type": "main", "index": 0 }],
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    { "name": "rudy-core" },
+    { "name": "phase-1" },
+    { "name": "backup" }
+  ]
+}

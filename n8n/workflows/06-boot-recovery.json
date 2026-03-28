@@ -1,0 +1,163 @@
+{
+  "name": "Rudy Boot Recovery - Startup Detection",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      },
+      "id": "boot-check-cron",
+      "name": "Every 5 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [250, 400]
+    },
+    {
+      "parameters": {
+        "command": "powershell.exe -NoProfile -Command \"$healthFile = Join-Path $env:USERPROFILE 'Desktop\\rudy-data\\health-latest.json'; $markerFile = Join-Path $env:USERPROFILE 'Desktop\\rudy-data\\boot-notified.txt'; $os = Get-CimInstance Win32_OperatingSystem; $bootTime = $os.LastBootUpTime; $uptime = (Get-Date) - $bootTime; $lastHealthAge = 999; if (Test-Path $healthFile) { $lastHealthAge = ((Get-Date) - (Get-Item $healthFile).LastWriteTime).TotalMinutes }; $alreadyNotified = $false; if (Test-Path $markerFile) { $notifiedBoot = Get-Content $markerFile -Raw; if ($notifiedBoot.Trim() -eq $bootTime.ToString('o')) { $alreadyNotified = $true } }; @{BootTime=$bootTime.ToString('o'); UptimeMinutes=[math]::Round($uptime.TotalMinutes,1); HealthFileAgeMinutes=[math]::Round($lastHealthAge,1); IsRecentBoot=($uptime.TotalMinutes -lt 15); AlreadyNotified=$alreadyNotified; MarkerFile=$markerFile} | ConvertTo-Json -Compress\""
+      },
+      "id": "detect-boot",
+      "name": "Detect Recent Boot",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [470, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = JSON.parse($input.first().json.stdout || '{}');\nconst needsNotification = data.IsRecentBoot && !data.AlreadyNotified;\n\nreturn [{\n  json: {\n    ...data,\n    needsNotification: needsNotification\n  }\n}];"
+      },
+      "id": "evaluate-boot",
+      "name": "Evaluate Boot Status",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [690, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "boot-notify",
+              "leftValue": "={{ $json.needsNotification }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-notify",
+      "name": "New Boot?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [910, 400]
+    },
+    {
+      "parameters": {
+        "command": "powershell.exe -NoProfile -Command \"$svcs = @('RustDesk','Tailscale','n8n') | ForEach-Object { $s = Get-Service -Name $_ -ErrorAction SilentlyContinue; if($s){\\\"$_`: $($s.Status)\\\"}else{\\\"$_`: NotInstalled\\\"} }; $os = Get-CimInstance Win32_OperatingSystem; $disk = Get-CimInstance Win32_LogicalDisk -Filter \\\"DeviceID='C:'\\\"; @{Services=($svcs -join ', '); RAM_Free_GB=[math]::Round($os.FreePhysicalMemory/1048576,1); Disk_Free_GB=[math]::Round($disk.FreeSpace/1073741824,1)} | ConvertTo-Json -Compress\""
+      },
+      "id": "post-boot-check",
+      "name": "Post-Boot Health Check",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1130, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const bootData = $('Evaluate Boot Status').first().json;\nconst healthRaw = $input.first().json.stdout || '{}';\nlet health;\ntry { health = JSON.parse(healthRaw); } catch { health = { error: 'parse failed' }; }\n\nconst emailBody = `Rudy is back online.\n\nBoot time: ${bootData.BootTime}\nUptime: ${bootData.UptimeMinutes} minutes\n\nPost-boot health check:\n- Services: ${health.Services || 'unknown'}\n- RAM Free: ${health.RAM_Free_GB || '?'} GB\n- Disk Free: ${health.Disk_Free_GB || '?'} GB\n\nAll automated workflows have resumed. Monitoring is active.`;\n\nreturn [{ json: { emailBody: emailBody, bootTime: bootData.BootTime, markerFile: bootData.MarkerFile } }];"
+      },
+      "id": "compose-boot-email",
+      "name": "Compose Boot Notification",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1350, 300]
+    },
+    {
+      "parameters": {
+        "sendTo": "ccimino2@gmail.com",
+        "subject": "=[Rudy] I'm Back Online",
+        "message": "={{ $json.emailBody }}",
+        "options": {}
+      },
+      "id": "send-boot-email",
+      "name": "Send Boot Notification",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1570, 300],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "",
+          "name": "Rudy Gmail OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "command": "=powershell.exe -NoProfile -Command \"'{{ $json.bootTime }}' | Out-File -FilePath '{{ $json.markerFile }}' -Encoding UTF8 -Force\""
+      },
+      "id": "write-marker",
+      "name": "Write Boot Marker",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1570, 500]
+    }
+  ],
+  "connections": {
+    "Every 5 Minutes": {
+      "main": [
+        [{ "node": "Detect Recent Boot", "type": "main", "index": 0 }]
+      ]
+    },
+    "Detect Recent Boot": {
+      "main": [
+        [{ "node": "Evaluate Boot Status", "type": "main", "index": 0 }]
+      ]
+    },
+    "Evaluate Boot Status": {
+      "main": [
+        [{ "node": "New Boot?", "type": "main", "index": 0 }]
+      ]
+    },
+    "New Boot?": {
+      "main": [
+        [{ "node": "Post-Boot Health Check", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Post-Boot Health Check": {
+      "main": [
+        [{ "node": "Compose Boot Notification", "type": "main", "index": 0 }]
+      ]
+    },
+    "Compose Boot Notification": {
+      "main": [
+        [
+          { "node": "Send Boot Notification", "type": "main", "index": 0 },
+          { "node": "Write Boot Marker", "type": "main", "index": 0 }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    { "name": "rudy-core" },
+    { "name": "phase-1" },
+    { "name": "resilience" }
+  ]
+}

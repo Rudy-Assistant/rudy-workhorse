@@ -1,0 +1,203 @@
+{
+  "name": "Rudy Morning Briefing - Daily Summary",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "30 6 * * *"
+            }
+          ]
+        }
+      },
+      "id": "morning-cron",
+      "name": "Daily 6:30 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [250, 400]
+    },
+    {
+      "parameters": {
+        "command": "powershell.exe -NoProfile -Command \"$healthFile = Join-Path $env:USERPROFILE 'Desktop\\rudy-data\\health-latest.json'; if (Test-Path $healthFile) { Get-Content $healthFile -Raw } else { '{\\\"status\\\": \\\"NO_DATA\\\", \\\"message\\\": \\\"Health file not found\\\"}' }\""
+      },
+      "id": "read-health",
+      "name": "Read Health Report",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [470, 200]
+    },
+    {
+      "parameters": {
+        "command": "powershell.exe -NoProfile -Command \"$os = Get-CimInstance Win32_OperatingSystem; $uptime = (Get-Date) - $os.LastBootUpTime; $cpu = (Get-CimInstance Win32_Processor | Measure-Object -Property LoadPercentage -Average).Average; $ramFree = [math]::Round($os.FreePhysicalMemory/1048576,1); $disk = Get-CimInstance Win32_LogicalDisk -Filter \\\"DeviceID='C:'\\\"; $diskFree = [math]::Round($disk.FreeSpace/1073741824,1); $diskPct = [math]::Round(($disk.Size - $disk.FreeSpace)/$disk.Size*100,1); $svcs = @('RustDesk','Tailscale','n8n') | ForEach-Object { $s = Get-Service -Name $_ -ErrorAction SilentlyContinue; if($s){\\\"$_`: $($s.Status)\\\"}else{\\\"$_`: NotInstalled\\\"} }; @{Uptime=$uptime.ToString('d\\.hh\\:mm'); CPU=$cpu; RAM_Free_GB=$ramFree; Disk_Free_GB=$diskFree; Disk_Used_Pct=$diskPct; Services=($svcs -join ', ')} | ConvertTo-Json -Compress\""
+      },
+      "id": "system-snapshot",
+      "name": "System Snapshot",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [470, 400]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "returnAll": false,
+        "limit": 20,
+        "filters": {
+          "q": "is:unread"
+        },
+        "options": {}
+      },
+      "id": "unread-count",
+      "name": "Get Unread Emails",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [470, 600],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "",
+          "name": "Rudy Gmail OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.openweathermap.org/data/2.5/weather",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "q", "value": "={{ $env.RUDY_WEATHER_CITY || 'New York,US' }}" },
+            { "name": "appid", "value": "={{ $env.OPENWEATHER_API_KEY || 'CONFIGURE_ME' }}" },
+            { "name": "units", "value": "imperial" }
+          ]
+        },
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "weather",
+      "name": "Weather API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [470, 800]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Compile all data into briefing context\nconst healthRaw = $input.all()[0]?.json?.stdout || '{}';\nconst systemRaw = $input.all()[1]?.json?.stdout || '{}';\nconst emails = $input.all()[2]?.json || {};\nconst weatherData = $input.all()[3]?.json || {};\n\nlet health, system;\ntry { health = JSON.parse(healthRaw); } catch { health = { status: 'PARSE_ERROR' }; }\ntry { system = JSON.parse(systemRaw); } catch { system = {}; }\n\n// Count unread emails\nconst unreadCount = Array.isArray(emails) ? emails.length : (emails.resultSizeEstimate || 0);\n\n// Format weather\nlet weatherStr = 'Weather data unavailable';\nif (weatherData.main) {\n  weatherStr = `${Math.round(weatherData.main.temp)}F, ${weatherData.weather?.[0]?.description || 'unknown'}, High ${Math.round(weatherData.main.temp_max)}F / Low ${Math.round(weatherData.main.temp_min)}F`;\n}\n\nconst briefingData = {\n  date: new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),\n  health: health,\n  system: system,\n  unreadEmails: unreadCount,\n  weather: weatherStr,\n  weatherRaw: weatherData\n};\n\nreturn [{ json: briefingData }];"
+      },
+      "id": "compile-briefing-data",
+      "name": "Compile Briefing Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [700, 500]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{ $env.ANTHROPIC_API_KEY }}" },
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "content-type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-6\",\n  \"max_tokens\": 1500,\n  \"system\": \"You are Rudy, Chris Cimino's autonomous family assistant AI. You run on an always-on mini-PC in the Batcave. Generate a concise morning briefing email. Be warm but efficient. Use short sections with clear headers. If any system issues exist, lead with those. End with a friendly sign-off.\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Generate my morning briefing email for Chris. Here's the data:\\n\\nDate: {{ $json.date }}\\nWeather: {{ $json.weather }}\\n\\nSystem Health: {{ JSON.stringify($json.health) }}\\nSystem Stats: {{ JSON.stringify($json.system) }}\\n\\nUnread Emails: {{ $json.unreadEmails }}\\n\\nFormat as a clean email with sections: Good Morning, System Status, Weather, Email Summary, and Today's Notes.\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "claude-compose",
+      "name": "Claude AI - Compose Briefing",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [940, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract the text from Claude's response\nconst response = $input.first().json;\nlet text = '';\nif (response.content && Array.isArray(response.content)) {\n  text = response.content.map(c => c.text || '').join('');\n} else {\n  text = 'Morning briefing generation failed. System is operational.';\n}\nreturn [{ json: { briefingText: text } }];"
+      },
+      "id": "extract-briefing",
+      "name": "Extract Briefing Text",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1160, 500]
+    },
+    {
+      "parameters": {
+        "sendTo": "ccimino2@gmail.com",
+        "subject": "=[Rudy] Morning Briefing - {{ $('Compile Briefing Data').first().json.date }}",
+        "message": "={{ $json.briefingText }}",
+        "options": {}
+      },
+      "id": "send-briefing",
+      "name": "Send Briefing to Chris",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1380, 500],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "",
+          "name": "Rudy Gmail OAuth2"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Daily 6:30 AM": {
+      "main": [
+        [
+          { "node": "Read Health Report", "type": "main", "index": 0 },
+          { "node": "System Snapshot", "type": "main", "index": 0 },
+          { "node": "Get Unread Emails", "type": "main", "index": 0 },
+          { "node": "Weather API", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Read Health Report": {
+      "main": [
+        [{ "node": "Compile Briefing Data", "type": "main", "index": 0 }]
+      ]
+    },
+    "System Snapshot": {
+      "main": [
+        [{ "node": "Compile Briefing Data", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get Unread Emails": {
+      "main": [
+        [{ "node": "Compile Briefing Data", "type": "main", "index": 0 }]
+      ]
+    },
+    "Weather API": {
+      "main": [
+        [{ "node": "Compile Briefing Data", "type": "main", "index": 0 }]
+      ]
+    },
+    "Compile Briefing Data": {
+      "main": [
+        [{ "node": "Claude AI - Compose Briefing", "type": "main", "index": 0 }]
+      ]
+    },
+    "Claude AI - Compose Briefing": {
+      "main": [
+        [{ "node": "Extract Briefing Text", "type": "main", "index": 0 }]
+      ]
+    },
+    "Extract Briefing Text": {
+      "main": [
+        [{ "node": "Send Briefing to Chris", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    { "name": "rudy-core" },
+    { "name": "phase-1" },
+    { "name": "daily" }
+  ]
+}

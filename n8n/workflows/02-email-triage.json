@@ -1,0 +1,249 @@
+{
+  "name": "Rudy Email Triage - Classify and Respond",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 2
+            }
+          ]
+        }
+      },
+      "id": "poll-trigger",
+      "name": "Every 2 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [250, 400]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "returnAll": false,
+        "limit": 10,
+        "filters": {
+          "q": "is:unread",
+          "labelIds": ["INBOX"]
+        },
+        "options": {}
+      },
+      "id": "gmail-fetch",
+      "name": "Fetch Unread Emails",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [470, 400],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "",
+          "name": "Rudy Gmail OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract email fields and check against family allowlist\nconst items = $input.all();\nconst results = [];\n\n// CONFIGURE: Add family email addresses here\nconst familyAllowlist = [\n  'ccimino2@gmail.com'\n  // Add more family emails as needed\n];\n\nconst knownSenders = [\n  // Add known bill/notification senders\n  // 'noreply@example.com'\n];\n\nfor (const item of items) {\n  const email = item.json;\n  const from = (email.from || email.sender || '').toLowerCase();\n  const fromEmail = from.match(/[\\w.-]+@[\\w.-]+/) ? from.match(/[\\w.-]+@[\\w.-]+/)[0] : from;\n  \n  const isFamily = familyAllowlist.some(f => fromEmail.includes(f.toLowerCase()));\n  const isKnown = knownSenders.some(k => fromEmail.includes(k.toLowerCase()));\n  \n  results.push({\n    json: {\n      id: email.id,\n      threadId: email.threadId,\n      from: fromEmail,\n      fromDisplay: from,\n      subject: email.subject || '(no subject)',\n      snippet: email.snippet || '',\n      body: (email.text || email.snippet || '').substring(0, 2000),\n      date: email.date || email.internalDate,\n      isFamily: isFamily,\n      isKnown: isKnown,\n      route: isFamily ? 'family' : (isKnown ? 'known' : 'unknown')\n    }\n  });\n}\n\nreturn results;"
+      },
+      "id": "extract-metadata",
+      "name": "Extract & Classify Sender",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [690, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.route }}",
+              "value2": "family",
+              "operation": "equals"
+            }
+          ]
+        }
+      },
+      "id": "is-family",
+      "name": "Is Family?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [910, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{ $env.ANTHROPIC_API_KEY }}" },
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "content-type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-haiku-4-5-20251001\",\n  \"max_tokens\": 1024,\n  \"system\": \"You are Rudy, a family assistant AI. Classify the following email and draft an appropriate response. Your tone is warm, helpful, and efficient. You serve Chris Cimino's family.\\n\\nClassify the email into exactly ONE category:\\n- calendar_request: wants to schedule something\\n- information_request: asking for information or research\\n- action_request: wants something done (non-calendar)\\n- conversation: casual chat or catch-up\\n- urgent: time-sensitive or emergency\\n\\nRespond with JSON: {\\\"category\\\": \\\"...\\\", \\\"confidence\\\": 0.0-1.0, \\\"summary\\\": \\\"one-line summary\\\", \\\"draft_response\\\": \\\"your drafted reply\\\", \\\"needs_chris\\\": true/false}\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"From: {{ $json.from }}\\nSubject: {{ $json.subject }}\\nBody: {{ $json.body }}\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "claude-classify",
+      "name": "Claude AI - Classify Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1130, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Claude's classification response\nconst item = $input.first();\nconst content = item.json.content;\nlet text = '';\nif (Array.isArray(content)) {\n  text = content.map(c => c.text || '').join('');\n} else {\n  text = content || '';\n}\n\n// Try to extract JSON from the response\nlet classification;\ntry {\n  const jsonMatch = text.match(/\\{[\\s\\S]*\\}/);\n  classification = JSON.parse(jsonMatch[0]);\n} catch (e) {\n  classification = {\n    category: 'conversation',\n    confidence: 0.5,\n    summary: 'Could not parse classification',\n    draft_response: text,\n    needs_chris: true\n  };\n}\n\n// Merge with original email data from previous nodes\nconst emailData = $('Extract & Classify Sender').first().json;\n\nreturn [{\n  json: {\n    ...emailData,\n    classification: classification\n  }\n}];"
+      },
+      "id": "parse-classification",
+      "name": "Parse AI Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1350, 300]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            { "value": "calendar_request", "output": 0 },
+            { "value": "information_request", "output": 1 },
+            { "value": "action_request", "output": 2 },
+            { "value": "conversation", "output": 3 },
+            { "value": "urgent", "output": 4 }
+          ]
+        },
+        "dataType": "string",
+        "value": "={{ $json.classification.category }}"
+      },
+      "id": "route-by-category",
+      "name": "Route by Category",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [1570, 300]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.from }}",
+        "subject": "=Re: {{ $json.subject }}",
+        "message": "={{ $json.classification.draft_response }}",
+        "options": {
+          "ccList": "ccimino2@gmail.com",
+          "replyTo": "={{ $json.from }}",
+          "threadId": "={{ $json.threadId }}"
+        }
+      },
+      "id": "send-response",
+      "name": "Send Response (CC Chris)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1800, 300],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "",
+          "name": "Rudy Gmail OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "ccimino2@gmail.com",
+        "subject": "=[URGENT] Rudy Alert: {{ $json.subject }}",
+        "message": "=URGENT email received that needs your attention.\n\nFrom: {{ $json.from }}\nSubject: {{ $json.subject }}\nSummary: {{ $json.classification.summary }}\n\nDraft response (not sent):\n{{ $json.classification.draft_response }}",
+        "options": {}
+      },
+      "id": "urgent-notify",
+      "name": "Notify Chris (Urgent)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1800, 600],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "",
+          "name": "Rudy Gmail OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Log the triage decision for audit\nconst item = $input.first();\nconst logEntry = {\n  timestamp: new Date().toISOString(),\n  from: item.json.from,\n  subject: item.json.subject,\n  route: item.json.route,\n  category: item.json.classification ? item.json.classification.category : 'archived',\n  summary: item.json.classification ? item.json.classification.summary : 'Non-family sender - archived'\n};\nreturn [{ json: logEntry }];"
+      },
+      "id": "log-decision",
+      "name": "Log Triage Decision",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1800, 100]
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $json.id }}",
+        "labelIds": ["Label_archived"]
+      },
+      "id": "archive-unknown",
+      "name": "Archive Unknown Sender",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1130, 550],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "",
+          "name": "Rudy Gmail OAuth2"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Every 2 Minutes": {
+      "main": [
+        [{ "node": "Fetch Unread Emails", "type": "main", "index": 0 }]
+      ]
+    },
+    "Fetch Unread Emails": {
+      "main": [
+        [{ "node": "Extract & Classify Sender", "type": "main", "index": 0 }]
+      ]
+    },
+    "Extract & Classify Sender": {
+      "main": [
+        [{ "node": "Is Family?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Is Family?": {
+      "main": [
+        [{ "node": "Claude AI - Classify Email", "type": "main", "index": 0 }],
+        [{ "node": "Archive Unknown Sender", "type": "main", "index": 0 }]
+      ]
+    },
+    "Claude AI - Classify Email": {
+      "main": [
+        [{ "node": "Parse AI Response", "type": "main", "index": 0 }]
+      ]
+    },
+    "Parse AI Response": {
+      "main": [
+        [
+          { "node": "Route by Category", "type": "main", "index": 0 },
+          { "node": "Log Triage Decision", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Route by Category": {
+      "main": [
+        [{ "node": "Send Response (CC Chris)", "type": "main", "index": 0 }],
+        [{ "node": "Send Response (CC Chris)", "type": "main", "index": 0 }],
+        [{ "node": "Send Response (CC Chris)", "type": "main", "index": 0 }],
+        [{ "node": "Send Response (CC Chris)", "type": "main", "index": 0 }],
+        [{ "node": "Notify Chris (Urgent)", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    { "name": "rudy-core" },
+    { "name": "phase-1" },
+    { "name": "email" }
+  ]
+}
