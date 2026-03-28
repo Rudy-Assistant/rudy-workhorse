@@ -354,7 +354,7 @@ class NetworkDefense:
 
             # Update baseline — grow it over time
             all_known = known_destinations | set(current_connections)
-            self.traffic_baseline["known_destinations"] = list(all_known)[-5000]  # Cap at 5000
+            self.traffic_baseline["known_destinations"] = list(all_known)[-5000:]  # Cap at 5000
             self.traffic_baseline["last_check"] = datetime.now().isoformat()
             self.traffic_baseline["last_connection_count"] = findings["connections"]
             self._save_json(TRAFFIC_BASELINE_FILE, self.traffic_baseline)

@@ -26,17 +26,19 @@
 2. There's a guaranteed override mechanism (e.g., "if no HID device is whitelisted AND connected, don't block anything")
 3. A time-based safety valve exists (e.g., "never block HID in the first 10 minutes after boot")
 
-### 2. Security Agent (security_agent.py) — TRUNCATED/BROKEN
+### 2. Security Agent (security_agent.py) — ✅ SAFE (CORRECTED)
 
-**Status:** The audit shows this file is truncated (known issue from v0.1.0 release notes). It may or may not have dangerous behaviors depending on what was cut off.
+**Status:** Full review completed (543 lines). This file is NOT truncated — the v0.1.0 release note was misleading. The module is purely passive/observational: monitors network connections, listening ports, processes, file integrity, Windows event logs, breach databases, WiFi presence, and wellness. **It never blocks anything.** Safe to run.
 
-**RECOMMENDATION: Do not run until reviewed and rebuilt with Fortress Paradox safeguards.**
+**RECOMMENDATION: Safe to enable. No Fortress Paradox concerns — no blocking behavior.**
 
-### 3. Network Defense (network_defense.py) — MEDIUM RISK
+### 3. Network Defense (network_defense.py) — ✅ SAFE (CORRECTED)
 
-**Problem:** Could potentially block network adapters or modify firewall rules. Needs review.
+**Status:** Full review completed (696 lines). This module is entirely read-only and observational. It uses only passive commands (`arp -a`, `nslookup`, `net share`, `net session`, `reg query`, `netstat -ano`, `tasklist`). **No blocking, no firewall modification, no device disabling.** The original "MEDIUM RISK" assessment was incorrect.
 
-**RECOMMENDATION: Read-only mode only until Fortress Paradox safeguards are in place.**
+**Minor bug:** Line 357 has `list(all_known)[-5000]` — should be `[-5000:]` (missing slice notation for the cap).
+
+**RECOMMENDATION: Safe to enable. No Fortress Paradox concerns — no blocking behavior.**
 
 ### 4. Intruder Profiler (intruder_profiler.py) — LOW RISK
 
@@ -111,10 +113,10 @@ Create a file-based kill switch: if `rudy-data/SECURITY-DISABLED` exists, ALL se
 ## Files That Are Safe to Run
 - surveillance.py (passive observation only)
 - intruder_profiler.py (passive observation only)
+- security_agent.py (passive observation only — full review confirmed safe)
+- network_defense.py (passive observation only — full review confirmed safe, bug fixed)
 - enforce-rustdesk-config.ps1 (protective)
 - All n8n seed workflows (01-07) — none have blocking behavior
 
 ## Files That Must NOT Run Until Safeguarded
-- usb_quarantine.py — WILL brick machine
-- security_agent.py — truncated, unknown behavior
-- network_defense.py — could block network access
+- usb_quarantine.py — use `usb_quarantine_safeguarded.py` instead (Fortress Paradox safeguards applied)
