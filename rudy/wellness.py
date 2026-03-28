@@ -310,7 +310,7 @@ class WellnessMonitor:
         """Generate a human-readable family safety dashboard."""
         lines = []
         lines.append("=" * 50)
-        lines.append(f"  FAMILY WELLNESS DASHBOARD")
+        lines.append("  FAMILY WELLNESS DASHBOARD")
         lines.append(f"  {datetime.now().strftime('%Y-%m-%d %H:%M')}")
         lines.append("=" * 50)
 
@@ -335,7 +335,7 @@ class WellnessMonitor:
         # Recent alerts
         recent = [a for a in self.alerts[-10:] if a.get("severity") in ("high", "medium")]
         if recent:
-            lines.append(f"\n  RECENT ALERTS:")
+            lines.append("\n  RECENT ALERTS:")
             for a in recent[-5:]:
                 lines.append(f"    [{a['severity'].upper()}] {a['message']}")
 

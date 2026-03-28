@@ -218,7 +218,7 @@ def setup_wizard():
             config["setup_complete"] = True
             save_config(config)
             print("\n  Cookie saved! Testing connection...")
-            client = SunoClient(config)
+            SunoClient(config)
             # Quick test
             print("  Configuration complete.")
         else:

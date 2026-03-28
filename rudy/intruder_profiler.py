@@ -432,7 +432,7 @@ class IntruderProfiler:
         lines.append(f"  {datetime.now().strftime('%Y-%m-%d %H:%M')}")
         lines.append("=" * 55)
 
-        stats = self.database.get("stats", {})
+        self.database.get("stats", {})
         devices = self.database.get("devices", {})
 
         active = [d for d in devices.values() if d.get("currently_present") and d["status"] != "cleared"]
@@ -444,7 +444,7 @@ class IntruderProfiler:
         lines.append(f"  Cleared: {len(self.cleared)}")
 
         if active:
-            lines.append(f"\n  ACTIVE UNKNOWNS:")
+            lines.append("\n  ACTIVE UNKNOWNS:")
             for d in sorted(active, key=lambda x: x.get("threat_score", 0), reverse=True):
                 score = d.get("threat_score", 0)
                 icon = "***" if score >= 25 else "**" if score >= 15 else "*" if score >= 8 else "."
@@ -459,7 +459,7 @@ class IntruderProfiler:
         # Recent timeline
         recent = self.timeline[-10:] if self.timeline else []
         if recent:
-            lines.append(f"\n  RECENT EVENTS:")
+            lines.append("\n  RECENT EVENTS:")
             for e in recent:
                 lines.append(f"    {e.get('time', '?')[:19]} | {e.get('event', '?')} | {e.get('mac', '?')}")
 
@@ -481,7 +481,7 @@ def run_intruder_scan():
     print(profiler.get_threat_summary())
 
     if result["new_intruders"]:
-        print(f"\n  NEW INTRUDERS DETECTED:")
+        print("\n  NEW INTRUDERS DETECTED:")
         for i in result["new_intruders"]:
             print(f"    {i['ip']} [{i['mac']}] — Threat Score: {i['threat_score']}")
 

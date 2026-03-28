@@ -137,7 +137,7 @@ def create_app():
                             "wellness", "movement_feed", "knowledge_base",
                             "web_intelligence", "financial", "voice", "ocr"]:
             try:
-                mod = __import__(f"rudy.{module_name}", fromlist=[""])
+                __import__(f"rudy.{module_name}", fromlist=[""])
                 status["modules"][module_name] = "loaded"
             except Exception:
                 status["modules"][module_name] = "unavailable"

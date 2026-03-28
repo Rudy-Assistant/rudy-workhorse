@@ -163,11 +163,6 @@ class PresenceMonitor:
         print("  Running ping sweep...")
         # Use PowerShell for parallel pinging (much faster than sequential)
         # Test-Connection is slow, use raw ping with short timeout
-        ps_cmd = f"""
-        1..254 | ForEach-Object -Parallel {{
-            $null = Test-Connection -ComputerName "{LOCAL_SUBNET}.$_" -Count 1 -TimeoutSeconds 1 -ErrorAction SilentlyContinue
-        }} -ThrottleLimit 50
-        """
         # Fallback: use simple ARP + targeted pings for common ranges
         # The ARP table often has most active devices already
         try:
@@ -248,7 +243,6 @@ class PresenceMonitor:
             name = self.known_devices.get(mac, {}).get("name", "Unknown Device")
             ip = discovered[mac]["ip"]
             is_known = mac in self.known_devices
-            severity = "info" if is_known else "warning"
 
             event = {
                 "time": now.isoformat(),
@@ -388,7 +382,7 @@ def run_scan(run_analytics=True):
             elif unknowns > 0:
                 print(f"  [Intruder] {unknowns} uncleared device(s) on network. Level: {level.upper()}")
             else:
-                print(f"  [Intruder] Network clear.")
+                print("  [Intruder] Network clear.")
         except Exception as e:
             print(f"  [Intruder] Warning: {e}")
 

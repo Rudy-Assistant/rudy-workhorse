@@ -208,13 +208,11 @@ class SecurityAgent(AgentBase):
 
         # Track unique remote destinations
         remote_hosts = Counter()
-        suspicious = []
 
         for conn in connections:
             if conn.status == 'ESTABLISHED' and conn.raddr:
                 remote_ip = conn.raddr.ip
                 remote_port = conn.raddr.port
-                local_port = conn.laddr.port if conn.laddr else 0
 
                 remote_hosts[remote_ip] += 1
 
@@ -268,12 +266,12 @@ class SecurityAgent(AgentBase):
                 listeners.append({"port": port, "process": proc_name, "pid": conn.pid})
 
         # Compare to known ports
-        current_ports = {l["port"] for l in listeners}
+        current_ports = {entry["port"] for entry in listeners}
         prev_ports = set(baseline.get("known_listeners", []))
 
         new_ports = current_ports - prev_ports - self.KNOWN_PORTS
         for port in new_ports:
-            proc = next((l for l in listeners if l["port"] == port), {})
+            proc = next((entry for entry in listeners if entry["port"] == port), {})
             self._security_event("warning", "new_listener",
                 f"New listening port: {port} ({proc.get('process', 'unknown')})")
 

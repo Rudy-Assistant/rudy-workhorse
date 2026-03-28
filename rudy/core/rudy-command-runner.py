@@ -71,12 +71,12 @@ def execute_command(cmd_file: Path):
 
     if ext not in EXECUTORS:
         with open(result_file, "w", encoding="utf-8") as f:
-            f.write(f"EXIT_CODE=-1\n")
-            f.write(f"--- STDOUT ---\n")
-            f.write(f"--- STDERR ---\n")
+            f.write("EXIT_CODE=-1\n")
+            f.write("--- STDOUT ---\n")
+            f.write("--- STDERR ---\n")
             f.write(f"Unsupported file type: {ext}\n")
             f.write(f"Supported: {', '.join(EXECUTORS.keys())}\n")
-            f.write(f"--- END ---\n")
+            f.write("--- END ---\n")
         return
 
     executor = EXECUTORS[ext]
@@ -96,30 +96,30 @@ def execute_command(cmd_file: Path):
 
         with open(result_file, "w", encoding="utf-8") as f:
             f.write(f"EXIT_CODE={result.returncode}\n")
-            f.write(f"--- STDOUT ---\n")
+            f.write("--- STDOUT ---\n")
             f.write(result.stdout or "(empty)\n")
-            f.write(f"--- STDERR ---\n")
+            f.write("--- STDERR ---\n")
             f.write(result.stderr or "(empty)\n")
-            f.write(f"--- END ---\n")
+            f.write("--- END ---\n")
 
         log.info(f"Completed: {cmd_file.name} (exit={result.returncode})")
 
     except subprocess.TimeoutExpired:
         with open(result_file, "w", encoding="utf-8") as f:
-            f.write(f"EXIT_CODE=-2\n")
-            f.write(f"--- STDOUT ---\n")
-            f.write(f"--- STDERR ---\n")
+            f.write("EXIT_CODE=-2\n")
+            f.write("--- STDOUT ---\n")
+            f.write("--- STDERR ---\n")
             f.write(f"TIMEOUT: Command exceeded {COMMAND_TIMEOUT}s limit\n")
-            f.write(f"--- END ---\n")
+            f.write("--- END ---\n")
         log.error(f"Timeout: {cmd_file.name}")
 
     except Exception as e:
         with open(result_file, "w", encoding="utf-8") as f:
-            f.write(f"EXIT_CODE=-3\n")
-            f.write(f"--- STDOUT ---\n")
-            f.write(f"--- STDERR ---\n")
+            f.write("EXIT_CODE=-3\n")
+            f.write("--- STDOUT ---\n")
+            f.write("--- STDERR ---\n")
             f.write(f"ERROR: {str(e)}\n")
-            f.write(f"--- END ---\n")
+            f.write("--- END ---\n")
         log.error(f"Error executing {cmd_file.name}: {e}")
 
     finally:

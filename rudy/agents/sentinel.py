@@ -66,42 +66,54 @@ class Sentinel(AgentBase):
 
         # Each scan is cheap and fast — bail if we're running too long
         self._scan_agent_health(state)
-        if not self._time_ok(): return self._finalize(state)
+        if not self._time_ok():
+            return self._finalize(state)
 
         self._scan_environment(state)
-        if not self._time_ok(): return self._finalize(state)
+        if not self._time_ok():
+            return self._finalize(state)
 
         self._scan_for_opportunities(state)
-        if not self._time_ok(): return self._finalize(state)
+        if not self._time_ok():
+            return self._finalize(state)
 
         self._scan_work_queue(state)
-        if not self._time_ok(): return self._finalize(state)
+        if not self._time_ok():
+            return self._finalize(state)
 
         self._scan_presence_analytics(state)
-        if not self._time_ok(): return self._finalize(state)
+        if not self._time_ok():
+            return self._finalize(state)
 
         # === Live Event Awareness ===
         self._scan_remote_sessions(state)
-        if not self._time_ok(): return self._finalize(state)
+        if not self._time_ok():
+            return self._finalize(state)
 
         self._scan_incoming_requests(state)
-        if not self._time_ok(): return self._finalize(state)
+        if not self._time_ok():
+            return self._finalize(state)
 
         self._scan_device_events(state)
-        if not self._time_ok(): return self._finalize(state)
+        if not self._time_ok():
+            return self._finalize(state)
 
         self._scan_service_health(state)
-        if not self._time_ok(): return self._finalize(state)
+        if not self._time_ok():
+            return self._finalize(state)
 
         # === Session Guardian (ADR-001) ===
         self._scan_capabilities(state)
-        if not self._time_ok(): return self._finalize(state)
+        if not self._time_ok():
+            return self._finalize(state)
 
         self._generate_session_briefing(state)
-        if not self._time_ok(): return self._finalize(state)
+        if not self._time_ok():
+            return self._finalize(state)
 
         self._check_session_activity(state)
-        if not self._time_ok(): return self._finalize(state)
+        if not self._time_ok():
+            return self._finalize(state)
 
         self._micro_improve(state)
         self._finalize(state)
@@ -181,7 +193,7 @@ class Sentinel(AgentBase):
             state["rustdesk_session_active"] = active_conns > 0
             state["rustdesk_connections"] = active_conns
 
-        except Exception as e:
+        except Exception:
             # Silently skip if powershell call fails — not critical
             pass
 
@@ -694,7 +706,7 @@ class Sentinel(AgentBase):
             with open(self.MANIFEST_FILE, "w", encoding="utf-8") as f:
                 json.dump(manifest, f, indent=2)
 
-            total = (len(manifest["modules"]) + len(manifest["packages"])
+            (len(manifest["modules"]) + len(manifest["packages"])
                      + len(manifest["skills"]) + len(manifest["agents"]))
             self._observe("capabilities",
                 f"Manifest updated: {len(manifest['modules'])} modules, "
@@ -978,4 +990,3 @@ class Sentinel(AgentBase):
             return
 
         # Clean up any stale lock files
-     

@@ -303,7 +303,7 @@ class TravelMode:
 
         # === NETWORK CHANGED ===
         print(f"\n{'='*55}")
-        print(f"  NETWORK CHANGE DETECTED")
+        print("  NETWORK CHANGE DETECTED")
         print(f"  Previous: {self.state.get('current_network', {}).get('ssid', 'Unknown')}")
         print(f"  New: {fp.ssid or 'Unknown SSID'}")
         print(f"  Gateway: {fp.gateway_ip} [{fp.gateway_mac}]")
@@ -356,7 +356,7 @@ class TravelMode:
         now = datetime.now()
         network_id = fp.fingerprint_id
 
-        print(f"  TRAVEL MODE ACTIVATED — all devices treated as hostile")
+        print("  TRAVEL MODE ACTIVATED — all devices treated as hostile")
         print(f"  Subnet: {fp.subnet}.0/24 | SSID: {fp.ssid or 'Unknown'}")
 
         self.state["mode"] = "travel"
@@ -391,7 +391,7 @@ class TravelMode:
         Aggressive initial reconnaissance of a new network.
         Maps every device, probes services, checks for common threats.
         """
-        print(f"\n  Running first-contact reconnaissance...")
+        print("\n  Running first-contact reconnaissance...")
         findings = {
             "timestamp": datetime.now().isoformat(),
             "network": fp.to_dict(),
@@ -495,7 +495,7 @@ class TravelMode:
             findings["devices"].append(device)
 
         # 3. Check for specific threats
-        print(f"  Phase 3: Threat assessment...")
+        print("  Phase 3: Threat assessment...")
 
         # Check for captive portal (common in hotels/Airbnbs)
         try:
@@ -573,7 +573,7 @@ class TravelMode:
 
         # Print summary
         print(f"\n  {'='*50}")
-        print(f"  FIRST-CONTACT RECONNAISSANCE COMPLETE")
+        print("  FIRST-CONTACT RECONNAISSANCE COMPLETE")
         print(f"  {'='*50}")
         print(f"  Network: {fp.ssid or 'Unknown'} ({fp.subnet}.0/24)")
         print(f"  Devices: {len(discovered)}")
@@ -584,7 +584,7 @@ class TravelMode:
             icon = {"info": ".", "warning": "!", "alert": "!!", "critical": "!!!"}
             print(f"    [{icon.get(t['severity'], '?')}] {t['detail']}")
 
-        print(f"\n  Devices on this network:")
+        print("\n  Devices on this network:")
         for d in findings["devices"]:
             ports = f" ports:{d['open_ports']}" if d['open_ports'] else ""
             name = f" ({d['hostname']})" if d.get('hostname') else ""
@@ -658,16 +658,16 @@ class TravelMode:
         lines.append(f"  Known networks: {len(s.get('known_networks', {}))}")
 
         if s.get("mode") == "travel":
-            lines.append(f"\n  ELEVATED THREAT POSTURE:")
-            lines.append(f"    Scan interval: 5 min (vs 15 min at home)")
-            lines.append(f"    All devices: HOSTILE until cleared")
-            lines.append(f"    SMB: Should be blocked")
+            lines.append("\n  ELEVATED THREAT POSTURE:")
+            lines.append("    Scan interval: 5 min (vs 15 min at home)")
+            lines.append("    All devices: HOSTILE until cleared")
+            lines.append("    SMB: Should be blocked")
             lines.append(f"    Travel since: {s.get('travel_activated_at', '?')[:19]}")
 
         # Known networks
         nets = s.get("known_networks", {})
         if nets:
-            lines.append(f"\n  Known Networks:")
+            lines.append("\n  Known Networks:")
             for nid, info in nets.items():
                 trust = info.get("trust_level", "?")
                 name = info.get("name", "?")

@@ -193,7 +193,7 @@ class MovementFeed:
         # Build per-person status from analytics clusters
         persons = []
         clusters = self.analytics.get("clusters", [])
-        profiles = self.analytics.get("device_profiles", {})
+        self.analytics.get("device_profiles", {})
 
         for cluster in clusters:
             devices_in_cluster = cluster.get("devices", [])

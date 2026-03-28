@@ -367,7 +367,7 @@ class OfflineController:
         )
 
         # Drain the queue
-        results = self.queue.drain()
+        self.queue.drain()
 
     def ai_decide(self, situation: str) -> dict:
         """Use local AI to make a decision about a situation."""

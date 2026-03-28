@@ -486,7 +486,7 @@ class ObsolescenceMonitor:
             domain = rec.get("domain", "general")
 
             # Check if a similar issue already exists
-            existing = gh.list_issues(labels=[f"priority:high", domain])
+            existing = gh.list_issues(labels=["priority:high", domain])
             if any(detail[:40] in issue.get("title", "") for issue in existing):
                 continue  # Skip duplicate
 
@@ -499,7 +499,7 @@ class ObsolescenceMonitor:
                 f"**Priority**: HIGH\n\n"
                 f"Auto-filed by ObsolescenceMonitor on {datetime.now().strftime('%Y-%m-%d %H:%M')}\n"
             )
-            url = gh.create_issue(title, body, labels=["audit", f"priority:high"])
+            url = gh.create_issue(title, body, labels=["audit", "priority:high"])
             if url:
                 created.append(url)
 

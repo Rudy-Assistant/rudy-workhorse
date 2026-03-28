@@ -152,7 +152,7 @@ def main():
     if agent_name == "all":
         result = run_all(args.mode or "full")
         print(f"\n{'='*60}")
-        print(f"  AGGREGATE RESULTS")
+        print("  AGGREGATE RESULTS")
         print(f"{'='*60}")
         for name, data in result["agents"].items():
             status_icon = "✓" if data.get("status") == "healthy" else "✗"
@@ -163,7 +163,7 @@ def main():
     elif agent_name == "health":
         result = health_summary()
         print(f"\n{'='*60}")
-        print(f"  AGENT HEALTH SUMMARY")
+        print("  AGENT HEALTH SUMMARY")
         print(f"{'='*60}")
         for name, data in result["agents"].items():
             status_icon = "✓" if data.get("status") == "healthy" else "?" if data.get("status") == "never_run" else "✗"

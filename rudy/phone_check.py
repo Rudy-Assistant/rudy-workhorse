@@ -476,8 +476,8 @@ class AndroidScanner:
         if not output:
             return {"status": "failed"}
 
-        third_party = [l.replace("package:", "").strip()
-                       for l in output.splitlines() if l.startswith("package:")]
+        third_party = [line.replace("package:", "").strip()
+                       for line in output.splitlines() if line.startswith("package:")]
 
         for pkg in third_party[:50]:  # Limit to avoid timeout
             perms_out = self._adb(f"shell dumpsys package {pkg}", timeout=10)
@@ -485,7 +485,6 @@ class AndroidScanner:
                 continue
 
             granted = []
-            in_perms = False
             for line in perms_out.splitlines():
                 if "granted=true" in line:
                     perm_match = re.search(r'(\S+): granted=true', line)

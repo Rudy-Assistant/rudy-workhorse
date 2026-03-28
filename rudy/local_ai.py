@@ -403,7 +403,7 @@ class LocalAI:
         """Core generation — routes to Ollama or llama-cpp."""
         self._ensure_loaded()
 
-        start = time.time()
+        time.time()
         self._stats["total_queries"] += 1
 
         if self._backend == "ollama":
@@ -653,15 +653,15 @@ if __name__ == "__main__":
         for m in models:
             print(f"    - {m}")
     else:
-        print(f"\n  Ollama: NOT RUNNING (start with 'ollama serve')")
+        print("\n  Ollama: NOT RUNNING (start with 'ollama serve')")
 
     # GGUF models
-    print(f"\n  GGUF models (llama-cpp fallback):")
+    print("\n  GGUF models (llama-cpp fallback):")
     for m in ai.list_available_models():
         status = "DOWNLOADED" if m["available_locally"] else "needs download"
         print(f"    {m['name']:15s} {m['size_gb']}GB  [{status}]  {m['description']}")
 
     print(f"\n  Health: {json.dumps(ai.get_health(), indent=2)}")
-    print(f"\n  Usage:")
-    print(f"    ai = LocalAI()")
-    print(f"    ai.ask('What is your purpose?')   # Auto-selects Ollama or llama-cpp")
+    print("\n  Usage:")
+    print("    ai = LocalAI()")
+    print("    ai.ask('What is your purpose?')   # Auto-selects Ollama or llama-cpp")

@@ -1262,7 +1262,7 @@ class HumanSimulator:
         print("=" * 55)
 
         t = status["timing"]
-        print(f"\n  Timing:")
+        print("\n  Timing:")
         print(f"    Actions sampled: {t['n']}")
         print(f"    Mean delay: {t['mean_ms']}ms (target: ~400ms)")
         print(f"    Std deviation: {t['std_ms']}ms (target: ~150ms)")
@@ -1272,7 +1272,7 @@ class HumanSimulator:
         m = status["mouse"]
         vv = m["velocity_variance"]
         human = "PASS" if m["human_like"] else f"LOW ({vv} < 15)"
-        print(f"\n  Mouse:")
+        print("\n  Mouse:")
         print(f"    Velocity variance: {vv} [{human}]")
 
         s = status["session"]
@@ -1285,14 +1285,14 @@ class HumanSimulator:
         print(f"    Bot detections: {s['bot_detections']}")
 
         b = status["bot_detection"]
-        print(f"\n  Bot Detection (24h):")
+        print("\n  Bot Detection (24h):")
         print(f"    Total: {b['total_detections']}")
         print(f"    By severity: {json.dumps(b['by_severity'])}")
         print(f"    Consecutive: {b['consecutive_current']}")
         print(f"    Backoff: {b['current_backoff_s']}s")
 
         f = status["fingerprint"]
-        print(f"\n  Fingerprint:")
+        print("\n  Fingerprint:")
         print(f"    ID: {f['rotation_id']}")
         print(f"    Chrome: {f['chrome_version']}")
         print(f"    Viewport: {f['viewport']}")

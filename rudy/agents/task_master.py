@@ -84,7 +84,7 @@ class TaskMaster(AgentBase):
         briefing.append(f"\n  Work Queue: {pending} pending, {in_progress} active, {completed} completed")
 
         # Agent health summary
-        briefing.append(f"\n  Agent Status:")
+        briefing.append("\n  Agent Status:")
         for agent_name in ["system_master", "operations_monitor", "research_intel", "task_master"]:
             status = self.read_status(agent_name)
             last = status.get("last_run", "never")
@@ -135,6 +135,7 @@ if __name__ == "__main__":
     def _run_financial_briefing(self):
         """Generate financial snapshot for morning briefing."""
         try:
+            from pathlib import Path
             sys.path.insert(0, str(Path(__file__).parent.parent.parent))
             from rudy.financial import FinancialIntelligence
             fi = FinancialIntelligence()

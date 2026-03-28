@@ -141,7 +141,7 @@ class NetworkDefense:
                     line, re.IGNORECASE
                 )
                 if match:
-                    ip, mac, entry_type = match.group(1), match.group(2).lower(), match.group(3)
+                    ip, mac, _entry_type = match.group(1), match.group(2).lower(), match.group(3)
                     if mac.startswith("ff-ff-ff") or mac.startswith("01-00-5e"):
                         continue
                     if ip.startswith(f"{SUBNET}."):
@@ -275,7 +275,7 @@ class NetworkDefense:
                         {"domain": domain, "trusted_ips": list(trusted_ips)}
                     )
 
-            except Exception as e:
+            except Exception:
                 pass  # Network issues shouldn't generate false alerts
 
         # Save baseline
@@ -307,7 +307,7 @@ class NetworkDefense:
 
         try:
             known_destinations = set(self.traffic_baseline.get("known_destinations", []))
-            known_remote_ports = set(self.traffic_baseline.get("known_remote_ports", []))
+            set(self.traffic_baseline.get("known_remote_ports", []))
             safe_ports = {80, 443, 53, 123, 8080, 8443, 993, 587, 465, 143}
 
             current_connections = []
@@ -469,7 +469,7 @@ class NetworkDefense:
                         {"share": share}
                     )
 
-        except Exception as e:
+        except Exception:
             pass  # net commands may need elevation
 
         return findings
@@ -509,7 +509,7 @@ class NetworkDefense:
                 state_hash = hashlib.sha256(result.stdout.encode()).hexdigest()[:16]
                 current_state[name] = {
                     "hash": state_hash,
-                    "entries": len([l for l in result.stdout.splitlines() if "REG_" in l]),
+                    "entries": len([line for line in result.stdout.splitlines() if "REG_" in line]),
                 }
             except Exception:
                 current_state[name] = {"hash": "error", "entries": 0}
@@ -667,7 +667,7 @@ class NetworkDefense:
 
         # ARP
         arp = self.arp_baseline
-        lines.append(f"\n  ARP Integrity:")
+        lines.append("\n  ARP Integrity:")
         lines.append(f"    Gateway MAC: {arp.get('gateway_mac', 'unknown')}")
         lines.append(f"    Tracked devices: {arp.get('device_count', 0)}")
 

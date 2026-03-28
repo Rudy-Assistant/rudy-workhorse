@@ -241,7 +241,7 @@ class VoiceModule:
 if __name__ == "__main__":
     print("Voice & Audio Module")
     print(f"  Audio directory: {AUDIO_DIR}")
-    print(f"  Available components:")
+    print("  Available components:")
     for comp, pkg in [("TTS Online", "gtts"), ("TTS Offline", "pyttsx3"),
                        ("STT", "openai-whisper"), ("Audio Processing", "pydub")]:
         try:

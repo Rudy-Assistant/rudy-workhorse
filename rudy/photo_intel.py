@@ -367,7 +367,6 @@ class PhotoOrganizer:
         times = [dt for dt, _ in event_photos]
         photos = [p for _, p in event_photos]
 
-        locations = set()
         gps_points = []
         for p in photos:
             gps = p.get("gps")
@@ -557,7 +556,7 @@ class TimelineGenerator:
                 loc_str = ""
                 if locations:
                     loc_names = list(set(
-                        f"{l['city']}, {l['country']}" for l in locations
+                        f"{loc['city']}, {loc['country']}" for loc in locations
                     ))
                     loc_str = f" — {', '.join(loc_names)}"
 
@@ -580,7 +579,7 @@ class TimelineGenerator:
                 loc_str = ""
                 if locations:
                     loc_names = list(set(
-                        f"{l['city']}, {l['country']}" for l in locations
+                        f"{loc['city']}, {loc['country']}" for loc in locations
                     ))
                     loc_str = " &mdash; " + ", ".join(loc_names)
 

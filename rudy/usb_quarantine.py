@@ -556,7 +556,7 @@ def _should_block_device(fp, whitelist: dict) -> tuple:
     remote_keywords = ['tailscale', 'rustdesk', 'rdp', 'ssh', 'remote']
     device_desc = f"{fp.friendly_name} {fp.description} {fp.driver} {fp.manufacturer}".lower()
     if any(kw in device_desc for kw in remote_keywords):
-        return False, f"REMOTE_SACRED: Device appears related to remote access"
+        return False, "REMOTE_SACRED: Device appears related to remote access"
 
     # Phase 3+ with safeguards passed: allow blocking
     return True, "All safeguards passed — blocking authorized"

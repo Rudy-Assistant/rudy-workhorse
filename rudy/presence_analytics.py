@@ -773,7 +773,7 @@ class PresenceAnalytics:
                               cooccurrence: dict, classifications: dict) -> list:
         """Generate human-readable inference statements."""
         inferences = []
-        now = datetime.now()
+        datetime.now()
 
         # Infrastructure identification
         infra = [p for p in profiles.values() if p["category"] == "infrastructure"]
@@ -934,7 +934,7 @@ class PresenceAnalytics:
         # Device breakdown
         profiles = a.get("device_profiles", {})
         categories = Counter(p.get("category") for p in profiles.values())
-        print(f"\n  Device Categories:")
+        print("\n  Device Categories:")
         for cat, count in categories.most_common():
             print(f"    {cat}: {count}")
 
@@ -950,7 +950,7 @@ class PresenceAnalytics:
         # Clusters
         clusters = a.get("clusters", [])
         if clusters:
-            print(f"\n  Person Clusters:")
+            print("\n  Person Clusters:")
             for c in clusters:
                 devices = c.get("devices", [])
                 ips = [profiles.get(m, {}).get("ip", "?") for m in devices]

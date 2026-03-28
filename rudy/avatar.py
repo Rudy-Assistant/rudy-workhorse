@@ -491,7 +491,7 @@ class AvatarStudio:
 
         except ImportError:
             pass
-        except Exception as e:
+        except Exception:
             pass
 
         # Suggest alternatives
