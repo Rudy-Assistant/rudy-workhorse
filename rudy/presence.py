@@ -48,7 +48,7 @@ def _detect_gateway():
     """Detect default gateway."""
     try:
         result = __import__("subprocess").run(
-            "ipconfig", shell=True, capture_output=True, text=True, timeout=10
+            ["ipconfig"], capture_output=True, text=True, timeout=10
         )
         import re
         for line in result.stdout.splitlines():
@@ -195,7 +195,7 @@ class PresenceMonitor:
         discovered = {}
         try:
             result = subprocess.run(
-                "arp -a", shell=True, capture_output=True, text=True, timeout=10
+                ["arp", "-a"], capture_output=True, text=True, timeout=10
             )
             # Parse ARP output
             # Format: "  192.168.7.1          aa-bb-cc-dd-ee-ff     dynamic"
@@ -227,7 +227,7 @@ class PresenceMonitor:
         # Also try getmac for additional info
         try:
             result = subprocess.run(
-                "getmac /v /fo csv", shell=True, capture_output=True, text=True, timeout=10
+                ["getmac", "/v", "/fo", "csv"], capture_output=True, text=True, timeout=10
             )
             # This gives us the local machine's MACs too
         except Exception as e:

@@ -80,7 +80,7 @@ def run_elevated_ps(script: str, timeout: int = 60) -> tuple[bool, str]:
 def is_elevated() -> bool:
     """Check if we're currently running with admin privileges."""
     try:
-        result = subprocess.run("net session", shell=True, capture_output=True, text=True, timeout=5)
+        result = subprocess.run(["net", "session"], capture_output=True, text=True, timeout=5)
         return result.returncode == 0
     except Exception as e:
         log.debug(f"Elevation check failed: {e}")

@@ -104,7 +104,7 @@ class NetworkFingerprint:
         try:
             # Get gateway IP
             result = subprocess.run(
-                'ipconfig', shell=True, capture_output=True, text=True, timeout=10
+                ["ipconfig"], capture_output=True, text=True, timeout=10
             )
             for line in result.stdout.splitlines():
                 if "Default Gateway" in line:
@@ -119,7 +119,7 @@ class NetworkFingerprint:
             # Get gateway MAC from ARP table
             if self.gateway_ip:
                 result = subprocess.run(
-                    'arp -a', shell=True, capture_output=True, text=True, timeout=10
+                    ["arp", "-a"], capture_output=True, text=True, timeout=10
                 )
                 for line in result.stdout.splitlines():
                     if self.gateway_ip in line:
@@ -155,7 +155,7 @@ class NetworkFingerprint:
         """Get configured DNS servers."""
         try:
             result = subprocess.run(
-                'ipconfig /all', shell=True, capture_output=True, text=True, timeout=10
+                ["ipconfig", "/all"], capture_output=True, text=True, timeout=10
             )
             for line in result.stdout.splitlines():
                 if "DNS Servers" in line:

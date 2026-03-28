@@ -58,7 +58,7 @@ DNS_CANARIES = [
 def _detect_current_gateway():
     try:
         result = __import__("subprocess").run(
-            "ipconfig", shell=True, capture_output=True, text=True, timeout=10
+            ["ipconfig"], capture_output=True, text=True, timeout=10
         )
         import re as _re
         for line in result.stdout.splitlines():
@@ -133,7 +133,7 @@ class NetworkDefense:
 
         try:
             result = subprocess.run(
-                "arp -a", shell=True, capture_output=True, text=True, timeout=10
+                ["arp", "-a"], capture_output=True, text=True, timeout=10
             )
             current_arp = {}
             mac_to_ips = defaultdict(list)
@@ -386,7 +386,7 @@ class NetworkDefense:
 
         try:
             result = subprocess.run(
-                "arp -a", shell=True, capture_output=True, text=True, timeout=10
+                ["arp", "-a"], capture_output=True, text=True, timeout=10
             )
             current_macs = set()
             known_macs = set(self.state.get("known_network_macs", []))
@@ -436,7 +436,7 @@ class NetworkDefense:
         try:
             # Check active shares
             result = subprocess.run(
-                "net share", shell=True, capture_output=True, text=True, timeout=10
+                ["net", "share"], capture_output=True, text=True, timeout=10
             )
             for line in result.stdout.splitlines():
                 line = line.strip()
@@ -447,7 +447,7 @@ class NetworkDefense:
 
             # Check active sessions
             result = subprocess.run(
-                "net session", shell=True, capture_output=True, text=True, timeout=10
+                ["net", "session"], capture_output=True, text=True, timeout=10
             )
             session_count = 0
             for line in result.stdout.splitlines():
