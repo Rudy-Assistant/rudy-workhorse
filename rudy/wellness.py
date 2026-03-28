@@ -20,11 +20,14 @@ Tier 3 (With mmWave Sensor — Future):
 All tiers feed into the same alert pipeline → email/notification to Chris.
 """
 import json
+import logging
 import os
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
 from collections import defaultdict
+
+log = logging.getLogger(__name__)
 
 DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
 LOGS_DIR = DESKTOP / "rudy-logs"
@@ -60,8 +63,8 @@ class WellnessMonitor:
             try:
                 with open(path, encoding="utf-8") as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as e:
+                log.debug(f"Failed to load JSON from {path}: {e}")
         return default
 
     def _save_json(self, path, data):
@@ -217,8 +220,8 @@ class WellnessMonitor:
                                 last_alert_dt = datetime.fromisoformat(last_alert)
                                 if (now - last_alert_dt).total_seconds() < 3600:
                                     should_alert = False
-                            except Exception:
-                                pass
+                            except Exception as e:
+                                log.debug(f"Error parsing last alert time: {e}")
 
                         if should_alert:
                             alert = {
@@ -237,8 +240,8 @@ class WellnessMonitor:
                             self.alerts.append(alert)
                             person_state["last_alert_time"] = now.isoformat()
                             status["wellness"] = "concern"
-                except Exception:
-                    pass
+                except Exception as e:
+                    log.debug(f"Error checking person inactivity for {name}: {e}")
 
         # === NIGHTTIME ACTIVITY ===
         if config.get("alert_on_nighttime_activity") and is_nighttime and person_home:

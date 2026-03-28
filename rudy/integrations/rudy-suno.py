@@ -38,8 +38,11 @@ import os
 import sys
 import time
 import requests
+import logging
 from pathlib import Path
 from datetime import datetime
+
+log = logging.getLogger(__name__)
 
 # Paths
 CONFIG_FILE = Path(r"C:\Users\C\Desktop\rudy-logs\rudy-suno-config.json")
@@ -183,8 +186,8 @@ class SunoClient:
                     "prompt": data.get("prompt"),
                     "instrumental": data.get("instrumental", False)
                 })
-            except Exception:
-                pass
+            except Exception as e:
+                log.debug(f"Failed to parse song metadata file {f.name}: {e}")
         return songs
 
 

@@ -6,10 +6,13 @@ data corruption from concurrent access or failed writes.
 """
 
 import json
+import logging
 import os
 import tempfile
 from pathlib import Path
 from typing import Any, Optional
+
+log = logging.getLogger(__name__)
 
 
 def atomic_json_save(path: Path, data: Any) -> None:
@@ -43,7 +46,8 @@ def atomic_json_save(path: Path, data: Any) -> None:
             json.dump(data, f, indent=2, default=str)
         # Atomic replace: on both Windows and Linux, os.replace() is atomic
         os.replace(temp_path, str(path))
-    except Exception:
+    except Exception as e:
+        log.debug(f"Error during atomic JSON save to {path}: {e}")
         # Clean up temp file if something went wrong
         try:
             os.unlink(temp_path)

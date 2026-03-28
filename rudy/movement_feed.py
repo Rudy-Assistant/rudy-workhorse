@@ -26,9 +26,12 @@ chronological feed suitable for dashboard display.
 """
 import json
 import os
+import logging
 from collections import defaultdict
 from datetime import datetime, timedelta
 from pathlib import Path
+
+log = logging.getLogger(__name__)
 
 DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
 LOGS_DIR = DESKTOP / "rudy-logs"
@@ -56,8 +59,8 @@ def _load_json(path, default=None):
         try:
             with open(path, encoding="utf-8") as f:
                 return json.load(f)
-        except Exception:
-            pass
+        except Exception as e:
+            log.debug(f"Failed to load JSON from {path}: {e}")
     return default if default is not None else {}
 
 

@@ -5,9 +5,12 @@ import time
 import json
 import random
 import re
+import logging
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 from playwright_stealth import stealth
+
+log = logging.getLogger(__name__)
 
 SESSION_DIR = Path(r"C:\Users\C\Desktop\rudy-sessions")
 SESSION_DIR.mkdir(exist_ok=True)
@@ -65,7 +68,8 @@ def safe_click(page, sel, timeout=5000):
         page.click(sel, timeout=timeout)
         human_delay(500, 1500)
         return True
-    except Exception:
+    except Exception as e:
+        log.debug(f"safe_click failed for selector: {e}")
         return False
 
 
@@ -156,8 +160,8 @@ def enter_sms(page, code):
             cb = page.query_selector('input[type="checkbox"]')
             if cb and not cb.is_checked():
                 cb.check()
-        except Exception:
-            pass
+        except Exception as e:
+            log.debug(f"checkbox check failed: {e}")
         safe_click(page, 'button:has-text("Next")', timeout=3000)
         human_delay(4000, 6000)
         return True

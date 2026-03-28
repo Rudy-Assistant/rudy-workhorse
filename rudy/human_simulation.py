@@ -30,6 +30,7 @@ Design Philosophy:
 """
 
 import json
+import logging
 import math
 import os
 import random
@@ -40,6 +41,8 @@ from dataclasses import dataclass, field, asdict
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional, Tuple, List, Dict, Callable
+
+log = logging.getLogger(__name__)
 
 # --- Paths ---
 DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
@@ -55,7 +58,8 @@ def _load_json(path, default=None):
         try:
             with open(path, encoding="utf-8") as f:
                 return json.load(f)
-        except Exception:
+        except Exception as e:
+            log.debug(f"context: {e}")
             pass
     return default if default is not None else {}
 
@@ -841,7 +845,8 @@ class FingerprintManager:
         try:
             created_dt = datetime.fromisoformat(created)
             return (datetime.now() - created_dt).days > 30
-        except Exception:
+        except Exception as e:
+            log.debug(f"context: {e}")
             return True
 
     def _generate_fingerprint(self):
@@ -1058,7 +1063,8 @@ class HumanSimulator:
             )
             if detection["detected"]:
                 self._handle_bot_detection(detection)
-        except Exception:
+        except Exception as e:
+            log.debug(f"context: {e}")
             pass
 
         self.session.record_action("navigate", url)
@@ -1109,7 +1115,8 @@ class HumanSimulator:
                 p.click(selector)
                 self.session.record_action("click", selector)
                 return
-        except Exception:
+        except Exception as e:
+            log.debug(f"context: {e}")
             p.click(selector)
             self.session.record_action("click", selector)
             return
@@ -1166,7 +1173,8 @@ class HumanSimulator:
         if not content and p:
             try:
                 content = p.inner_text("body")
-            except Exception:
+            except Exception as e:
+                log.debug(f"context: {e}")
                 content = ""
 
         read_time = self.timing.reading_time(content[:2000])  # Cap analysis
@@ -1235,7 +1243,8 @@ class HumanSimulator:
                 server.starttls()
                 server.login("rudy.ciminoassist@gmail.com", os.environ.get("RUDY_GMAIL_APP_PASSWORD", ""))
                 server.send_message(msg)
-        except Exception:
+        except Exception as e:
+            log.debug(f"context: {e}")
             # Best-effort — don't crash on alert failure
             pass
 

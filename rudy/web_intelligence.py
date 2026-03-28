@@ -15,6 +15,7 @@ Capabilities:
 
 import hashlib
 import json
+import logging
 import os
 import re
 import time
@@ -22,6 +23,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional, List, Dict
 from urllib.parse import urlparse, urljoin
+
+log = logging.getLogger(__name__)
 
 DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
 LOGS = DESKTOP / "rudy-logs"
@@ -34,8 +37,8 @@ def _load_json(path, default=None):
         try:
             with open(path, encoding="utf-8") as f:
                 return json.load(f)
-        except Exception:
-            pass
+        except Exception as e:
+            log.debug(f"context: {e}")
     return default if default is not None else {}
 
 
@@ -76,13 +79,13 @@ class ArticleExtractor:
                             result["author"] = meta.get("author", "")
                             result["date"] = meta.get("date", "")
                             result["source"] = meta.get("sitename", "")
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            log.debug(f"context: {e}")
                     return result
         except ImportError:
             pass
-        except Exception:
-            pass
+        except Exception as e:
+            log.debug(f"context: {e}")
 
         # Fallback to newspaper3k
         try:
@@ -100,8 +103,8 @@ class ArticleExtractor:
                 return result
         except ImportError:
             pass
-        except Exception:
-            pass
+        except Exception as e:
+            log.debug(f"context: {e}")
 
         # Last resort: requests + beautifulsoup
         try:
@@ -203,8 +206,8 @@ class PageWatcher:
                     soup = BeautifulSoup(content, "html.parser")
                     selected = soup.select(watch["css_selector"])
                     content = "\n".join(str(el) for el in selected)
-                except Exception:
-                    pass
+                except Exception as e:
+                    log.debug(f"context: {e}")
 
             content_hash = hashlib.sha256(content.encode()).hexdigest()[:24]
 
@@ -272,8 +275,8 @@ class DomainIntel:
                 try:
                     answers = dns.resolver.resolve(domain, rtype)
                     records[rtype] = [str(r) for r in answers]
-                except Exception:
-                    pass
+                except Exception as e:
+                    log.debug(f"context: {e}")
             return {"domain": domain, "records": records}
         except ImportError:
             return {"error": "dnspython not installed"}
@@ -350,8 +353,8 @@ class JobMonitor:
                         self.state["seen_ids"].append(job_id)
         except ImportError:
             pass
-        except Exception:
-            pass
+        except Exception as e:
+            log.debug(f"context: {e}")
 
         # Trim seen IDs
         if len(self.state["seen_ids"]) > 5000:

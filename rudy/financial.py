@@ -11,11 +11,14 @@ Capabilities:
 """
 
 import json
+import logging
 import os
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional, List, Dict
+
+log = logging.getLogger(__name__)
 
 DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
 LOGS = DESKTOP / "rudy-logs"
@@ -32,8 +35,8 @@ def _load_json(path, default=None):
         try:
             with open(path, encoding="utf-8") as f:
                 return json.load(f)
-        except Exception:
-            pass
+        except Exception as e:
+            log.debug(f"Error loading JSON from {path}: {e}")
     return default if default is not None else {}
 
 
@@ -279,8 +282,8 @@ class PriceAlerts:
                 subject=f"Price Alert: {', '.join(a['symbol'] for a in triggered_alerts)}",
                 body=body,
             )
-        except Exception:
-            pass  # Best-effort notification
+        except Exception as e:
+            log.debug(f"Error sending price alert notification: {e}")  # Best-effort notification
 
 
 class Watchlist:

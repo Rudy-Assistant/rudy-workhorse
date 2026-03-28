@@ -28,12 +28,15 @@ Required:
 """
 
 import json
+import logging
 import math
 import os
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional, Dict, List, Tuple
+
+log = logging.getLogger(__name__)
 
 DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
 LOGS_DIR = DESKTOP / "rudy-logs"
@@ -59,7 +62,8 @@ def _load_json(path: Path, default=None):
     if path.exists():
         try:
             return json.loads(path.read_text(encoding="utf-8"))
-        except Exception:
+        except Exception as e:
+            log.debug(f"context: {e}")
             pass
     return default if default is not None else {}
 
@@ -147,8 +151,8 @@ class ICloudAuth:
                     "  python -m rudy.find_my verify CODE\n"
                 ),
             )
-        except Exception:
-            pass
+        except Exception as e:
+            log.debug(f"context: {e}")
 
         return False
 
@@ -172,7 +176,8 @@ class ICloudAuth:
                 _save_json(STATE_FILE, state)
                 return True
             return False
-        except Exception:
+        except Exception as e:
+            log.debug(f"context: {e}")
             return False
 
     @property
@@ -400,8 +405,8 @@ class FindMyFriends:
                     "severity": "WARNING",
                     "message": f"{name}'s location is {age_hours:.0f}h old — phone may be off or out of range",
                 }
-        except Exception:
-            pass
+        except Exception as e:
+            log.debug(f"context: {e}")
         return None
 
     def _check_speed_anomaly(self, name: str, lat: float, lng: float, timestamp) -> Optional[Dict]:
@@ -436,8 +441,8 @@ class FindMyFriends:
                     "message": (f"{name} moved {distance:.0f}km in {hours_elapsed:.1f}h "
                                 f"({speed_kmh:.0f} km/h) — verify travel or possible data anomaly"),
                 }
-        except Exception:
-            pass
+        except Exception as e:
+            log.debug(f"context: {e}")
         return None
 
     def _check_routine(self, name: str, lat: float, lng: float) -> Optional[Dict]:
@@ -467,7 +472,8 @@ class FindMyFriends:
                 entry_how = entry_time.weekday() * 24 + entry_time.hour
                 if abs(entry_how - hour_of_week) <= 1 or abs(entry_how - hour_of_week) >= 167:
                     typical_locs.append((entry["lat"], entry["lng"]))
-            except Exception:
+            except Exception as e:
+                log.debug(f"context: {e}")
                 continue
 
         if len(typical_locs) < 3:
@@ -536,8 +542,8 @@ class FindMyFriends:
             from rudy.email_multi import EmailMulti
             em = EmailMulti()
             em.send(to="ccimino2@gmail.com", subject=subject, body="\n".join(body_lines))
-        except Exception:
-            pass
+        except Exception as e:
+            log.debug(f"context: {e}")
 
     # ── Geofence Management ──────────────────────────────────
 
@@ -654,8 +660,8 @@ def verify_2fa(code: str) -> bool:
     auth = ICloudAuth(apple_id, password)
     try:
         auth.connect()  # Will fail but sets up the API object
-    except Exception:
-        pass
+    except Exception as e:
+        log.debug(f"context: {e}")
 
     return auth.verify_2fa(code)
 

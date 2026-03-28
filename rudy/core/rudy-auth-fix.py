@@ -20,7 +20,10 @@ import shutil
 import imaplib
 import ssl
 import socket
+import logging
 from pathlib import Path
+
+log = logging.getLogger(__name__)
 
 DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
 LOG_DIR = DESKTOP / "rudy-logs"
@@ -210,8 +213,8 @@ def check_2fa_with_playwright():
             # Cleanup temp profile
             try:
                 shutil.rmtree(TEMP_PROFILE, ignore_errors=True)
-            except Exception:
-                pass
+            except Exception as e:
+                log.debug(f"Failed to clean up temp profile: {e}")
 
 
 def check_2fa_on_page(page):
@@ -265,7 +268,8 @@ def check_all_edge_profiles():
                     emails = [a.get("email", "") for a in account_info]
                     profiles.append({"name": item.name, "emails": emails})
                     print(f"    {item.name}: {', '.join(emails) if emails else '(no accounts)'}")
-                except Exception:
+                except Exception as e:
+                    log.debug(f"Failed to parse profile {item.name}: {e}")
                     profiles.append({"name": item.name, "emails": []})
 
     for p in profiles:

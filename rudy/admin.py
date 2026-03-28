@@ -16,7 +16,10 @@ import subprocess
 import tempfile
 import os
 import time
+import logging
 from pathlib import Path
+
+log = logging.getLogger(__name__)
 
 DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
 LOG_DIR = DESKTOP / "rudy-logs"
@@ -79,5 +82,6 @@ def is_elevated() -> bool:
     try:
         result = subprocess.run("net session", shell=True, capture_output=True, text=True, timeout=5)
         return result.returncode == 0
-    except Exception:
+    except Exception as e:
+        log.debug(f"Elevation check failed: {e}")
         return False

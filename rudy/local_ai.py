@@ -25,12 +25,15 @@ Hardware target: AMD Ryzen 5 5600U, 16GB RAM, CPU-only.
 """
 
 import json
+import logging
 import os
 import hashlib
 import time
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, List, Dict
+
+log = logging.getLogger(__name__)
 
 DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
 MODELS_DIR = DESKTOP / "rudy-data" / "models"
@@ -110,8 +113,8 @@ def _load_json(path, default=None):
         try:
             with open(path, encoding="utf-8") as f:
                 return json.load(f)
-        except Exception:
-            pass
+        except Exception as e:
+            log.debug(f"Failed to load JSON from {path}: {e}")
     return default if default is not None else {}
 
 
@@ -142,8 +145,8 @@ class ResponseCache:
             try:
                 if (datetime.now() - datetime.fromisoformat(cached_time)).total_seconds() < 3600:
                     return entry.get("response")
-            except Exception:
-                pass
+            except Exception as e:
+                log.debug(f"Error checking cache entry timestamp: {e}")
         return None
 
     def put(self, prompt: str, role: str, response: str):
@@ -187,7 +190,8 @@ class OllamaBackend:
             with urllib.request.urlopen(req, timeout=3) as resp:
                 self._available = resp.status == 200
                 return self._available
-        except Exception:
+        except Exception as e:
+            log.debug(f"Ollama availability check failed: {e}")
             self._available = False
             return False
 
@@ -199,7 +203,8 @@ class OllamaBackend:
             with urllib.request.urlopen(req, timeout=5) as resp:
                 data = json.loads(resp.read().decode())
                 return [m.get("name", "") for m in data.get("models", [])]
-        except Exception:
+        except Exception as e:
+            log.debug(f"Error listing Ollama models: {e}")
             return []
 
     def has_model(self, model_name: str) -> bool:
@@ -371,6 +376,7 @@ class LocalAI:
             print("llama-cpp-python not installed. Run: pip install llama-cpp-python")
             return False
         except Exception as e:
+            log.debug(f"Error loading model {name}: {e}")
             print(f"Failed to load model: {e}")
             return False
 
@@ -416,6 +422,7 @@ class LocalAI:
                 return text
             except Exception as e:
                 # Ollama failed — try falling back to llama-cpp
+                log.debug(f"Ollama generation failed: {e}")
                 if self._llm is not None or self.load_model():
                     self._backend = "llamacpp"
                     self._stats["backend"] = "llamacpp"
@@ -618,7 +625,8 @@ class OfflineAI:
             return None
         try:
             return self.ai.ask(prompt, role=role)
-        except Exception:
+        except Exception as e:
+            log.debug(f"Quick ask failed: {e}")
             return None
 
     def should_restart(self, service_name: str, down_minutes: int) -> bool:

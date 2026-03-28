@@ -10,12 +10,15 @@ Capabilities:
 """
 
 import json
+import logging
 import os
 import subprocess
 import time
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, List
+
+log = logging.getLogger(__name__)
 
 DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
 AUDIO_DIR = DESKTOP / "rudy-data" / "audio"
@@ -61,12 +64,14 @@ class TextToSpeech:
         if prefer_offline:
             try:
                 return self.speak_offline(text, output_path)
-            except Exception:
+            except Exception as e:
+                log.debug(f"Offline TTS failed, falling back to online: {e}")
                 return self.speak_online(text, output_path)
         else:
             try:
                 return self.speak_online(text, output_path)
-            except Exception:
+            except Exception as e:
+                log.debug(f"Online TTS failed, falling back to offline: {e}")
                 return self.speak_offline(text, output_path)
 
 

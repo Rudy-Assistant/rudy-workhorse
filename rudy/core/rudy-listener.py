@@ -120,7 +120,7 @@ def connect_imap_robust():
             mail = imaplib.IMAP4_SSL(host=ip, port=IMAP_PORT)
             return mail, ip
         except Exception as e:
-            log.debug(f"  {ip} failed: {e}")
+            log.debug(f"IMAP direct IP connection failed: {e}")
             continue
 
     # Layer 3: Direct IPs with relaxed SSL (last resort)
@@ -134,7 +134,7 @@ def connect_imap_robust():
             log.warning(f"Connected via {ip} with relaxed SSL — not ideal but functional")
             return mail, ip
         except Exception as e:
-            log.debug(f"  {ip} relaxed SSL failed: {e}")
+            log.debug(f"IMAP relaxed SSL failed: {e}")
             continue
 
     raise ConnectionError("All IMAP connection methods exhausted")
@@ -532,8 +532,8 @@ def try_idle(mail):
         mail.send(b"DONE\r\n")
         try:
             mail.readline()
-        except Exception:
-            pass
+        except Exception as e:
+            log.debug(f"IDLE end-of-response failed: {e}")
 
         mail.sock.settimeout(None)
         return True
@@ -542,8 +542,8 @@ def try_idle(mail):
         log.warning(f"IDLE error: {e}")
         try:
             mail.sock.settimeout(None)
-        except Exception:
-            pass
+        except Exception as e2:
+            log.debug(f"Failed to reset socket timeout: {e2}")
         return False
 
 
@@ -661,8 +661,8 @@ if __name__ == "__main__":
             f"Rudy is now online and monitoring emails.\n"
             f"Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n— Rudy"
         )
-    except Exception:
-        log.warning("Could not send startup notification (non-fatal)")
+    except Exception as e:
+        log.warning(f"Could not send startup notification (non-fatal): {e}")
 
     try:
         main_loop()

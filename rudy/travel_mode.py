@@ -27,6 +27,7 @@ Network identification:
   This prevents spoofing — an attacker would need to replicate ALL of these.
 """
 import json
+import logging
 import os
 import re
 import shutil
@@ -36,6 +37,8 @@ import hashlib
 from collections import defaultdict
 from datetime import datetime, timedelta
 from pathlib import Path
+
+log = logging.getLogger(__name__)
 
 DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
 LOGS_DIR = DESKTOP / "rudy-logs"
@@ -127,7 +130,8 @@ class NetworkFingerprint:
                         if match:
                             self.gateway_mac = match.group(1).lower()
                             break
-        except Exception:
+        except Exception as e:
+            log.debug(f"Failed to get gateway IP and MAC: {e}")
             pass
 
     def _get_ssid(self):
@@ -143,7 +147,8 @@ class NetworkFingerprint:
                     if match:
                         self.ssid = match.group(1).strip()
                         break
-        except Exception:
+        except Exception as e:
+            log.debug(f"Failed to get SSID: {e}")
             pass
 
     def _get_dns(self):
@@ -157,7 +162,8 @@ class NetworkFingerprint:
                     match = re.search(r'(\d+\.\d+\.\d+\.\d+)', line)
                     if match:
                         self.dns_servers.append(match.group(1))
-        except Exception:
+        except Exception as e:
+            log.debug(f"Failed to get DNS servers: {e}")
             pass
 
     def _get_local_ip(self):
@@ -167,7 +173,8 @@ class NetworkFingerprint:
             s.connect(("8.8.8.8", 80))
             self.local_ip = s.getsockname()[0]
             s.close()
-        except Exception:
+        except Exception as e:
+            log.debug(f"Failed to get local IP: {e}")
             pass
 
     def _get_public_ip(self):
@@ -177,13 +184,15 @@ class NetworkFingerprint:
             resp = httpx.get("https://api.ipify.org?format=json", timeout=5)
             if resp.status_code == 200:
                 self.public_ip = resp.json().get("ip")
-        except Exception:
+        except Exception as e:
+            log.debug(f"Failed to get public IP via httpx: {e}")
             try:
                 import requests
                 resp = requests.get("https://api.ipify.org?format=json", timeout=5)
                 if resp.status_code == 200:
                     self.public_ip = resp.json().get("ip")
-            except Exception:
+            except Exception as e:
+                log.debug(f"Failed to get public IP via requests: {e}")
                 pass
 
     @property
@@ -246,7 +255,8 @@ class TravelMode:
             try:
                 with open(path, encoding="utf-8") as f:
                     return json.load(f)
-            except Exception:
+            except Exception as e:
+                log.debug(f"Failed to load JSON from {path}: {e}")
                 pass
         return default
 
@@ -432,7 +442,8 @@ class TravelMode:
                         continue
                     if ip.startswith(f"{subnet}."):
                         discovered[ip] = mac
-        except Exception:
+        except Exception as e:
+            log.debug(f"Failed to perform ARP discovery: {e}")
             pass
 
         print(f"    Found {len(discovered)} devices")
@@ -461,7 +472,8 @@ class TravelMode:
                     if "<00>" in line and "UNIQUE" in line:
                         device["hostname"] = line.split()[0].strip()
                         break
-            except Exception:
+            except Exception as e:
+                log.debug(f"Failed to resolve hostname for {ip}: {e}")
                 pass
 
             # Quick port scan (common dangerous ports)
@@ -472,7 +484,8 @@ class TravelMode:
                     if sock.connect_ex((ip, port)) == 0:
                         device["open_ports"].append(port)
                     sock.close()
-                except Exception:
+                except Exception as e:
+                    log.debug(f"Failed to scan port {port} on {ip}: {e}")
                     pass
 
             # TTL-based OS detection
@@ -489,7 +502,8 @@ class TravelMode:
                         device["os_hint"] = "Linux/Android/iOS/macOS"
                     elif ttl <= 128:
                         device["os_hint"] = "Windows"
-            except Exception:
+            except Exception as e:
+                log.debug(f"Failed to detect OS via TTL for {ip}: {e}")
                 pass
 
             findings["devices"].append(device)
@@ -510,7 +524,8 @@ class TravelMode:
                     "severity": "info",
                     "detail": "Captive portal detected — traffic may be intercepted",
                 })
-        except Exception:
+        except Exception as e:
+            log.debug(f"Failed to check for captive portal: {e}")
             pass
 
         # Check for ARP duplicates (MitM indicator)

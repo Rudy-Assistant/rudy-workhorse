@@ -24,12 +24,15 @@ Required:
 """
 
 import json
+import logging
 import os
 import subprocess
 import time
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, Dict, List, Tuple
+
+log = logging.getLogger(__name__)
 
 DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
 LOGS_DIR = DESKTOP / "rudy-logs"
@@ -52,7 +55,8 @@ def _load_json(path, default=None):
     if path.exists():
         try:
             return json.loads(path.read_text(encoding="utf-8"))
-        except Exception:
+        except Exception as e:
+            log.debug(f"context: {e}")
             pass
     return default if default is not None else {}
 
@@ -126,7 +130,8 @@ class CameraDiscovery:
                             "pnp_class": dev.get("Class", ""),
                             "source": "pnp_only",
                         })
-        except Exception:
+        except Exception as e:
+            log.debug(f"context: {e}")
             pass
 
         return cameras
@@ -188,7 +193,8 @@ class MotionDetector:
             self._bg_subtractor = cv2.createBackgroundSubtractorMOG2(
                 history=500, varThreshold=50, detectShadows=True
             )
-        except Exception:
+        except Exception as e:
+            log.debug(f"context: {e}")
             pass
 
     def detect(self, frame) -> Dict:
@@ -351,7 +357,8 @@ class SurveillanceController:
             cv2.imwrite(str(filepath), frame)
 
             return str(filepath)
-        except Exception:
+        except Exception as e:
+            log.debug(f"context: {e}")
             return None
 
     def monitor_cycle(self, camera_source=0, duration_seconds: int = 60,
@@ -443,7 +450,8 @@ class SurveillanceController:
             filepath = SNAPSHOTS_DIR / filename
             cv2.imwrite(str(filepath), frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
             return str(filepath)
-        except Exception:
+        except Exception as e:
+            log.debug(f"context: {e}")
             return None
 
     def _annotate_frame(self, frame, motion: Dict, persons: Dict):
@@ -482,7 +490,8 @@ class SurveillanceController:
                         cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
 
             return annotated
-        except Exception:
+        except Exception as e:
+            log.debug(f"context: {e}")
             return frame
 
     def _should_alert(self) -> bool:
@@ -509,7 +518,8 @@ class SurveillanceController:
             from rudy.email_multi import EmailMulti
             em = EmailMulti()
             em.send(to="ccimino2@gmail.com", subject=subject, body=body)
-        except Exception:
+        except Exception as e:
+            log.debug(f"context: {e}")
             pass
 
     def cleanup_old_footage(self, max_gb: float = None):
@@ -541,7 +551,8 @@ class SurveillanceController:
                 total -= size
                 freed += size
                 cleaned += 1
-            except Exception:
+            except Exception as e:
+                log.debug(f"context: {e}")
                 pass
 
         return {"cleaned": cleaned, "freed_mb": round(freed / 1024 / 1024, 1)}

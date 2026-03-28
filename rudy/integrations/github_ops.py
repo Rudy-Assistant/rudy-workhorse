@@ -41,7 +41,8 @@ class GitHubOps:
                     shell=True, capture_output=True, text=True, timeout=10
                 )
                 self._gh_available = r.returncode == 0
-            except Exception:
+            except Exception as e:
+                logger.debug(f"gh availability check failed: {e}")
                 self._gh_available = False
         return self._gh_available
 

@@ -27,6 +27,7 @@ Design:
 """
 
 import json
+import logging
 import os
 import re
 import subprocess
@@ -34,6 +35,8 @@ import time
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, List, Dict, Tuple
+
+log = logging.getLogger(__name__)
 
 DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
 LOGS = DESKTOP / "rudy-logs"
@@ -66,8 +69,8 @@ def _load_json(path: Path, default=None):
         try:
             with open(path, encoding="utf-8") as f:
                 return json.load(f)
-        except Exception:
-            pass
+        except Exception as e:
+            log.debug(f"Failed to load JSON from {path}: {e}")
     return default if default is not None else {}
 
 
@@ -183,8 +186,8 @@ class DeviceDetector:
                     "serial": info.get("SerialNumber", ""),
                     "detection_method": "pymobiledevice3",
                 })
-        except Exception:
-            pass
+        except Exception as e:
+            log.debug(f"Error detecting iOS devices via pymobiledevice3: {e}")
 
         if devices:
             return devices
@@ -258,8 +261,8 @@ class DeviceDetector:
                         info["platform"] = "ios"
                         info["detection_method"] = "wsl_libimobiledevice"
                         devices.append(info)
-        except Exception:
-            pass
+        except Exception as e:
+            log.debug(f"Error detecting iOS devices via WSL: {e}")
         return devices
 
     def _get_ios_info_wsl(self, udid: str) -> dict:

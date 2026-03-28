@@ -126,8 +126,8 @@ def execute_command(cmd_file: Path):
         # Remove the command file after execution
         try:
             cmd_file.unlink()
-        except Exception:
-            pass
+        except Exception as e:
+            log.debug(f"Failed to remove command file: {e}")
 
 
 def watch_loop():

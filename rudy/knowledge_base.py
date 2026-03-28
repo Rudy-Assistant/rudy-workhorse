@@ -15,12 +15,15 @@ Capabilities:
 
 import hashlib
 import json
+import logging
 import os
 import re
 import time
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, List, Dict, Tuple
+
+log = logging.getLogger(__name__)
 
 DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
 LOGS = DESKTOP / "rudy-logs"
@@ -108,7 +111,8 @@ def _read_file(filepath: Path) -> str:
         else:
             with open(filepath, encoding="utf-8", errors="replace") as f:
                 return f.read()[:10000]
-    except Exception:
+    except Exception as e:
+        log.debug(f"Error reading text from {filepath}: {e}")
         return ""
 
 
@@ -135,8 +139,8 @@ class KnowledgeBase:
             try:
                 with open(INDEX_STATE, encoding="utf-8") as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as e:
+                log.debug(f"Error loading index state from {INDEX_STATE}: {e}")
         return {"indexed_files": {}, "last_full_index": None, "total_chunks": 0}
 
     def _save_state(self):
@@ -257,7 +261,8 @@ class KnowledgeBase:
         try:
             self._get_chroma().get_collection(name)
             return True
-        except Exception:
+        except Exception as e:
+            log.debug(f"Error checking if collection {name} exists: {e}")
             return False
 
     def index_all(self) -> dict:

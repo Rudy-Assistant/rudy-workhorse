@@ -17,6 +17,7 @@ Data flow:
   presence-log.json (raw events) → analytics engine → presence-analytics.json
 """
 import json
+import logging
 import math
 import os
 import re
@@ -24,6 +25,8 @@ from collections import defaultdict, Counter
 from datetime import datetime, timedelta
 from pathlib import Path
 from itertools import combinations
+
+log = logging.getLogger(__name__)
 
 DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
 LOGS_DIR = DESKTOP / "rudy-logs"
@@ -591,8 +594,8 @@ class PresenceAnalytics:
             try:
                 with open(path, encoding="utf-8") as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as e:
+                log.debug(f"Error loading JSON from {path}: {e}")
         return default
 
     def _save_json(self, path, data):
@@ -746,7 +749,8 @@ class PresenceAnalytics:
 
             try:
                 dt = datetime.fromisoformat(t)
-            except Exception:
+            except Exception as e:
+                log.debug(f"Error parsing ISO timestamp {t}: {e}")
                 continue
 
             window = dt.strftime("%Y-%m-%dT%H:%M")[:15] + "0"  # 10-min buckets

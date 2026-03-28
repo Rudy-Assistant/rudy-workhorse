@@ -14,6 +14,7 @@ Data is stored in:
   - rudy-logs/presence-routines.json — learned patterns (day-of-week averages)
 """
 import json
+import logging
 import os
 import re
 import subprocess
@@ -21,6 +22,8 @@ import time
 from datetime import datetime, timedelta
 from pathlib import Path
 from collections import defaultdict
+
+log = logging.getLogger(__name__)
 
 DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
 LOGS_DIR = DESKTOP / "rudy-logs"
@@ -37,7 +40,8 @@ def _detect_subnet():
         s.close()
         parts = local_ip.split(".")
         return ".".join(parts[:3])
-    except Exception:
+    except Exception as e:
+        log.debug(f"Error detecting subnet: {e}")
         return "192.168.7"  # Fallback to home subnet
 
 def _detect_gateway():
@@ -52,8 +56,8 @@ def _detect_gateway():
                 match = re.search(r"(\d+\.\d+\.\d+\.\d+)", line)
                 if match:
                     return match.group(1)
-    except Exception:
-        pass
+    except Exception as e:
+        log.debug(f"Error detecting gateway: {e}")
     return "192.168.7.1"
 
 LOCAL_SUBNET = _detect_subnet()
@@ -81,8 +85,8 @@ class PresenceMonitor:
             try:
                 with open(path, encoding="utf-8") as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as e:
+                log.debug(f"Failed to load JSON from {path}: {e}")
         return default
 
     def _save_json(self, path, data):
@@ -183,8 +187,8 @@ class PresenceMonitor:
                 stderr=subprocess.DEVNULL,
             )
             time.sleep(3)  # Wait for pings to complete and ARP table to populate
-        except Exception:
-            pass
+        except Exception as e:
+            log.debug(f"Error during ping sweep: {e}")
 
     def _read_arp_table(self) -> dict:
         """Read the Windows ARP table and extract MAC-to-IP mappings."""
@@ -217,6 +221,7 @@ class PresenceMonitor:
                             "seen_at": datetime.now().isoformat(),
                         }
         except Exception as e:
+            log.debug(f"ARP scan failed: {e}")
             print(f"  ARP scan failed: {e}")
 
         # Also try getmac for additional info
@@ -225,8 +230,8 @@ class PresenceMonitor:
                 "getmac /v /fo csv", shell=True, capture_output=True, text=True, timeout=10
             )
             # This gives us the local machine's MACs too
-        except Exception:
-            pass
+        except Exception as e:
+            log.debug(f"Error running getmac: {e}")
 
         return discovered
 
@@ -384,6 +389,7 @@ def run_scan(run_analytics=True):
             else:
                 print("  [Intruder] Network clear.")
         except Exception as e:
+            log.debug(f"Intruder profiler error: {e}")
             print(f"  [Intruder] Warning: {e}")
 
     return result

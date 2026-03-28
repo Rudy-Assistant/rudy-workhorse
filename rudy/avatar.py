@@ -19,6 +19,7 @@ All processing is LOCAL — no cloud API needed, full privacy.
 """
 
 import json
+import logging
 import os
 import shutil
 import subprocess
@@ -26,6 +27,8 @@ import time
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, List, Dict
+
+log = logging.getLogger(__name__)
 
 DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
 AVATAR_DIR = DESKTOP / "rudy-data" / "avatar"
@@ -74,7 +77,8 @@ class SadTalkerEngine:
             if (MODELS_DIR / "SadTalker" / "inference.py").exists():
                 return True
             return False
-        except Exception:
+        except Exception as e:
+            log.debug(f"Error checking SadTalker availability: {e}")
             return False
 
     def generate(self, image_path: str, audio_path: str,
@@ -145,7 +149,8 @@ class Wav2LipEngine:
         try:
             stdout, _, rc = _run("python -c \"import wav2lip\"")
             return rc == 0
-        except Exception:
+        except Exception as e:
+            log.debug(f"Error checking Wav2Lip availability: {e}")
             return False
 
     def lip_sync(self, video_path: str, audio_path: str,
@@ -491,8 +496,8 @@ class AvatarStudio:
 
         except ImportError:
             pass
-        except Exception:
-            pass
+        except Exception as e:
+            log.debug(f"Error generating avatar from Stable Diffusion: {e}")
 
         # Suggest alternatives
         return {

@@ -20,6 +20,7 @@ Design:
 """
 
 import json
+import logging
 import os
 import re
 import hashlib
@@ -27,6 +28,8 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional, List, Dict, Tuple
+
+log = logging.getLogger(__name__)
 
 DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
 LOGS = DESKTOP / "rudy-logs"
@@ -56,8 +59,8 @@ def _load_json(path: Path, default=None):
         try:
             with open(path, encoding="utf-8") as f:
                 return json.load(f)
-        except Exception:
-            pass
+        except Exception as e:
+            log.debug(f"Failed to load JSON from {path}: {e}")
     return default if default is not None else {}
 
 
@@ -123,7 +126,8 @@ class EXIFExtractor:
                         if isinstance(value, bytes):
                             try:
                                 value = value.decode(errors="replace")
-                            except Exception:
+                            except Exception as e:
+                                log.debug(f"Failed to decode EXIF tag value: {e}")
                                 value = str(value)
                         exif[str(tag)] = value
 
@@ -157,6 +161,7 @@ class EXIFExtractor:
 
             img.close()
         except Exception as e:
+            log.debug(f"EXIF extraction error for {image_path}: {e}")
             result["error"] = str(e)[:200]
 
         return result
@@ -190,7 +195,8 @@ class EXIFExtractor:
                 result["altitude_m"] = round(alt_val, 1)
 
             return result
-        except Exception:
+        except Exception as e:
+            log.debug(f"GPS parsing error: {e}")
             return None
 
     def _dms_to_decimal(self, dms, ref: str) -> float:
@@ -263,6 +269,7 @@ class GeoLocator:
         except ImportError:
             result["error"] = "geopy not installed"
         except Exception as e:
+            log.debug(f"Reverse geocoding error for {lat},{lon}: {e}")
             result["error"] = str(e)[:200]
 
         self.cache[cache_key] = result
@@ -424,7 +431,8 @@ class DuplicateDetector:
                     h = ih.average_hash(img)
                     img.close()
                     hashes[str(f)] = h
-                except Exception:
+                except Exception as e:
+                    log.debug(f"Error hashing image {f}: {e}")
                     continue
 
         # Compare all pairs
@@ -453,7 +461,8 @@ class DuplicateDetector:
                 try:
                     h = hashlib.md5(f.read_bytes()).hexdigest()
                     file_hashes[h].append(str(f))
-                except Exception:
+                except Exception as e:
+                    log.debug(f"Error computing MD5 hash for {f}: {e}")
                     continue
 
         duplicates = []

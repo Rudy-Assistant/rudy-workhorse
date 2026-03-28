@@ -24,12 +24,15 @@ Security:
 
 import hashlib
 import json
+import logging
 import os
 import secrets
 import time
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
+
+log = logging.getLogger(__name__)
 
 DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
 LOGS = DESKTOP / "rudy-logs"
@@ -43,8 +46,8 @@ def _load_config():
         try:
             with open(API_CONFIG, encoding="utf-8") as f:
                 return json.load(f)
-        except Exception:
-            pass
+        except Exception as e:
+            log.debug(f"Failed to load API config file: {e}")
 
     # Generate new API key on first run
     config = {
@@ -102,23 +105,23 @@ def create_app():
             raise HTTPException(status_code=401, detail="Invalid API key")
 
     def log_request(request: Request, endpoint: str, data: dict = None):
-        log = []
+        log_data = []
         if API_LOG.exists():
             try:
                 with open(API_LOG, encoding="utf-8") as f:
-                    log = json.load(f)
-            except Exception:
-                pass
-        log.append({
+                    log_data = json.load(f)
+            except Exception as e:
+                log.debug(f"Failed to load API log file: {e}")
+        log_data.append({
             "time": datetime.now().isoformat(),
             "endpoint": endpoint,
             "ip": request.client.host if request.client else "unknown",
             "method": request.method,
         })
-        if len(log) > 1000:
-            log = log[-500:]
+        if len(log_data) > 1000:
+            log_data = log_data[-500:]
         with open(API_LOG, "w", encoding="utf-8") as f:
-            json.dump(log, f, indent=2)
+            json.dump(log_data, f, indent=2)
 
     # ── Health ──────────────────────────────────────────────
     @app.get("/health")
@@ -139,7 +142,8 @@ def create_app():
             try:
                 __import__(f"rudy.{module_name}", fromlist=[""])
                 status["modules"][module_name] = "loaded"
-            except Exception:
+            except Exception as e:
+                log.debug(f"Failed to import module {module_name}: {e}")
                 status["modules"][module_name] = "unavailable"
 
         return status

@@ -22,6 +22,7 @@ Design:
 """
 
 import json
+import logging
 import os
 import socket
 import subprocess
@@ -29,6 +30,8 @@ import time
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional, List, Dict
+
+log = logging.getLogger(__name__)
 
 DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
 LOGS = DESKTOP / "rudy-logs"
@@ -43,8 +46,8 @@ def _load_json(path, default=None):
         try:
             with open(path, encoding="utf-8") as f:
                 return json.load(f)
-        except Exception:
-            pass
+        except Exception as e:
+            log.debug(f"Error loading JSON from {path}: {e}")
     return default if default is not None else {}
 
 
@@ -77,7 +80,8 @@ class ConnectivityChecker:
                 sock = socket.create_connection((host, port), timeout=3)
                 sock.close()
                 return True
-            except Exception:
+            except Exception as e:
+                log.debug(f"DNS check failed for {host}:{port}: {e}")
                 continue
         return False
 
@@ -90,7 +94,8 @@ class ConnectivityChecker:
                     resp = requests.get(url, timeout=5)
                     if resp.status_code in [200, 204]:
                         return True
-                except Exception:
+                except Exception as e:
+                    log.debug(f"HTTP check failed for {url}: {e}")
                     continue
         except ImportError:
             pass
@@ -101,7 +106,8 @@ class ConnectivityChecker:
         try:
             socket.getaddrinfo("www.google.com", 443, socket.AF_INET, socket.SOCK_STREAM)
             return True
-        except Exception:
+        except Exception as e:
+            log.debug(f"DNS resolution check failed: {e}")
             return False
 
     def full_check(self) -> dict:
@@ -285,8 +291,8 @@ class OfflineController:
             try:
                 from rudy.local_ai import OfflineAI
                 self._ai = OfflineAI.get()
-            except Exception:
-                pass
+            except Exception as e:
+                log.debug(f"Error loading offline AI: {e}")
         return self._ai
 
     def heartbeat(self) -> dict:

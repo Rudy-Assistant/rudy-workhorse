@@ -13,12 +13,15 @@ Capabilities:
 """
 
 import json
+import logging
 import os
 import re
 from collections import Counter
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, List, Dict, Tuple
+
+log = logging.getLogger(__name__)
 
 DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
 
@@ -41,8 +44,8 @@ class SentimentAnalyzer:
                     nltk.download("vader_lexicon", quiet=True)
                     from nltk.sentiment.vader import SentimentIntensityAnalyzer
                     self._vader = SentimentIntensityAnalyzer()
-                except Exception:
-                    pass
+                except Exception as e:
+                    log.debug(f"Error downloading VADER lexicon: {e}")
         return self._vader
 
     def analyze(self, text: str) -> dict:
@@ -224,8 +227,8 @@ class LanguageDetector:
             blob = TextBlob(text)
             lang = blob.detect_language()
             return {"language": lang, "engine": "textblob"}
-        except Exception:
-            pass
+        except Exception as e:
+            log.debug(f"Error detecting language with TextBlob: {e}")
 
         # Heuristic fallback
         if re.search(r'[\u3040-\u309f\u30a0-\u30ff]', text):

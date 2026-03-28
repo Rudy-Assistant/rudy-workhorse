@@ -22,6 +22,7 @@ All processing is LOCAL — no cloud API needed, full privacy.
 """
 
 import json
+import logging
 import os
 import shutil
 import subprocess
@@ -29,6 +30,8 @@ import time
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, List, Dict
+
+log = logging.getLogger(__name__)
 
 DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
 VOICE_DIR = DESKTOP / "rudy-data" / "voice-clone"
@@ -49,8 +52,8 @@ def _load_json(path: Path, default=None):
         try:
             with open(path, encoding="utf-8") as f:
                 return json.load(f)
-        except Exception:
-            pass
+        except Exception as e:
+            log.debug(f"Failed to load JSON from {path}: {e}")
     return default if default is not None else {}
 
 
@@ -103,6 +106,7 @@ class AudioPreprocessor:
         except ImportError:
             info["note"] = "pydub not available — install for audio analysis"
         except Exception as e:
+            log.debug(f"Audio analysis error for {path}: {e}")
             info["error"] = str(e)[:200]
 
         return info
@@ -166,6 +170,7 @@ class AudioPreprocessor:
                 "note": "pydub not available — raw copy only",
             }
         except Exception as e:
+            log.debug(f"Error preparing audio sample {path}: {e}")
             return {"success": False, "error": str(e)[:200]}
 
     def extract_speech_segments(self, audio_path: str) -> List[dict]:
@@ -197,6 +202,7 @@ class AudioPreprocessor:
 
             return segments
         except Exception as e:
+            log.debug(f"Error extracting speech segments from {audio_path}: {e}")
             return [{"error": str(e)[:200]}]
 
 
@@ -382,8 +388,8 @@ class FallbackTTSEngine:
             tts = gTTS(text=text, lang=language)
             tts.save(output_path)
             return {"success": True, "output": output_path, "engine": "gtts"}
-        except Exception:
-            pass
+        except Exception as e:
+            log.debug(f"gTTS synthesis failed: {e}")
 
         # Try pyttsx3 (offline)
         try:
@@ -393,6 +399,7 @@ class FallbackTTSEngine:
             engine.runAndWait()
             return {"success": True, "output": output_path, "engine": "pyttsx3"}
         except Exception as e:
+            log.debug(f"Fallback TTS error: {e}")
             return {"success": False, "error": str(e)[:200], "engine": "fallback"}
 
 
@@ -654,7 +661,8 @@ class VoiceCloner:
             combined_path = str(out_dir / "combined_output.wav")
             combined.export(combined_path, format="wav")
             return results + [{"combined": combined_path, "total_lines": len(script)}]
-        except Exception:
+        except Exception as e:
+            log.debug(f"Error concatenating audio files: {e}")
             return results
 
     def get_status(self) -> dict:

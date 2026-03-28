@@ -25,9 +25,12 @@ import sys
 import json
 import ctypes
 import subprocess
+import logging
 from datetime import datetime
 from pathlib import Path
 from email.mime.text import MIMEText
+
+log = logging.getLogger(__name__)
 
 # ─────────────────────────────────────────────
 # CONFIGURATION (mirrors rudy-listener.py)
@@ -198,6 +201,7 @@ def check_tcp_connectivity(report):
                 sock.close()
                 report.ok(f"{label} ({ip}:{port}) — Direct IP fallback OK")
             except Exception as e2:
+                log.debug(f"Direct IP connection failed: {e2}")
                 report.fail(f"{label} — All connection methods failed: {e2}",
                             "Check firewall/antivirus settings; ensure port 993/465 not blocked")
 
@@ -225,7 +229,8 @@ def check_imap_auth(report):
                 mail = imaplib.IMAP4_SSL(ip, IMAP_PORT, ssl_context=ctx)
                 connected_via = ip
                 break
-            except Exception:
+            except Exception as e:
+                log.debug(f"IMAP IP fallback attempt failed for {ip}: {e}")
                 continue
 
     if mail is None:
@@ -318,7 +323,8 @@ def check_imap_idle(report):
                     ctx = ssl.create_default_context()
                     mail = imaplib.IMAP4_SSL(host, IMAP_PORT, ssl_context=ctx)
                 break
-            except Exception:
+            except Exception as e:
+                log.debug(f"IMAP connection attempt failed: {e}")
                 continue
 
         if mail is None:
@@ -357,6 +363,7 @@ def check_listener_process(report):
         else:
             report.warn("No Python processes found — listener may not be running")
     except Exception as e:
+        log.debug(f"Process check failed: {e}")
         report.warn(f"Could not check processes: {e}")
 
     # Check scheduled task
@@ -419,7 +426,8 @@ def is_admin():
     """Check if running with admin privileges."""
     try:
         return ctypes.windll.shell32.IsUserAnAdmin() != 0
-    except Exception:
+    except Exception as e:
+        log.debug(f"Admin check failed: {e}")
         return False
 
 

@@ -16,6 +16,7 @@ Schedule: Integrated into self-improvement task (Mon/Wed/Fri 10 AM)
 """
 
 import json
+import logging
 import os
 import subprocess
 import sys
@@ -24,6 +25,8 @@ import time
 from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Optional
+
+log = logging.getLogger(__name__)
 
 DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
 LOGS = DESKTOP / "rudy-logs"
@@ -41,8 +44,8 @@ def _load_json(path: Path, default=None):
         try:
             with open(path, encoding="utf-8") as f:
                 return json.load(f)
-        except Exception:
-            pass
+        except Exception as e:
+            log.debug(f"Error loading JSON from {path}: {e}")
     return default if default is not None else {}
 
 

@@ -21,6 +21,7 @@ Capabilities:
   7. Historical pattern matching (has this device appeared before?)
 """
 import json
+import logging
 import os
 import re
 import subprocess
@@ -29,6 +30,8 @@ import hashlib
 from collections import defaultdict, Counter
 from datetime import datetime, timedelta
 from pathlib import Path
+
+log = logging.getLogger(__name__)
 
 DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
 LOGS_DIR = DESKTOP / "rudy-logs"
@@ -82,7 +85,8 @@ class IntruderProfiler:
             try:
                 with open(path, encoding="utf-8") as f:
                     return json.load(f)
-            except Exception:
+            except Exception as e:
+                log.debug(f"context: {e}")
                 pass
         return default
 
@@ -196,7 +200,8 @@ class IntruderProfiler:
                     try:
                         last = datetime.fromisoformat(dossier["last_seen"])
                         duration = (now - last).total_seconds() / 60
-                    except Exception:
+                    except Exception as e:
+                        log.debug(f"context: {e}")
                         pass
                 dossier["currently_present"] = False
                 dossier["departures"] = dossier.get("departures", 0) + 1
@@ -288,7 +293,8 @@ class IntruderProfiler:
                 if "<00>" in line and "UNIQUE" in line:
                     hostname = line.split()[0].strip()
                     break
-        except Exception:
+        except Exception as e:
+            log.debug(f"context: {e}")
             pass
 
         if not hostname:
@@ -299,7 +305,8 @@ class IntruderProfiler:
                 ).stdout
                 match = re.search(r'Name:\s+(\S+)', hostname)
                 hostname = match.group(1) if match else None
-            except Exception:
+            except Exception as e:
+                log.debug(f"context: {e}")
                 pass
 
         profile["hostname"] = hostname
@@ -316,7 +323,8 @@ class IntruderProfiler:
                 if result == 0:
                     open_ports.append(port)
                 sock.close()
-            except Exception:
+            except Exception as e:
+                log.debug(f"context: {e}")
                 pass
         profile["open_ports"] = open_ports
 
@@ -336,7 +344,8 @@ class IntruderProfiler:
                     profile["os_family"] = "Windows"
                 else:
                     profile["os_family"] = "Unknown"
-        except Exception:
+        except Exception as e:
+            log.debug(f"context: {e}")
             pass
 
         dossier["profile"] = profile
