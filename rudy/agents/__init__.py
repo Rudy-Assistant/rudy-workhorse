@@ -173,8 +173,8 @@ class AgentBase:
                 lines = log_file.read_text(encoding="utf-8", errors="replace").splitlines()
                 if len(lines) > max_lines:
                     log_file.write_text("\n".join(lines[-max_lines:]) + "\n", encoding="utf-8")
-        except Exception:
-            pass
+        except Exception as e:
+            self.log.debug(f"Failed to trim log file: {e}")
 
     def _write_crash_dump(self, error: Exception, kwargs: dict):
         """Write a detailed crash dump for Sentinel to pick up.
@@ -197,7 +197,8 @@ class AgentBase:
                 try:
                     lines = log_file.read_text(encoding="utf-8", errors="replace").splitlines()
                     recent_log = lines[-20:]  # Last 20 lines
-                except Exception:
+                except Exception as e:
+                    self.log.debug(f"Failed to read log for crash dump: {e}")
                     recent_log = ["(could not read log)"]
 
             # Sanitize kwargs (remove anything non-serializable)
@@ -312,6 +313,6 @@ class AgentBase:
             if status_file.exists():
                 with open(status_file, encoding="utf-8") as f:
                     return json.load(f)
-        except Exception:
-            pass
+        except Exception as e:
+            self.log.debug(f"Failed to read status for {agent_name}: {e}")
         return {"status": "unknown", "last_run": "never"}

@@ -141,8 +141,8 @@ class SecurityAgent(AgentBase):
             try:
                 with open(self.BASELINE_FILE, encoding="utf-8") as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as e:
+                self.log.debug(f"Failed to load baseline: {e}")
         return {
             "first_run": datetime.now().isoformat(),
             "file_hashes": {},
@@ -172,8 +172,8 @@ class SecurityAgent(AgentBase):
         try:
             with open(self.THREAT_LOG, "a", encoding="utf-8") as f:
                 f.write(f"{event['time']} [{severity.upper()}] [{category}] {detail}\n")
-        except Exception:
-            pass
+        except Exception as e:
+            self.log.debug(f"Failed to write to threat log: {e}")
 
         if severity in ("alert", "critical"):
             self.alert(f"[{category}] {detail}")
@@ -189,8 +189,8 @@ class SecurityAgent(AgentBase):
             try:
                 with open(self.ALERTS_FILE, encoding="utf-8") as f:
                     all_events = json.load(f)
-            except Exception:
-                pass
+            except Exception as e:
+                self.log.debug(f"Failed to load existing alerts: {e}")
         all_events.extend(self.security_events)
         all_events = all_events[-500:]  # Keep last 500 events
         with open(self.ALERTS_FILE, "w", encoding="utf-8") as f:
@@ -224,8 +224,8 @@ class SecurityAgent(AgentBase):
                         try:
                             proc = psutil.Process(conn.pid)
                             proc_name = proc.name()
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            self.log.debug(f"Failed to get process name for PID {conn.pid}: {e}")
 
                     # Not necessarily bad, but worth logging on first sight
                     conn_key = f"{remote_ip}:{remote_port}"
@@ -261,8 +261,8 @@ class SecurityAgent(AgentBase):
                     try:
                         proc = psutil.Process(conn.pid)
                         proc_name = proc.name()
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        self.log.debug(f"Failed to get process name for listening port {port}: {e}")
                 listeners.append({"port": port, "process": proc_name, "pid": conn.pid})
 
         # Compare to known ports
@@ -359,8 +359,8 @@ class SecurityAgent(AgentBase):
                 if count > 0:
                     self._security_event("warning", "failed_logins",
                         f"{count} failed login attempts in recent event log")
-        except Exception:
-            pass
+        except Exception as e:
+            self.log.debug(f"Failed to check event log for failed logins: {e}")
 
         # Check for new user accounts created (Event ID 4720)
         try:
@@ -371,8 +371,8 @@ class SecurityAgent(AgentBase):
             if r.stdout.strip() and "TimeCreated" in r.stdout:
                 self._security_event("alert", "new_account",
                     "New user account was created!")
-        except Exception:
-            pass
+        except Exception as e:
+            self.log.debug(f"Failed to check event log for new accounts: {e}")
 
         # Check for service installations (Event ID 7045)
         try:
@@ -385,8 +385,8 @@ class SecurityAgent(AgentBase):
                 if "TimeCreated" in r.stdout:
                     self._security_event("info", "service_installed",
                         "Recent service installation detected (check details)")
-        except Exception:
-            pass
+        except Exception as e:
+            self.log.debug(f"Failed to check event log for service installations: {e}")
 
     # === WIFI PRESENCE ===
 
@@ -493,8 +493,8 @@ class SecurityAgent(AgentBase):
                 if (datetime.now() - last).total_seconds() < 86400:
                     self.log.info("  Breach check: skipping (checked within 24h)")
                     return
-            except Exception:
-                pass
+            except Exception as e:
+                self.log.debug(f"Failed to load breach check timestamp: {e}")
 
         try:
             import httpx
@@ -532,8 +532,8 @@ class SecurityAgent(AgentBase):
         try:
             with open(last_check_file, "w", encoding="utf-8") as f:
                 json.dump({"last_check": datetime.now().isoformat(), "results": breached}, f)
-        except Exception:
-            pass
+        except Exception as e:
+            self.log.debug(f"Failed to save breach check timestamp: {e}")
 
         if breached:
             self.log.info(f"  ALERT: {len(breached)} email(s) found in breaches!")

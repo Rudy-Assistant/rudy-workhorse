@@ -128,7 +128,8 @@ def health_summary() -> dict:
                     "summary": data.get("summary", ""),
                     "duration": data.get("duration_seconds", 0),
                 }
-            except Exception:
+            except Exception as e:
+                print(f"Warning: Failed to read {name} status: {e}", file=sys.stderr)
                 results[name] = {"status": "error_reading", "last_run": "unknown"}
         else:
             results[name] = {"status": "never_run", "last_run": "never"}

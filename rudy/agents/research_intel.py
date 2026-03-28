@@ -83,8 +83,8 @@ class ResearchIntel(AgentBase):
                     for p in packages
                 ]
                 self.log.info(f"  {len(packages)} Python packages installed")
-            except Exception:
-                pass
+            except Exception as e:
+                self.log.debug(f"Exception occurred: {e}")
 
         # Check scheduled tasks
         ok, out = self._run_cmd('schtasks /query /fo CSV /nh')
@@ -111,7 +111,8 @@ class ResearchIntel(AgentBase):
         if ok:
             try:
                 packages = {p["name"].lower() for p in json.loads(out)}
-            except Exception:
+            except Exception as e:
+                self.log.debug(f"Failed to parse pip list output: {e}")
                 packages = set()
 
             desired = {
@@ -198,8 +199,8 @@ class ResearchIntel(AgentBase):
         if ok:
             try:
                 installed = {p["name"].lower(): p["version"] for p in json.loads(out)}
-            except Exception:
-                pass
+            except Exception as e:
+                self.log.debug(f"Exception occurred: {e}")
 
         for pkg, info in SUPERSEDED.items():
             if pkg in installed:
@@ -382,8 +383,8 @@ class ResearchIntel(AgentBase):
         try:
             with open(health_file, "w", encoding="utf-8") as f:
                 json.dump(report, f, indent=2)
-        except Exception:
-            pass
+        except Exception as e:
+            self.log.debug(f"Exception occurred: {e}")
 
         if issues:
             self.action(f"Dependency health: {len(issues)} issues found — see dependency-health.json")
@@ -398,7 +399,8 @@ class ResearchIntel(AgentBase):
             req = urllib.request.Request(url, headers={"User-Agent": "Rudy/1.0"})
             with urllib.request.urlopen(req, timeout=timeout) as resp:
                 return json.loads(resp.read().decode("utf-8"))
-        except Exception:
+        except Exception as e:
+            self.log.debug(f"Failed to fetch URL {url}: {e}")
             return None
 
     def _check_pypi(self, package_name):
@@ -423,8 +425,8 @@ class ResearchIntel(AgentBase):
                 try:
                     release_dt = datetime.strptime(latest_release_date, "%Y-%m-%d")
                     days_since = (datetime.now() - release_dt).days
-                except Exception:
-                    pass
+                except Exception as e:
+                    self.log.debug(f"Exception occurred: {e}")
 
             return {
                 "latest_version": latest_version,
@@ -434,7 +436,8 @@ class ResearchIntel(AgentBase):
                 "home_page": info.get("home_page", ""),
                 "requires_python": info.get("requires_python", ""),
             }
-        except Exception:
+        except Exception as e:
+            self.log.debug(f"Failed to parse PyPI data for {package_name}: {e}")
             return None
 
     def _check_github(self, repo_slug):
@@ -456,16 +459,16 @@ class ResearchIntel(AgentBase):
                         try:
                             push_dt = datetime.fromisoformat(pushed_at.replace("Z", "+00:00"))
                             days_since = (datetime.now(push_dt.tzinfo) - push_dt).days
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            self.log.debug(f"Exception occurred: {e}")
                     return {
                         "stars": stars,
                         "archived": archived,
                         "last_push": pushed_at,
                         "days_since_commit": days_since,
                     }
-                except Exception:
-                    pass
+                except Exception as e:
+                    self.log.debug(f"Exception occurred: {e}")
 
         # Fallback: unauthenticated API (60 req/hour limit)
         data = self._fetch_json(f"https://api.github.com/repos/{repo_slug}")
@@ -478,8 +481,8 @@ class ResearchIntel(AgentBase):
                 try:
                     push_dt = datetime.fromisoformat(pushed_at.replace("Z", "+00:00"))
                     days_since = (datetime.now(push_dt.tzinfo) - push_dt).days
-                except Exception:
-                    pass
+                except Exception as e:
+                    self.log.debug(f"Exception occurred: {e}")
             return {
                 "stars": data.get("stargazers_count", 0),
                 "archived": data.get("archived", False),
@@ -488,7 +491,8 @@ class ResearchIntel(AgentBase):
                 "open_issues": data.get("open_issues_count", 0),
                 "forks": data.get("forks_count", 0),
             }
-        except Exception:
+        except Exception as e:
+            self.log.debug(f"Failed to parse GitHub data for {repo_slug}: {e}")
             return None
 
     def _search_alternatives(self, search_terms, year, current_pkg):
@@ -513,8 +517,8 @@ class ResearchIntel(AgentBase):
                         # Extract package names mentioned in comparison articles
                         found = self._extract_package_names(text, current_pkg)
                         alternatives.extend(found)
-        except Exception:
-            pass
+        except Exception as e:
+            self.log.debug(f"Exception occurred: {e}")
 
         # Strategy 2: Direct search via trafilatura + requests
         if not alternatives:
@@ -543,10 +547,10 @@ class ResearchIntel(AgentBase):
                                 text = traf_extract(art_resp.text) or ""
                                 found = self._extract_package_names(text, current_pkg)
                                 alternatives.extend(found)
-                        except Exception:
-                            pass
-            except Exception:
-                pass
+                        except Exception as e:
+                            self.log.debug(f"Exception occurred: {e}")
+            except Exception as e:
+                self.log.debug(f"Exception occurred: {e}")
 
         # Strategy 3: Check PyPI search for related packages
         if not alternatives:
@@ -563,8 +567,8 @@ class ResearchIntel(AgentBase):
                         name_lower = name.lower()
                         if name_lower != current_pkg.lower() and name_lower not in ("pip", "setuptools"):
                             alternatives.append(name_lower)
-            except Exception:
-                pass
+            except Exception as e:
+                self.log.debug(f"Exception occurred: {e}")
 
         # Deduplicate and remove self
         seen = set()
@@ -610,7 +614,8 @@ class ResearchIntel(AgentBase):
             if not (ollama.is_available() and ollama.has_model("phi3-mini")):
                 self.log.info("  Ollama not available — skipping AI synthesis (evidence preserved)")
                 return
-        except Exception:
+        except Exception as e:
+            self.log.debug(f"Ollama not available: {e}")
             return
 
         self.log.info("  Synthesizing evidence with local AI...")
@@ -655,8 +660,8 @@ class ResearchIntel(AgentBase):
                     temperature=0.1,
                 )
                 ev["ai_synthesis"] = response.strip()[:200]
-            except Exception:
-                pass  # Synthesis is optional
+            except Exception as e:
+                self.log.debug(f"Exception occurred: {e}")  # Synthesis is optional
 
     def _check_system_health(self):
         """Layer 4: System-level health audit.
@@ -742,8 +747,8 @@ class ResearchIntel(AgentBase):
                         ],
                         "detail": f"{len(real_problems)} devices with driver problems",
                     })
-            except Exception:
-                pass
+            except Exception as e:
+                self.log.debug(f"Exception occurred: {e}")
 
         # --- 4c: Core tool version checks (live) ---
         # Check if our critical tools have newer versions available
@@ -846,8 +851,8 @@ class ResearchIntel(AgentBase):
                             "pct_free": pct_free,
                             "detail": f"Drive {vol.get('DriveLetter')}: only {pct_free}% free ({vol.get('FreeGB')}GB)",
                         })
-            except Exception:
-                pass
+            except Exception as e:
+                self.log.debug(f"Exception occurred: {e}")
 
         return {"status": status, "issues": sys_issues}
 

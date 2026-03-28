@@ -55,8 +55,8 @@ class OperationsMonitor(AgentBase):
                             else:
                                 os.unlink(path)
                             cleaned += 1
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        self.log.debug(f"Failed to clean temp file {path}: {e}")
 
         if cleaned:
             self.action(f"Cleaned {cleaned} temp files")
@@ -76,8 +76,8 @@ class OperationsMonitor(AgentBase):
                 try:
                     shutil.move(str(f), str(archive_dir / f.name))
                     archived += 1
-                except Exception:
-                    pass
+                except Exception as e:
+                    self.log.debug(f"Failed to archive {f.name}: {e}")
 
         # Also clean result.json files
         for f in cmd_dir.glob("*.result.json"):
@@ -86,8 +86,8 @@ class OperationsMonitor(AgentBase):
                 try:
                     shutil.move(str(f), str(archive_dir / f.name))
                     archived += 1
-                except Exception:
-                    pass
+                except Exception as e:
+                    self.log.debug(f"Failed to archive {f.name}: {e}")
 
         # Clean old archive files (> 7 days)
         old_cleaned = 0
@@ -97,8 +97,8 @@ class OperationsMonitor(AgentBase):
                 if age > 86400 * 7:
                     f.unlink()
                     old_cleaned += 1
-            except Exception:
-                pass
+            except Exception as e:
+                self.log.debug(f"Failed to clean old archive {f.name}: {e}")
 
         if archived or old_cleaned:
             self.action(f"Archived {archived} results, cleaned {old_cleaned} old archive files")
@@ -113,8 +113,8 @@ class OperationsMonitor(AgentBase):
                     try:
                         shutil.rmtree(os.path.join(root, d), ignore_errors=True)
                         cleaned += 1
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        self.log.debug(f"Failed to remove __pycache__ at {root}: {e}")
         if cleaned:
             self.action(f"Removed {cleaned} __pycache__ directories")
         return cleaned

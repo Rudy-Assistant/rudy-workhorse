@@ -141,8 +141,8 @@ class Sentinel(AgentBase):
             try:
                 with open(self.STATE_FILE, encoding="utf-8") as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as e:
+                self.log.debug(f"Exception occurred: {e}")
         return {
             "run_count": 0,
             "last_run": None,
@@ -193,9 +193,9 @@ class Sentinel(AgentBase):
             state["rustdesk_session_active"] = active_conns > 0
             state["rustdesk_connections"] = active_conns
 
-        except Exception:
+        except Exception as e:
             # Silently skip if powershell call fails — not critical
-            pass
+            self.log.debug(f"RustDesk session check failed: {e}")
 
     def _scan_incoming_requests(self, state):
         """Detect new pending command runner scripts (incoming work)."""
@@ -232,8 +232,8 @@ class Sentinel(AgentBase):
 
             state["pending_commands"] = list(current_pending)
 
-        except Exception:
-            pass
+        except Exception as e:
+            self.log.debug(f"Exception occurred: {e}")
 
     def _scan_device_events(self, state):
         """Detect new USB devices via quarantine protocol.
@@ -278,8 +278,8 @@ class Sentinel(AgentBase):
         except ImportError:
             # Fallback to basic detection if quarantine module not available
             self._scan_device_events_basic(state)
-        except Exception:
-            pass
+        except Exception as e:
+            self.log.debug(f"Exception occurred: {e}")
 
         # Network devices: check presence scan results for changes
         try:
@@ -303,8 +303,8 @@ class Sentinel(AgentBase):
                             actionable=False)
 
                 state["known_network_devices"] = list(current_macs)
-        except Exception:
-            pass
+        except Exception as e:
+            self.log.debug(f"Exception occurred: {e}")
 
     def _scan_device_events_basic(self, state):
         """Basic USB detection fallback (used if usb_quarantine module unavailable)."""
@@ -326,8 +326,8 @@ class Sentinel(AgentBase):
                             f"USB device connected (UNSCREENED): {short}",
                             actionable=True)
                 state["usb_devices"] = list(current_usb)
-        except Exception:
-            pass
+        except Exception as e:
+            self.log.debug(f"Exception occurred: {e}")
 
     def _scan_service_health(self, state):
         """Monitor key services: Ollama, Tailscale, RustDesk, command runner."""
@@ -344,7 +344,8 @@ class Sentinel(AgentBase):
                     services_status["ollama"] = f"running ({len(models)} models)"
                 else:
                     services_status["ollama"] = "error"
-        except Exception:
+        except Exception as e:
+            self.log.debug(f"Failed to check Ollama service: {e}")
             services_status["ollama"] = "down"
 
         # Tailscale
@@ -359,7 +360,8 @@ class Sentinel(AgentBase):
                 services_status["tailscale"] = "connected" if self_online else "disconnected"
             else:
                 services_status["tailscale"] = "error"
-        except Exception:
+        except Exception as e:
+            self.log.debug(f"Failed to check Tailscale service: {e}")
             services_status["tailscale"] = "unavailable"
 
         # RustDesk service
@@ -370,7 +372,8 @@ class Sentinel(AgentBase):
                 capture_output=True, text=True, timeout=5
             )
             services_status["rustdesk"] = result.stdout.strip().lower() or "not found"
-        except Exception:
+        except Exception as e:
+            self.log.debug(f"Failed to check RustDesk service: {e}")
             services_status["rustdesk"] = "unknown"
 
         # Command runner (check process)
@@ -383,7 +386,8 @@ class Sentinel(AgentBase):
             )
             count = result.stdout.strip()
             services_status["command_runner"] = f"running ({count} proc)" if count and count != "0" else "not running"
-        except Exception:
+        except Exception as e:
+            self.log.debug(f"Failed to check command runner process: {e}")
             services_status["command_runner"] = "unknown"
 
         # Detect state changes from previous run
@@ -438,8 +442,8 @@ class Sentinel(AgentBase):
                     obs.get("category", "unknown"),
                     obs.get("observation", "No details")
                 )
-        except Exception:
-            pass  # GitHub integration is best-effort
+        except Exception as e:
+            self.log.debug(f"Exception occurred: {e}")  # GitHub integration is best-effort
 
     def _finalize(self, state):
         """Save state and observations."""
@@ -461,8 +465,8 @@ class Sentinel(AgentBase):
             try:
                 with open(self.OBSERVATIONS_FILE, encoding="utf-8") as f:
                     all_obs = json.load(f)
-            except Exception:
-                pass
+            except Exception as e:
+                self.log.debug(f"Exception occurred: {e}")
         all_obs.extend(self.observations)
         all_obs = all_obs[-100:]
         with open(self.OBSERVATIONS_FILE, "w", encoding="utf-8") as f:
@@ -503,8 +507,8 @@ class Sentinel(AgentBase):
                         self._observe("staleness",
                             f"{agent_name} hasn't run in {age_hours:.1f} hours",
                             actionable=True)
-                except Exception:
-                    pass
+                except Exception as e:
+                    self.log.debug(f"Exception occurred: {e}")
 
             prev[agent_name] = {"status": agent_status, "last_run": last_run}
 
@@ -532,8 +536,8 @@ class Sentinel(AgentBase):
                             f"{name} was modified since last check",
                             actionable=False)
                     prev_hashes[name] = current_hash
-                except Exception:
-                    pass
+                except Exception as e:
+                    self.log.debug(f"Exception occurred: {e}")
 
         state["file_hashes"] = prev_hashes
 
@@ -581,8 +585,8 @@ class Sentinel(AgentBase):
                 self._observe("active_alert",
                     f"Unresolved alert: {content}",
                     actionable=True)
-            except Exception:
-                pass
+            except Exception as e:
+                self.log.debug(f"Exception occurred: {e}")
 
     def _scan_work_queue(self, state):
         """Check if the work queue has stale items."""
@@ -596,8 +600,8 @@ class Sentinel(AgentBase):
                     self._observe("work_pending",
                         f"{pending} items in work queue",
                         actionable=False)
-            except Exception:
-                pass
+            except Exception as e:
+                self.log.debug(f"Exception occurred: {e}")
 
     # === SESSION GUARDIAN (ADR-001) ===
 
@@ -670,8 +674,8 @@ class Sentinel(AgentBase):
                     manifest["skills"] = sorted(all_skills)
                     manifest["connectors"] = sorted(all_connectors)
                     manifest["scheduled_tasks"] = sorted(all_tasks)
-                except Exception:
-                    pass
+                except Exception as e:
+                    self.log.debug(f"Exception occurred: {e}")
 
             # 3. Read installed packages from existing research-capability.json
             # (generated by ObsolescenceMonitor — don't duplicate its work)
@@ -685,8 +689,8 @@ class Sentinel(AgentBase):
                             p if isinstance(p, str) else p.get("name", str(p))
                             for p in pkgs[:200]  # Cap to avoid bloat
                         ]
-                except Exception:
-                    pass
+                except Exception as e:
+                    self.log.debug(f"Exception occurred: {e}")
 
             # 4. Scan agents
             agents_dir = DESKTOP / "rudy" / "agents"
@@ -777,7 +781,8 @@ class Sentinel(AgentBase):
                             lines.append(f"- [~] {desc} (in progress)")
                     if not pending and not in_progress:
                         lines.append("- No pending tasks")
-                except Exception:
+                except Exception as e:
+                    self.log.debug(f"Failed to read task queue: {e}")
                     lines.append("- Could not read task queue")
             else:
                 lines.append("- No task queue file")
@@ -795,7 +800,8 @@ class Sentinel(AgentBase):
                             cd = json.loads(cf.read_text(encoding="utf-8"))
                             lines.append(f"- **{cd.get('agent', '?')}** at {cd.get('crash_time', '?')}: "
                                          f"`{cd.get('error_type', '?')}: {cd.get('error_message', '')[:100]}`")
-                        except Exception:
+                        except Exception as e:
+                            self.log.debug(f"Failed to parse crash dump {cf.name}: {e}")
                             lines.append(f"- {cf.name} (could not parse)")
                     lines.append("")
 
@@ -808,8 +814,8 @@ class Sentinel(AgentBase):
                 )):
                     try:
                         marker.unlink()
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        self.log.debug(f"Exception occurred: {e}")
 
             # Dependency health issues (from ResearchIntel)
             dep_health = LOGS_DIR / "dependency-health.json"
@@ -830,8 +836,8 @@ class Sentinel(AgentBase):
                                     f"- **{issue['module']}** ({issue['description']}): "
                                     f"import failed")
                         lines.append("")
-                except Exception:
-                    pass
+                except Exception as e:
+                    self.log.debug(f"Exception occurred: {e}")
 
             # Recent observations (last 5 actionable)
             lines.append("## Recent Observations")
@@ -844,7 +850,8 @@ class Sentinel(AgentBase):
                             lines.append(f"- **{o.get('category', '?')}**: {o.get('observation', '')}")
                     else:
                         lines.append("- No actionable observations")
-                except Exception:
+                except Exception as e:
+                    self.log.debug(f"Failed to read observations: {e}")
                     lines.append("- Could not read observations")
             lines.append("")
 
@@ -965,8 +972,8 @@ class Sentinel(AgentBase):
                     pending = queue.get("pending", [])
                     if pending:
                         lines.append(f"Work queue: {len(pending)} pending tasks.")
-                except Exception:
-                    pass
+                except Exception as e:
+                    self.log.debug(f"Exception occurred: {e}")
 
             lines.append("")
             lines.append("Read CLAUDE.md for full system state.")

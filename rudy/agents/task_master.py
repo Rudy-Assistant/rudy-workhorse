@@ -35,8 +35,8 @@ class TaskMaster(AgentBase):
             try:
                 with open(self.QUEUE_FILE, encoding="utf-8") as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as e:
+                self.log.debug(f"Failed to load task queue: {e}")
         return {"pending": [], "in_progress": [], "completed": [], "last_updated": None}
 
     def _save_queue(self, queue: dict):

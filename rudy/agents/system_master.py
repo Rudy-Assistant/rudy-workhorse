@@ -229,8 +229,8 @@ class SystemMaster(AgentBase):
                 if len(lines) > max_lines:
                     log_file.write_text("\n".join(lines[-max_lines:]) + "\n", encoding="utf-8")
                     rotated += 1
-            except Exception:
-                pass
+            except Exception as e:
+                self.log.debug(f"Failed to rotate {log_file.name}: {e}")
         if rotated:
             self.action(f"Rotated {rotated} log files")
 
