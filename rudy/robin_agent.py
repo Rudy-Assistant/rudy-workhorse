@@ -76,11 +76,14 @@ RULES:
 5. Never expose secrets, tokens, or passwords in your responses.
 6. If you're unsure about a destructive action, explain why and stop.
 
-TO USE A TOOL, respond with exactly this format:
+TO USE A TOOL, you MUST wrap the JSON in <tool_call> tags like this:
+
 <tool_call>
 {"tool": "server_name.tool_name", "args": {"param1": "value1"}}
 </tool_call>
 
+IMPORTANT: Always include the <tool_call> and </tool_call> tags.
+Do NOT output bare JSON without the tags -- it will not be recognized.
 You can include reasoning text before and after the tool_call block.
 Only ONE tool_call per response. Wait for the result before calling another.
 
@@ -128,6 +131,12 @@ TOOL_CALL_PATTERN = re.compile(
     re.DOTALL,
 )
 
+# Fallback: bare JSON with "tool" key (DeepSeek sometimes omits the tags)
+BARE_TOOL_CALL_PATTERN = re.compile(
+    r'(\{\s*"tool"\s*:\s*"[^"]+\.\w+"\s*,\s*"args"\s*:\s*\{.*?\}\s*\})',
+    re.DOTALL,
+)
+
 THINK_PATTERN = re.compile(
     r"<think>(.*?)</think>",
     re.DOTALL,
@@ -136,13 +145,22 @@ THINK_PATTERN = re.compile(
 
 def parse_tool_call(text: str) -> Optional[dict]:
     """Extract a tool call from DeepSeek's response."""
+    # Try tagged format first
     match = TOOL_CALL_PATTERN.search(text)
-    if not match:
-        return None
+    if match:
+        raw = match.group(1)
+    else:
+        # Fallback: bare JSON with "tool" key containing a dot (server.tool)
+        match = BARE_TOOL_CALL_PATTERN.search(text)
+        if match:
+            raw = match.group(1)
+            log.info("Detected bare tool call (no <tool_call> tags)")
+        else:
+            return None
 
     try:
-        call = json.loads(match.group(1))
-        if "tool" in call:
+        call = json.loads(raw)
+        if "tool" in call and "." in call["tool"]:
             return {
                 "tool": call["tool"],
                 "args": call.get("args", call.get("arguments", {})),
@@ -216,7 +234,7 @@ class RobinAgent:
 
         # Build system prompt with available tools
         tools_prompt = self.registry.get_tools_prompt()
-        system_prompt = AGENT_SYSTEM_PROMPT.format(tools_prompt=tools_prompt)
+        system_prompt = AGENT_SYSTEM_PROMPT.replace("{tools_prompt}", tools_prompt)
 
         messages.append({"role": "system", "content": system_prompt})
 
