@@ -146,8 +146,9 @@ class RobinChat:
 
     def __init__(self):
         self.ollama_host = SecureConfig.get("ollama_host", "http://localhost:11434")
-        self.model = "llama3.2:3b"
-        self.fallback_models = ["phi3", "mistral", "tinyllama"]
+        self.model = SecureConfig.get("ollama_model", "deepseek-r1:8b")
+        fallbacks = SecureConfig.get("ollama_fallback_models", None)
+        self.fallback_models = fallbacks if isinstance(fallbacks, list) else ["llama3.2:3b", "phi3", "mistral"]
         self.conversation_history = []
         self.system_prompt = self._build_system_prompt()
 
