@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 """
 Robin Bridge — Polls alfred-skills/docs/robin-tasks/ for pending tasks from Alfred.
 
@@ -7,22 +8,22 @@ in the GitHub repo with YAML frontmatter. Robin polls for pending tasks, claims 
 executes them, and writes results back.
 
 Task file format:
-    ---
-    task: task-slug
-    status: pending|claimed|completed|failed
-    priority: critical|high|medium|low
-    created: 2026-03-29T01:30:00Z
-    created_by: alfred
-    claimed_by: robin        # Added when Robin claims
-    completed_at: <iso>      # Added when done
-    ---
-    # Task Title
-    ... markdown body with steps, acceptance criteria, etc.
+ ---
+ task: task-slug
+ status: pending|claimed|completed|failed
+ priority: critical|high|medium|low
+ created: 2026-03-29T01:30:00Z
+ created_by: alfred
+ claimed_by: robin # Added when Robin claims
+ completed_at: <iso> # Added when done
+ ---
+ # Task Title
+ ... markdown body with steps, acceptance criteria, etc.
 
 Usage:
-    python -m rudy.agents.robin_bridge              # Poll once
-    python -m rudy.agents.robin_bridge --continuous  # Poll every 5 minutes
-    python -m rudy.agents.robin_bridge --status      # Show task queue status
+ python -m rudy.agents.robin_bridge # Poll once
+ python -m rudy.agents.robin_bridge --continuous # Poll every 5 minutes
+ python -m rudy.agents.robin_bridge --status # Show task queue status
 """
 
 import json
@@ -57,6 +58,7 @@ log = logging.getLogger("robin_bridge")
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
+
 ALFRED_REPO = "Rudy-Assistant/alfred-skills"
 TASKS_PATH = "docs/robin-tasks"
 POLL_INTERVAL = 300  # 5 minutes
@@ -197,7 +199,7 @@ def update_frontmatter(content: str, updates: dict[str, str]) -> str:
         if key not in updated_keys:
             new_lines.append(f"{key}: {value}")
 
-    return f"---\n" + "\n".join(new_lines) + f"\n---\n{body}"
+    return "---\n" + "\n".join(new_lines) + "\n---\n" + body
 
 
 # ---------------------------------------------------------------------------
@@ -232,8 +234,8 @@ class RobinBridge:
                         continue
 
                     self.log.info("Found pending task: %s (%s priority)",
-                                 fm.get("task", file_info["name"]),
-                                 fm.get("priority", "medium"))
+                                  fm.get("task", file_info["name"]),
+                                  fm.get("priority", "medium"))
 
                     # Claim the task
                     claimed_content = update_frontmatter(content, {
@@ -259,7 +261,7 @@ class RobinBridge:
                         "completed_at": datetime.now().isoformat(),
                     })
                     # Append result to body
-                    completed_content = completed_content.rstrip() + f"\n\n## Result (Robin — {datetime.now().isoformat()})\n```json\n{result_text}\n```\n"
+                    completed_content = f"{completed_content.rstrip()}\n\n## Result (Robin — {datetime.now().isoformat()})\n```json\n{result_text}\n```\n"
 
                     self.api.update_file(
                         ALFRED_REPO, file_info["path"], completed_content, new_sha,

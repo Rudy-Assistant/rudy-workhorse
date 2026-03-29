@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 """
 Robin Sentinel — The Batcave's Immune System + Night Shift Operator
 
@@ -15,10 +16,10 @@ Registered as Windows Scheduled Task: At startup, run as SYSTEM.
 Also runs continuously as the night shift when Batman is inactive.
 
 Usage:
-    python -m rudy.agents.robin_sentinel              # Full boot sequence
-    python -m rudy.agents.robin_sentinel --phase 1    # Run specific phase only
-    python -m rudy.agents.robin_sentinel --night-shift # Enter night shift mode
-    python -m rudy.agents.robin_sentinel --status      # Report current state
+ python -m rudy.agents.robin_sentinel # Full boot sequence
+ python -m rudy.agents.robin_sentinel --phase 1 # Run specific phase only
+ python -m rudy.agents.robin_sentinel --night-shift # Enter night shift mode
+ python -m rudy.agents.robin_sentinel --status # Report current state
 """
 
 import json
@@ -37,6 +38,7 @@ from typing import Any, Optional
 # ---------------------------------------------------------------------------
 # Paths
 # ---------------------------------------------------------------------------
+
 HOME = Path(os.environ.get("USERPROFILE", os.path.expanduser("~")))
 DESKTOP = HOME / "Desktop"
 RUDY_DATA = DESKTOP / "rudy-data"
@@ -55,6 +57,7 @@ for d in [RUDY_DATA, RUDY_LOGS, RUDY_COMMANDS]:
 # ---------------------------------------------------------------------------
 # Logging
 # ---------------------------------------------------------------------------
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [Robin] %(levelname)s %(message)s",
@@ -231,8 +234,8 @@ def phase_1_services(state: dict) -> dict:
             log.info(action)
             if not recovered:
                 status["healthy"] = False
-                if svc_cfg.get("sacred"):
-                    _escalate(f"SACRED service {svc_name} is DOWN and could not be recovered")
+            if svc_cfg.get("sacred"):
+                _escalate(f"SACRED service {svc_name} is DOWN and could not be recovered")
 
     # Check RustDesk zombie processes
     _check_rustdesk_zombies(state, status)
@@ -282,7 +285,7 @@ def _check_rustdesk_zombies(state: dict, status: dict) -> None:
             ["tasklist", "/FI", "IMAGENAME eq rustdesk.exe", "/FO", "CSV", "/NH"],
             capture_output=True, text=True, timeout=10,
         )
-        lines = [l for l in result.stdout.strip().split("\n") if "rustdesk" in l.lower()]
+        lines = [line for line in result.stdout.strip().split("\n") if "rustdesk" in line.lower()]
         count = len(lines)
         max_inst = rd_cfg.get("max_instances", 3)
 
@@ -579,6 +582,7 @@ class NightShift:
             return {"status": "rudy_dir_not_found"}
 
         results = {}
+
         # Try ruff lint
         try:
             result = subprocess.run(
@@ -602,6 +606,7 @@ class NightShift:
             "robin_tasks_completed": [],
             "alerts": [],
         }
+
         # The actual briefing content will be enriched by:
         # - Sentinel health status
         # - Bridge task results
@@ -744,7 +749,7 @@ def run_continuous() -> None:
             cycle += 1
 
             # Quick health check every cycle
-            p1 = phase_1_services(state)
+            phase_1_services(state)
             p3 = phase_3_connectivity(state)
             online = p3.get("online", False)
 
@@ -761,7 +766,7 @@ def run_continuous() -> None:
             ns = NightShift(state, online)
             if ns.should_activate():
                 log.info("Night shift conditions detected — activating")
-                ns_result = ns.run()
+                ns.run()
                 # Don't run night shift again for at least 4 hours
                 time.sleep(14400)
 

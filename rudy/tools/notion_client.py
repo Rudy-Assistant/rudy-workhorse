@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 """
 Notion Client for Robin — Read/write access to the Bat Family's shared knowledge.
 
@@ -13,10 +14,10 @@ via keyring: keyring.set_password("notion", "robin", "<token>")
 
 Key Notion Page IDs (from Alfred Session 2):
 - Batcave Operations Hub: 3327d3f7-e736-81b1-8c48-d300c31a7883
-- Bat Family Directives:  3327d3f7-e736-81b5-8293-faa7d9c5ed7d
-- Alfred Session Log:     3327d3f7-e736-81ff-ab82-d73d2f106a61
+- Bat Family Directives: 3327d3f7-e736-81b5-8293-faa7d9c5ed7d
+- Alfred Session Log: 3327d3f7-e736-81ff-ab82-d73d2f106a61
 - Workhorse Command Center: 32f7d3f7-e736-81fc-aa01-d378d347d427
-- Watchdog Health Log:    3327d3f7-e736-8109-bf96-f79796545a73
+- Watchdog Health Log: 3327d3f7-e736-8109-bf96-f79796545a73
 """
 
 import json
@@ -45,6 +46,7 @@ log = logging.getLogger("notion_client")
 # ---------------------------------------------------------------------------
 # Page IDs
 # ---------------------------------------------------------------------------
+
 PAGES = {
     "batcave_hub": "3327d3f7-e736-81b1-8c48-d300c31a7883",
     "directives": "3327d3f7-e736-81b5-8293-faa7d9c5ed7d",
@@ -145,7 +147,7 @@ class NotionClient:
         healthy = assessment.get("all_healthy", False)
         online = assessment.get("online", False)
 
-        status_emoji = "\u2705" if healthy else "\u26a0\ufe0f"
+        status_emoji = "✅" if healthy else "⚠️"
         status_text = "NOMINAL" if healthy else "DEGRADED"
         connectivity = "ONLINE" if online else "OFFLINE"
 
@@ -155,21 +157,27 @@ class NotionClient:
             actions.extend(phase.get("actions", []))
 
         blocks = [
-            self._heading(f"{now.strftime('%Y-%m-%d %I:%M %p ET')} — {status_emoji} {status_text}"),
-            self._paragraph(f"**Status:** {status_text} | **Connectivity:** {connectivity}"),
+            self._heading(
+                f"{now.strftime('%Y-%m-%d %I:%M %p ET')} — {status_emoji} {status_text}"
+            ),
+            self._paragraph(
+                f"**Status:** {status_text} | **Connectivity:** {connectivity}"
+            ),
         ]
 
         if actions:
-            blocks.append(self._paragraph(f"**Actions taken:** {'; '.join(actions)}"))
+            blocks.append(self._paragraph(
+                f"**Actions taken:** {'; '.join(actions)}"
+            ))
 
         if assessment.get("degraded_systems"):
             blocks.append(self._paragraph(
                 f"**Degraded systems:** {', '.join(assessment['degraded_systems'])}"
             ))
 
+        boot_dur = assessment.get("boot_duration_seconds", "?")
         blocks.append(self._paragraph(
-            f"**Boot duration:** {assessment.get('boot_duration_seconds', '?')}s | "
-            f"**Source:** Robin Sentinel"
+            f"**Boot duration:** {boot_dur}s | **Source:** Robin Sentinel"
         ))
         blocks.append(self._divider())
 
@@ -178,31 +186,33 @@ class NotionClient:
 
     def update_oracle_status(self, status: dict) -> None:
         """Update the Batcave Operations Hub with Oracle's current status."""
-        # This appends a status update block; in the future we could
-        # update specific sections of the page
+        now_str = datetime.now().strftime("%Y-%m-%d %I:%M %p")
         blocks = [
-            self._heading(f"Oracle Status — {datetime.now().strftime('%Y-%m-%d %I:%M %p')}"),
-            self._paragraph(json.dumps(status, indent=2)[:1900]),  # Notion block limit
+            self._heading(f"Oracle Status — {now_str}"),
+            self._paragraph(json.dumps(status, indent=2)[:1900]),
             self._divider(),
         ]
         self.api.append_blocks(PAGES["batcave_hub"], blocks)
 
     def log_night_shift(self, results: dict) -> None:
         """Log night shift activity to the session log."""
+        now_str = datetime.now().strftime("%Y-%m-%d")
         blocks = [
-            self._heading(f"Robin Night Shift — {datetime.now().strftime('%Y-%m-%d')}"),
+            self._heading(f"Robin Night Shift — {now_str}"),
             self._paragraph(f"**Started:** {results.get('started', '?')}"),
             self._paragraph(f"**Ended:** {results.get('ended', '?')}"),
         ]
 
         if results.get("tasks_completed"):
+            tasks_str = ", ".join(str(t) for t in results["tasks_completed"])
             blocks.append(self._paragraph(
-                f"**Tasks completed:** {', '.join(str(t) for t in results['tasks_completed'])}"
+                f"**Tasks completed:** {tasks_str}"
             ))
 
         if results.get("errors"):
+            errors_str = "; ".join(results["errors"])
             blocks.append(self._paragraph(
-                f"**Errors:** {'; '.join(results['errors'])}"
+                f"**Errors:** {errors_str}"
             ))
 
         blocks.append(self._divider())
@@ -218,7 +228,9 @@ class NotionClient:
         return {
             "object": "block",
             "type": key,
-            key: {"rich_text": [{"type": "text", "text": {"content": text[:2000]}}]],
+            key: {
+                "rich_text": [{"type": "text", "text": {"content": text[:2000]}}],
+            },
         }
 
     @staticmethod
@@ -226,7 +238,9 @@ class NotionClient:
         return {
             "object": "block",
             "type": "paragraph",
-            "paragraph": {"rich_text": [{"type": "text", "text": {"content": text[:2000]}}]],
+            "paragraph": {
+                "rich_text": [{"type": "text", "text": {"content": text[:2000]}}],
+            },
         }
 
     @staticmethod
