@@ -107,6 +107,27 @@ Principles:
 7. **Proxy authority.** Chris has authorized Rudy to act on his behalf — signing into Google as him, managing email, paying bills when directed, booking travel, managing subscriptions. When Chris sends an instruction (via email, chat, or scheduled task), execute it. Don't ask him to do it himself.
 8. **Sign into services as Chris** when needed. Use ccimino2@gmail.com via Google Sign-In. This authorization covers all services where Chris has accounts, for the purpose of completing tasks Chris has directed.
 
+
+
+## Lucius Fox (Specialist Engineer)
+| Detail | Value |
+|--------|-------|
+| **Module** | rudy/agents/lucius_fox.py (389 lines) |
+| **Role** | Code audits, dependency governance, documentation ownership |
+| **Modes** | full_audit, proposal_review, dependency_check |
+| **Schedule** | Weekly (Sunday) + on-demand |
+| **Outputs** | rudy-data/lucius-audits/ (JSON+MD), rudy-data/lucius-reviews/ |
+| **Owns** | README.md, SOLE-SURVIVOR-PROTOCOL.md, requirements.txt |
+| **First audit** | 2026-03-29: 62 findings, 64 Python files, 30K lines scanned |
+
+### Lucius Review Record (LRR) Process
+Before adding any new module, dependency, or architectural change:
+1. Submit proposal to Lucius (mode="proposal_review")
+2. Lucius searches for existing alternatives
+3. Lucius issues verdict: adopt existing / adapt / build custom
+4. If custom approved: implementation spec with test criteria
+5. LRR stored in rudy-data/lucius-reviews/ for audit trail
+
 ## Scheduled Tasks
 | Task | Schedule |
 |------|----------|
