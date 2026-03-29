@@ -365,8 +365,6 @@ class NightShiftRunner:
 
     def _run_maintenance(self) -> None:
         """System maintenance tasks."""
-        import subprocess
-
         tasks = [
             ("Log rotation", self._rotate_logs),
             ("Temp cleanup", self._cleanup_temp),
@@ -415,8 +413,9 @@ class NightShiftRunner:
         }
 
         # Ask Robin's local LLM what to do
+        ctx_summary = json.dumps(context, indent=2, default=str)
         decision = self.chat.reason_about(
-            "Night shift proactive phase. System health and task status above. "
+            f"Night shift proactive phase. Context:\n{ctx_summary}\n"
             "What maintenance or improvements should I do right now?",
             options=[
                 "Check for Python package updates in rudy-workhorse",
