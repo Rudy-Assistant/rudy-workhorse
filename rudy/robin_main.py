@@ -430,7 +430,7 @@ class NightShiftRunner:
                 agent = RobinAgent(
                     registry=registry,
                     ollama_host=SecureConfig.get("ollama_host", "http://localhost:11434"),
-                    model=SecureConfig.get("ollama_model", "deepseek-r1:8b"),
+                    model=SecureConfig.get("ollama_model", "qwen2.5:7b"),
                     max_steps=10,
                 )
                 result = agent.run(
@@ -769,7 +769,7 @@ def _run_nightwatch() -> None:
                 agent = RobinAgent(
                     registry=registry,
                     ollama_host=SecureConfig.get("ollama_host", "http://localhost:11434"),
-                    model=SecureConfig.get("ollama_model", "deepseek-r1:8b"),
+                    model=SecureConfig.get("ollama_model", "qwen2.5:7b"),
                 )
                 result = agent.run_with_report(task_desc)
                 log.info("[NightWatch] Task complete: success=%s, steps=%s",
@@ -778,12 +778,40 @@ def _run_nightwatch() -> None:
             except Exception as e:
                 log.error("[NightWatch] Task failed: %s", e)
         else:
-            if cycle % 12 == 1:
-                try:
-                    from rudy.robin_logger import log_nightwatch_checkin
-                    log_nightwatch_checkin(status="watching", tasks_pending=0, notes=f"Cycle {cycle}")
-                except Exception:
-                    pass
+            # === AUTONOMY ENGINE ===
+            try:
+                from rudy.robin_autonomy import AutonomyEngine
+
+                def _make_agent():
+                    from rudy.robin_mcp_client import MCPServerRegistry
+                    from rudy.robin_agent import RobinAgent
+                    secrets = SecureConfig.load()
+                    registry = MCPServerRegistry(secrets)
+                    registry.connect_all()
+                    agent = RobinAgent(
+                        registry=registry,
+                        ollama_host=SecureConfig.get("ollama_host", "http://localhost:11434"),
+                        model=SecureConfig.get("ollama_model", "qwen2.5:7b"),
+                    )
+                    return agent
+
+                autonomy = AutonomyEngine()
+                plan = autonomy.decide()
+                log.info("[NightWatch] Autonomy: mode=%s, action=%s, rationale=%s",
+                         plan.get("mode"), plan.get("action"), plan.get("rationale", "")[:80])
+                result = autonomy.execute(plan, agent_factory=_make_agent)
+                log.info("[NightWatch] Autonomy result: success=%s",
+                         result.get("success"))
+            except ImportError as e:
+                log.warning("[NightWatch] Autonomy engine not available: %s", e)
+                if cycle % 12 == 1:
+                    try:
+                        from rudy.robin_logger import log_nightwatch_checkin
+                        log_nightwatch_checkin(status="watching", tasks_pending=0, notes=f"Cycle {cycle}")
+                    except Exception:
+                        pass
+            except Exception as e:
+                log.error("[NightWatch] Autonomy error: %s", e)
 
         try:
             _time.sleep(CHECK_INTERVAL)
@@ -844,7 +872,7 @@ def main() -> None:
             agent = RobinAgent(
                 registry=registry,
                 ollama_host=SecureConfig.get("ollama_host", "http://localhost:11434"),
-                model=SecureConfig.get("ollama_model", "deepseek-r1:8b"),
+                model=SecureConfig.get("ollama_model", "qwen2.5:7b"),
             )
             result = agent.run_with_report(task)
             print(json.dumps(result, indent=2, default=str))
