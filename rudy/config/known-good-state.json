@@ -1,0 +1,74 @@
+{
+  "version": 2,
+  "last_updated": null,
+  "description": "Robin's immune memory — the expected state of Oracle. When Robin detects a deviation, Robin fixes it. When Robin successfully fixes something new, Robin updates this file.",
+  "services": {
+    "Tailscale": {
+      "type": "windows-service",
+      "name": "Tailscale",
+      "expected": "running",
+      "sacred": true,
+      "notes": "VPN tunnel to family network. NEVER disable."
+    },
+    "sshd": {
+      "type": "windows-service",
+      "name": "sshd",
+      "expected": "running",
+      "sacred": true,
+      "notes": "OpenSSH Server — backup access. Firewall restricted to Tailscale subnet."
+    },
+    "WinRM": {
+      "type": "windows-service",
+      "name": "WinRM",
+      "expected": "running",
+      "sacred": true,
+      "notes": "PowerShell Remoting — tertiary access path."
+    }
+  },
+  "processes": {
+    "rustdesk": {
+      "max_instances": 3,
+      "kill_zombies": true,
+      "sacred": true,
+      "notes": "Remote desktop. Zombies caused the 2026-03-27 cascade failure. Kill excess aggressively."
+    },
+    "ollama": {
+      "expected": true,
+      "port": 11434,
+      "notes": "Local LLM server. Robin's reasoning engine when offline."
+    }
+  },
+  "scheduled_tasks": {
+    "RudyCommandRunner": {
+      "expected": "enabled",
+      "notes": "File-drop execution bridge. Alfred dispatches scripts through this."
+    },
+    "RudyEmailListener": {
+      "expected": "enabled",
+      "notes": "IMAP IDLE listener on rudy.ciminoassistant@zohomail.com"
+    },
+    "RobinSentinel": {
+      "expected": "enabled",
+      "notes": "This agent. Runs at startup and continuously."
+    }
+  },
+  "network": {
+    "tailscale_ip": "100.83.49.9",
+    "dns_test_host": "api.github.com",
+    "email_host": "imap.zohomail.com",
+    "email_port": 993
+  },
+  "fortress_paradox": {
+    "boot_grace_period_minutes": 10,
+    "sacred_services": ["Tailscale", "sshd", "WinRM", "rustdesk"],
+    "usb_quarantine_mode": "log-only",
+    "notes": "Security measures must NEVER lock out the operator. Robin guards against this."
+  },
+  "recovery_playbook": {
+    "rustdesk_zombie": "Kill all rustdesk.exe, copy canonical config, restart cleanly",
+    "tailscale_down": "Restart Tailscale service, check network adapter, verify auth",
+    "ollama_down": "Run 'ollama serve' as background process, wait 3s, verify port 11434",
+    "no_internet": "Check network adapter, restart Tailscale, try DNS, enter offline mode if all fail",
+    "command_runner_stopped": "Re-register scheduled task, verify rudy-commands directory exists"
+  }
+}
