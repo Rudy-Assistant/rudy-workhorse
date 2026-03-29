@@ -364,11 +364,9 @@ class PresenceMonitor:
                                          "Handoff expired + HID detected")
                         self.state["batman_briefing_pending"] = True
                     else:
-                        # Handoff expired but Batman still away -- become AFK
                         self._transition(PresenceState.AFK, RobinMode.ACTIVE,
                                          "Handoff expired, Batman still away")
             elif idle_minutes < 1:
-                # No expiry set -- check for return
                 self._transition(PresenceState.RETURNING, RobinMode.SHADOW,
                                  "HID detected during open-ended handoff")
                 self.state["batman_briefing_pending"] = True
@@ -379,7 +377,6 @@ class PresenceMonitor:
                                  "HID detected -- Batman waking up")
                 self.state["batman_briefing_pending"] = True
             elif not is_night:
-                # Morning -- transition to AFK if still no activity
                 self._transition(PresenceState.AFK, RobinMode.ACTIVE,
                                  "Night ended, Batman still away")
 
@@ -390,17 +387,14 @@ class PresenceMonitor:
 
             if in_grace:
                 if idle_minutes >= 2:
-                    # Transient input -- go back to AFK
                     self._transition(PresenceState.AFK, RobinMode.ACTIVE,
                                      "Transient HID during grace -- still AFK")
                     self.state["batman_briefing_pending"] = False
             else:
                 if idle_minutes < 1:
-                    # Sustained activity -- Batman is back
                     self._transition(PresenceState.ACTIVE, RobinMode.STANDBY,
                                      "Sustained HID -- Batman confirmed back")
                 else:
-                    # Grace expired without sustained input
                     self._transition(PresenceState.AFK, RobinMode.ACTIVE,
                                      "Grace expired without sustained HID")
                     self.state["batman_briefing_pending"] = False
