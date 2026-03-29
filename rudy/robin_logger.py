@@ -12,6 +12,7 @@ Page ID: 3327d3f7-e736-816d-8622-d884ccc0a3cd
 
 import json
 import logging
+import os
 import urllib.request
 import urllib.error
 from datetime import datetime
@@ -72,6 +73,41 @@ def _notion_request(method: str, path: str, token: str, data: dict = None) -> di
         return json.loads(resp.read().decode())
 
 
+LOCAL_LOG_DIR = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop" / "rudy-logs"
+LOCAL_LOG_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def _log_to_local_json(task, success, final_answer, total_steps=0,
+                        total_tool_calls=0, duration_ms=0,
+                        tools_used=None, error=None):
+    """Write a task entry to local JSON log file (always succeeds)."""
+    log_file = LOCAL_LOG_DIR / f"robin-ops-{datetime.now().strftime('%Y%m%d')}.json"
+    
+    entry = {
+        "timestamp": datetime.now().isoformat(),
+        "task": task,
+        "success": success,
+        "answer": final_answer[:500],
+        "steps": total_steps,
+        "tool_calls": total_tool_calls,
+        "duration_ms": duration_ms,
+        "tools": tools_used or [],
+        "error": error,
+    }
+    
+    # Append to daily log file
+    entries = []
+    if log_file.exists():
+        try:
+            entries = json.loads(log_file.read_text())
+        except (json.JSONDecodeError, OSError):
+            entries = []
+    
+    entries.append(entry)
+    log_file.write_text(json.dumps(entries, indent=2, default=str))
+    log.info("Local log: %s -> %s", task[:40], log_file.name)
+
+
 def log_task_to_notion(
     task: str,
     success: bool,
@@ -89,11 +125,18 @@ def log_task_to_notion(
     Returns True if logged successfully, False otherwise.
     """
     token = _get_notion_token()
-    if not token:
-        log.warning("No Notion token available -- skipping log")
-        return False
-
     now = datetime.now()
+
+    # Always write to local JSON log (fallback + audit trail)
+    _log_to_local_json(
+        task=task, success=success, final_answer=final_answer,
+        total_steps=total_steps, total_tool_calls=total_tool_calls,
+        duration_ms=duration_ms, tools_used=tools_used, error=error,
+    )
+
+    if not token:
+        log.info("No Notion token -- logged to local JSON only")
+        return True  # local log succeeded
     status_emoji = "\u2705" if success else "\u274c"
     duration_str = f"{duration_ms / 1000:.1f}s" if duration_ms else "?"
 
@@ -173,8 +216,16 @@ def log_nightwatch_checkin(
 ) -> bool:
     """Write a periodic night-watch check-in to Notion."""
     token = _get_notion_token()
+    
+    # Local log always
+    _log_to_local_json(
+        task=f"nightwatch-checkin: {status}",
+        success=True,
+        final_answer=notes or status,
+    )
+    
     if not token:
-        return False
+        return True  # local log succeeded
 
     now = datetime.now()
     blocks = [

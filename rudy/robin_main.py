@@ -692,6 +692,111 @@ class RobinOrchestrator:
 # Entry Point
 # ---------------------------------------------------------------------------
 
+
+def _run_nightwatch() -> None:
+    """Robin Night Watch -- persistent monitoring loop with presence awareness."""
+    import time as _time
+
+    TASK_FILE = RUDY_DATA / "nightwatch-tasks.json"
+    CHECK_INTERVAL = 300  # 5 minutes
+
+    log.info("=== ROBIN NIGHT WATCH ACTIVE ===")
+    log.info("Watching: %s", TASK_FILE)
+    log.info("Interval: %ds", CHECK_INTERVAL)
+
+    # Log initial check-in
+    try:
+        from rudy.robin_logger import log_nightwatch_checkin
+        log_nightwatch_checkin(status="starting", notes="Night watch activated")
+    except Exception as e:
+        log.warning("Check-in failed: %s", e)
+
+    cycle = 0
+    while True:
+        cycle += 1
+
+        # Check presence -- yield if Batman is back
+        try:
+            from rudy.agents.robin_presence import PresenceMonitor, should_robin_activate
+            pm = PresenceMonitor()
+            pstate = pm.evaluate()
+            if not should_robin_activate(pstate):
+                idle = pstate.get("idle_minutes", 0)
+                mode = pstate.get("robin_mode", "unknown")
+                if cycle % 6 == 1:
+                    log.info("[NightWatch] Batman present (mode=%s, idle=%.0fm) -- standing by", mode, idle)
+                try:
+                    _time.sleep(CHECK_INTERVAL)
+                except KeyboardInterrupt:
+                    break
+                continue
+        except ImportError:
+            pass
+        except Exception as e:
+            log.warning("[NightWatch] Presence check failed: %s -- continuing", e)
+
+        # Check for tasks
+        tasks = []
+        if TASK_FILE.exists():
+            try:
+                with open(TASK_FILE) as f:
+                    tasks = json.load(f)
+                if not isinstance(tasks, list):
+                    tasks = []
+            except (json.JSONDecodeError, OSError) as e:
+                log.warning("Bad task file: %s", e)
+                tasks = []
+
+        if tasks:
+            priority_order = {"high": 0, "medium": 1, "low": 2}
+            tasks.sort(key=lambda t: priority_order.get(t.get("priority", "medium"), 1))
+
+            task = tasks.pop(0)
+            task_desc = task.get("task", "unknown task")
+            log.info("[NightWatch] Executing task: %s", task_desc)
+
+            with open(TASK_FILE, "w") as f:
+                json.dump(tasks, f, indent=2)
+
+            try:
+                from rudy.robin_mcp_client import MCPServerRegistry
+                from rudy.robin_agent import RobinAgent
+
+                secrets = SecureConfig.load()
+                registry = MCPServerRegistry(secrets)
+                registry.connect_all()
+
+                agent = RobinAgent(
+                    registry=registry,
+                    ollama_host=SecureConfig.get("ollama_host", "http://localhost:11434"),
+                    model=SecureConfig.get("ollama_model", "deepseek-r1:8b"),
+                )
+                result = agent.run_with_report(task_desc)
+                log.info("[NightWatch] Task complete: success=%s, steps=%s",
+                         result.get("success"), result.get("total_steps"))
+                registry.disconnect_all()
+            except Exception as e:
+                log.error("[NightWatch] Task failed: %s", e)
+        else:
+            if cycle % 12 == 1:
+                try:
+                    from rudy.robin_logger import log_nightwatch_checkin
+                    log_nightwatch_checkin(status="watching", tasks_pending=0, notes=f"Cycle {cycle}")
+                except Exception:
+                    pass
+
+        try:
+            _time.sleep(CHECK_INTERVAL)
+        except KeyboardInterrupt:
+            log.info("Night watch terminated by user")
+            try:
+                from rudy.robin_logger import log_nightwatch_checkin
+                log_nightwatch_checkin(status="stopped", notes="Manual shutdown")
+            except Exception:
+                pass
+            break
+
+
 def main() -> None:
     args = sys.argv[1:]
 
