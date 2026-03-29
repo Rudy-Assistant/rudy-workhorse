@@ -15,6 +15,8 @@ Usage:
     python -m rudy.robin_main --night-shift      # Force night shift mode
     python -m rudy.robin_main --status            # Show all subsystem status
     python -m rudy.robin_main --chat "query"      # Direct Robin chat
+    python -m rudy.robin_main --agent "task"      # Agent mode (MCP tools)
+    python -m rudy.robin_main --mcp-tools         # List available MCP tools
 """
 
 import json
@@ -404,7 +406,7 @@ class NightShiftRunner:
                             shutil.rmtree(f, ignore_errors=True)
 
     def _run_proactive(self) -> None:
-        """Robin reasons about what proactive improvements to make."""
+        """Robin reasons about what proactive improvements to make -- with MCP tools if available."""
         # Gather context
         context = {
             "time": datetime.now().isoformat(),
@@ -413,7 +415,50 @@ class NightShiftRunner:
             "tasks_done": self.state["tasks_completed"],
         }
 
-        # Ask Robin's local LLM what to do
+        # Try agent mode (MCP-powered) first, fall back to chat-only
+        try:
+            from rudy.robin_mcp_client import MCPServerRegistry
+            from rudy.robin_agent import RobinAgent
+
+            secrets = SecureConfig.load()
+            registry = MCPServerRegistry(secrets)
+            connected = registry.connect_all()
+
+            if any(connected.values()):
+                log.info("Night shift proactive: using MCP agent (%d servers)",
+                         sum(1 for v in connected.values() if v))
+                agent = RobinAgent(
+                    registry=registry,
+                    ollama_host=SecureConfig.get("ollama_host", "http://localhost:11434"),
+                    model=SecureConfig.get("ollama_model", "deepseek-r1:8b"),
+                    max_steps=10,
+                )
+                result = agent.run(
+                    "Night shift proactive phase. Check system health, review recent "
+                    "error logs, and run any quick maintenance tasks. "
+                    "Report what you found and what you did.",
+                    context=context,
+                )
+                log.info("Agent proactive result: %s (steps=%d, tools=%d)",
+                         result.final_answer[:200],
+                         result.total_steps, result.total_tool_calls)
+                self.state["proactive_result"] = {
+                    "mode": "agent",
+                    "steps": result.total_steps,
+                    "tool_calls": result.total_tool_calls,
+                    "summary": result.final_answer[:1000],
+                }
+                registry.disconnect_all()
+                return
+            else:
+                registry.disconnect_all()
+                log.info("No MCP servers available, falling back to chat-only")
+        except ImportError:
+            log.info("MCP agent not available, using chat-only mode")
+        except Exception as e:
+            log.warning("MCP agent failed, falling back to chat: %s", e)
+
+        # Fallback: chat-only reasoning
         ctx_summary = json.dumps(context, indent=2, default=str)
         decision = self.chat.reason_about(
             f"Night shift proactive phase. Context:\n{ctx_summary}\n"
@@ -676,6 +721,51 @@ def main() -> None:
         chat = RobinChat()
         result = chat.delegate_to_alfred(task)
         print(json.dumps(result, indent=2))
+        return
+
+    if "--agent" in args:
+        idx = args.index("--agent")
+        task = " ".join(args[idx + 1:]) if idx + 1 < len(args) else "Report system status"
+        log.info("Agent mode: %s", task)
+        try:
+            from rudy.robin_mcp_client import MCPServerRegistry
+            from rudy.robin_agent import RobinAgent
+            secrets = SecureConfig.load()
+            registry = MCPServerRegistry(secrets)
+            # Connect to available servers
+            connect_results = registry.connect_all()
+            for name, ok in connect_results.items():
+                log.info("MCP %s: %s", name, "connected" if ok else "FAILED")
+            agent = RobinAgent(
+                registry=registry,
+                ollama_host=SecureConfig.get("ollama_host", "http://localhost:11434"),
+                model=SecureConfig.get("ollama_model", "deepseek-r1:8b"),
+            )
+            result = agent.run_with_report(task)
+            print(json.dumps(result, indent=2, default=str))
+            registry.disconnect_all()
+        except Exception as e:
+            log.error("Agent failed: %s", e)
+            print(json.dumps({"error": str(e)}, indent=2))
+        return
+
+    if "--mcp-tools" in args:
+        log.info("Listing available MCP tools")
+        try:
+            from rudy.robin_mcp_client import MCPServerRegistry
+            secrets = SecureConfig.load()
+            registry = MCPServerRegistry(secrets)
+            results = registry.connect_all()
+            for name, ok in results.items():
+                status = "OK" if ok else "FAILED"
+                print(f"  {name}: {status}")
+                if ok:
+                    for tool_name in registry.servers[name].tools:
+                        desc = registry.servers[name].tools[tool_name].description[:80]
+                        print(f"    - {tool_name}: {desc}")
+            registry.disconnect_all()
+        except Exception as e:
+            log.error("MCP tool listing failed: %s", e)
         return
 
     # Default: start the full orchestrator
