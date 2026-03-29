@@ -306,55 +306,32 @@ class MCPServerConnection:
             log.error("Failed to send notification to '%s': %s", self.name, e)
 
     def _write_message(self, message: dict) -> None:
-        """Write a JSON-RPC message with Content-Length header."""
+        """Write a JSON-RPC message as newline-delimited JSON."""
         body = json.dumps(message)
-        header = f"Content-Length: {len(body)}\r\n\r\n"
-        data = (header + body).encode("utf-8")
+        data = (body + "\n").encode("utf-8")
 
         if self.process and self.process.stdin:
             self.process.stdin.write(data)
             self.process.stdin.flush()
 
     def _read_stdout(self) -> None:
-        """Background thread: read JSON-RPC messages from stdout."""
-        buffer = b""
-
+        """Background thread: read newline-delimited JSON-RPC messages from stdout."""
         while self._running and self.process and self.process.stdout:
             try:
-                chunk = self.process.stdout.read(1)
-                if not chunk:
+                line = self.process.stdout.readline()
+                if not line:
                     break
-                buffer += chunk
 
-                # Try to parse a complete message
-                while b"\r\n\r\n" in buffer:
-                    header_end = buffer.index(b"\r\n\r\n")
-                    header = buffer[:header_end].decode("utf-8")
+                line = line.strip()
+                if not line:
+                    continue
 
-                    # Parse Content-Length
-                    content_length = None
-                    for line in header.split("\r\n"):
-                        if line.lower().startswith("content-length:"):
-                            content_length = int(line.split(":", 1)[1].strip())
-                            break
-
-                    if content_length is None:
-                        buffer = buffer[header_end + 4:]
-                        continue
-
-                    # Check if we have the full body
-                    body_start = header_end + 4
-                    if len(buffer) < body_start + content_length:
-                        break  # Need more data
-
-                    body = buffer[body_start:body_start + content_length]
-                    buffer = buffer[body_start + content_length:]
-
-                    try:
-                        message = json.loads(body.decode("utf-8"))
-                        self._handle_message(message)
-                    except json.JSONDecodeError as e:
-                        log.warning("Invalid JSON from '%s': %s", self.name, e)
+                try:
+                    message = json.loads(line.decode("utf-8"))
+                    self._handle_message(message)
+                except json.JSONDecodeError as e:
+                    log.warning("Invalid JSON from '%s': %s (line: %s)",
+                                self.name, e, line[:200])
 
             except Exception as e:
                 if self._running:
