@@ -721,15 +721,43 @@ def _run_nightwatch() -> None:
             pm = PresenceMonitor()
             pstate = pm.evaluate()
             if not should_robin_activate(pstate):
-                idle = pstate.get("idle_minutes", 0)
-                mode = pstate.get("robin_mode", "unknown")
-                if cycle % 6 == 1:
-                    log.info("[NightWatch] Batman present (mode=%s, idle=%.0fm) -- standing by", mode, idle)
+                # Check if there's an active directive - directives override presence
+                _has_directive = False
                 try:
-                    _time.sleep(CHECK_INTERVAL)
-                except KeyboardInterrupt:
-                    break
-                continue
+                    from rudy.robin_autonomy import DirectiveTracker
+                    _dt = DirectiveTracker()
+                    _has_directive = _dt.has_active_directive()
+                except ImportError:
+                    pass
+                # Also check for high-priority Alfred messages
+                _has_urgent = False
+                try:
+                    from pathlib import Path as _P
+                    _robin_inbox = _P(r"C:\Users\ccimi\Desktop\rudy-data\robin-inbox")
+                    for _mf in _robin_inbox.glob("*.json"):
+                        try:
+                            import json as _j
+                            _msg = _j.loads(_mf.read_text())
+                            if _msg.get("priority") == "high" and _msg.get("status") == "unread":
+                                _has_urgent = True
+                                break
+                        except Exception:
+                            continue
+                except Exception:
+                    pass
+                if _has_directive or _has_urgent:
+                    idle = pstate.get("idle_minutes", 0)
+                    log.info("[NightWatch] Batman present but directive/urgent msg active -- proceeding")
+                else:
+                    idle = pstate.get("idle_minutes", 0)
+                    mode = pstate.get("robin_mode", "unknown")
+                    if cycle % 6 == 1:
+                        log.info("[NightWatch] Batman present (mode=%s, idle=%.0fm) -- standing by", mode, idle)
+                    try:
+                        _time.sleep(CHECK_INTERVAL)
+                    except KeyboardInterrupt:
+                        break
+                    continue
         except ImportError:
             pass
         except Exception as e:
