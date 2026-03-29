@@ -749,6 +749,28 @@ def main() -> None:
             print(json.dumps({"error": str(e)}, indent=2))
         return
 
+    if "--log" in args:
+        idx = args.index("--log")
+        message = " ".join(args[idx + 1:]) if idx + 1 < len(args) else "Robin check-in"
+        log.info("Log mode: %s", message)
+        try:
+            from rudy.robin_logger import log_task_to_notion
+            ok = log_task_to_notion(
+                task="Manual log entry",
+                success=True,
+                final_answer=message,
+            )
+            print("Logged to Notion" if ok else "Failed to log to Notion")
+        except Exception as e:
+            log.error("Log failed: %s", e)
+            print(f"Error: {e}")
+        return
+
+    if "--nightwatch" in args:
+        log.info("Starting night watch mode")
+        _run_nightwatch()
+        return
+
     if "--mcp-tools" in args:
         log.info("Listing available MCP tools")
         try:

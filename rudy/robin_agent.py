@@ -47,6 +47,12 @@ from typing import Optional
 
 from rudy.robin_mcp_client import MCPServerRegistry, MCPToolResult
 
+try:
+    from rudy.robin_logger import log_task_to_notion
+    HAS_LOGGER = True
+except ImportError:
+    HAS_LOGGER = False
+
 log = logging.getLogger("robin_agent")
 
 # ---------------------------------------------------------------------------
@@ -407,7 +413,7 @@ class RobinAgent:
     def run_with_report(self, task: str, context: dict = None) -> dict:
         """Run a task and return a serializable report."""
         result = self.run(task, context)
-        return {
+        report = {
             "task": result.task,
             "success": result.success,
             "final_answer": result.final_answer,
@@ -426,6 +432,28 @@ class RobinAgent:
                 for s in result.steps
             ],
         }
+
+        # Auto-log to Notion
+        if HAS_LOGGER:
+            tools_used = list(set(
+                s.tool_name for s in result.steps
+                if s.tool_name
+            ))
+            try:
+                log_task_to_notion(
+                    task=result.task,
+                    success=result.success,
+                    final_answer=result.final_answer,
+                    total_steps=result.total_steps,
+                    total_tool_calls=result.total_tool_calls,
+                    duration_ms=result.total_duration_ms,
+                    tools_used=tools_used,
+                    error=result.error,
+                )
+            except Exception as e:
+                log.warning("Auto-log to Notion failed: %s", e)
+
+        return report
 
 
 # ---------------------------------------------------------------------------
