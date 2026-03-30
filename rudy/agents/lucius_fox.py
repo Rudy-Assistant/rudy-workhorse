@@ -1120,6 +1120,66 @@ class LuciusFox(AgentBase):
 
 
     # ================================================================
+    # SESSION CHECKPOINT (HARD RULE #5 — Session 22)
+    # ================================================================
+
+    def session_checkpoint(
+        self,
+        session_number: int,
+        context_pct: float,
+        status: str = "",
+    ) -> str:
+        """Generate and log a context evaluation line.
+
+        HARD RULE #5: Every substantive Alfred response must end with a
+        context evaluation line. This method formats it, logs it, and
+        returns the string for Alfred to append to the response.
+
+        If context_pct >= 50, emits a warning.
+        If context_pct >= 70, emits a handoff directive.
+
+        Args:
+            session_number: Current session number.
+            context_pct: Estimated context window consumption (0-100).
+            status: Brief status summary for the line.
+
+        Returns:
+            Formatted context evaluation string, ready to paste.
+        """
+        if context_pct >= 70:
+            prefix = "HANDOFF REQUIRED"
+        elif context_pct >= 50:
+            prefix = "APPROACHING LIMIT"
+        else:
+            prefix = ""
+
+        line = f"[Context: ~{int(context_pct)}% | Session {session_number} | {status}]"
+        if prefix:
+            line = f"**{prefix}** — {line}"
+
+        # Log checkpoint
+        self.log.info(
+            f"Session checkpoint: {context_pct}% context, session {session_number}"
+        )
+
+        # Write checkpoint to status file for post-session gate
+        try:
+            checkpoint_file = self.AUDIT_DIR / "session-checkpoints.jsonl"
+            import json as _json
+            entry = {
+                "session": session_number,
+                "context_pct": context_pct,
+                "status": status,
+                "timestamp": datetime.now().isoformat(),
+            }
+            with open(checkpoint_file, "a", encoding="utf-8") as f:
+                f.write(_json.dumps(entry) + "\n")
+        except Exception as e:
+            self.log.warning(f"Failed to write checkpoint: {e}")
+
+        return line
+
+    # ================================================================
     # ADR-004 TOOLKIT: lucius:skills-check
     # ================================================================
 
