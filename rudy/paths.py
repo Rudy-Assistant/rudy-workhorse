@@ -77,3 +77,44 @@ BATCAVE_VAULT = REPO_ROOT / "vault"
 
 for _d in [RUDY_DATA, RUDY_LOGS, RUDY_COMMANDS, ROBIN_INBOX, SCREENSHOT_DIR, LUCIUS_AUDITS, BATCAVE_VAULT]:
     _d.mkdir(parents=True, exist_ok=True)
+
+
+# ---------------------------------------------------------------------------
+# Executable finder — replaces hardcoded Python/Git paths across codebase
+# ---------------------------------------------------------------------------
+
+def find_exe(name: str, fallbacks: tuple[str, ...] = ()) -> str:
+    """Find an executable on PATH or in known locations.
+
+    Args:
+        name: Executable name (e.g. "python", "git")
+        fallbacks: Tuple of absolute paths to check if not on PATH
+
+    Returns:
+        Full path to the executable, or bare *name* as last resort.
+    """
+    import shutil
+    import sys as _sys
+
+    found = shutil.which(name)
+    if found:
+        return found
+    for fb in fallbacks:
+        if Path(fb).exists():
+            return fb
+    # Last resort: if we're looking for Python, use our own interpreter
+    if name.lower() in ("python", "python3"):
+        return _sys.executable or name
+    return name
+
+
+PYTHON_EXE = find_exe("python", (
+    r"C:\Python312\python.exe",
+    r"C:\Python311\python.exe",
+    r"C:\Users\ccimi\AppData\Local\Programs\Python\Python312\python.exe",
+))
+
+GIT_EXE = find_exe("git", (
+    r"C:\Program Files\Git\cmd\git.exe",
+    r"C:\Program Files (x86)\Git\cmd\git.exe",
+))

@@ -28,8 +28,8 @@ Setup:
     2. Set SUNO_COOKIE in rudy-suno-config.json (extract from browser)
        OR set SUNO_API_KEY if using a commercial API provider
 
-Configuration file: C:\\Users\\C\\Desktop\\rudy-logs\\rudy-suno-config.json
-Output directory:   C:\\Users\\C\\Desktop\\rudy-logs\\suno-output\\
+Configuration file: <RUDY_LOGS>/rudy-suno-config.json  (resolved at runtime)
+Output directory:   <RUDY_LOGS>/suno-output/  (resolved at runtime)
 """
 
 import argparse
@@ -41,9 +41,13 @@ import requests
 from pathlib import Path
 from datetime import datetime
 
-# Paths
-CONFIG_FILE = Path(r"C:\Users\C\Desktop\rudy-logs\rudy-suno-config.json")
-OUTPUT_DIR = Path(r"C:\Users\C\Desktop\rudy-logs\suno-output")
+# Bootstrap rudy.paths
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
+from rudy.paths import RUDY_LOGS  # noqa: E402
+
+# Paths — resolved dynamically via rudy.paths
+CONFIG_FILE = RUDY_LOGS / "rudy-suno-config.json"
+OUTPUT_DIR = RUDY_LOGS / "suno-output"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # Default config template

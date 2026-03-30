@@ -27,8 +27,12 @@ import logging
 from pathlib import Path
 from datetime import datetime, timedelta
 
-DESKTOP = Path(r"C:\Users\C\Desktop")
-LOGDIR = DESKTOP / "rudy-logs"
+# Bootstrap rudy.paths
+_REPO = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(_REPO))
+from rudy.paths import RUDY_LOGS, DESKTOP  # noqa: E402
+
+LOGDIR = RUDY_LOGS
 LOGDIR.mkdir(parents=True, exist_ok=True)
 
 logging.basicConfig(

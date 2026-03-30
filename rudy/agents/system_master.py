@@ -10,7 +10,7 @@ import subprocess
 import shutil
 
 from datetime import datetime
-from . import AgentBase, DESKTOP, LOGS_DIR
+from . import AgentBase, DESKTOP, LOGS_DIR, PYTHON_EXE
 
 try:
     import psutil
@@ -35,7 +35,7 @@ class SystemMaster(AgentBase):
         "watchdog": "workhorse-watchdog",
     }
     DISK_WARN_GB = 10
-    PYTHON = r"C:\Users\C\AppData\Local\Programs\Python\Python312\python.exe"
+    PYTHON = PYTHON_EXE
 
     def run(self, **kwargs):
         mode = kwargs.get("mode", "full")

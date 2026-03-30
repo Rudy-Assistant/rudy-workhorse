@@ -24,7 +24,8 @@ from email.mime.text import MIMEText
 
 EMAIL = "rudy.ciminoassist@gmail.com"
 APP_PW = "bviuyjdptufrtnys"
-SECRET = Path(r"C:\Users\C\Desktop\rudy-logs\rudy-totp-secret.json")
+from rudy.paths import RUDY_LOGS
+SECRET = RUDY_LOGS / "rudy-totp-secret.json"
 
 print("=" * 50)
 print("  Rudy Complete Setup")

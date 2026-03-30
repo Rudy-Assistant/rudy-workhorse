@@ -23,9 +23,14 @@ import logging
 from pathlib import Path
 from datetime import datetime
 
+# Bootstrap rudy.paths — scripts/ is two levels below repo root
+_REPO = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(_REPO))
+from rudy.paths import RUDY_LOGS  # noqa: E402
+
 # --- Configuration ---
 CHECK_INTERVAL = 60  # seconds between checks
-LOG_DIR = Path(r"C:\Users\C\Desktop\rudy-logs")
+LOG_DIR = RUDY_LOGS
 LOG_FILE = LOG_DIR / "watchdog.log"
 STATUS_FILE = LOG_DIR / "watchdog-status.json"
 
@@ -73,14 +78,14 @@ SERVICES = [
         "critical": False,
         "check": "process_script",
         "script_pattern": "rudy-command-runner.py",
-        "restart_cmd": ["python", r"C:\Users\C\Desktop\rudy-command-runner.py"],
+        "restart_cmd": ["python", str(_REPO / "rudy-command-runner.py")],
     },
     {
         "name": "Rudy Listener",
         "critical": False,
         "check": "process_script",
         "script_pattern": "rudy-listener.py",
-        "restart_cmd": ["python", r"C:\Users\C\Desktop\rudy-listener.py"],
+        "restart_cmd": ["python", str(_REPO / "rudy-listener.py")],
     },
 ]
 

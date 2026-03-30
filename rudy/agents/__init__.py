@@ -16,7 +16,7 @@ import time
 import traceback as tb_module
 from datetime import datetime
 from pathlib import Path
-from rudy.paths import RUDY_LOGS
+from rudy.paths import RUDY_LOGS, DESKTOP, REPO_ROOT, PYTHON_EXE
 
 LOGS_DIR = RUDY_LOGS
 LOGS_DIR.mkdir(exist_ok=True)

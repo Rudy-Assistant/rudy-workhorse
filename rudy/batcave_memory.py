@@ -32,9 +32,8 @@ from pathlib import Path
 
 log = logging.getLogger("batcave_memory")
 
-# Resolve paths relative to repo root (Protocol Salvage fix)
-REPO_ROOT = Path(__file__).resolve().parent.parent
-RUDY_DATA = REPO_ROOT / "rudy-data"
+# Canonical paths from rudy.paths
+from rudy.paths import RUDY_DATA  # noqa: E402
 MEMORY_DIR = RUDY_DATA / "batcave-memory"
 LEARNINGS_FILE = MEMORY_DIR / "learnings.json"
 BATCAVE_MD = MEMORY_DIR / "BATCAVE.md"

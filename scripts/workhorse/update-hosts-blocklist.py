@@ -1,7 +1,8 @@
 """Weekly hosts file blocklist update — refreshes DNS-level threat blocking."""
 import sys, os, json, time
+from pathlib import Path
 from datetime import datetime
-sys.path.insert(0, r"C:\Users\C\Desktop")
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 try:
     import httpx
@@ -14,7 +15,7 @@ except ImportError:
 
 from rudy.admin import run_elevated_ps
 
-DESKTOP = r"C:\Users\C\Desktop"
+from rudy.paths import DESKTOP  # noqa: E402
 url = "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts"
 
 print("Downloading blocklist...")
