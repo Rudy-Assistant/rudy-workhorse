@@ -6,11 +6,9 @@ and result file archiving.
 import os
 import shutil
 import subprocess
-import json
-import glob
-from datetime import datetime, timedelta
-from . import AgentBase, DESKTOP, LOGS_DIR
 
+from datetime import datetime
+from . import AgentBase, DESKTOP, LOGS_DIR
 
 class OperationsMonitor(AgentBase):
     name = "operations_monitor"
@@ -179,7 +177,6 @@ class OperationsMonitor(AgentBase):
                 self.log.info(f"  {name}: {sizes[name]:.1f} MB")
 
         self.status["disk_audit"] = sizes
-
 
 if __name__ == "__main__":
     import sys

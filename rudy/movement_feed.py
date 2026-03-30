@@ -26,7 +26,7 @@ chronological feed suitable for dashboard display.
 """
 import json
 import os
-from collections import defaultdict
+
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -50,7 +50,6 @@ DEFENSE_ALERTS = LOGS_DIR / "defense-alerts.json"
 MOVEMENT_FEED = LOGS_DIR / "movement-feed.json"
 MOVEMENT_SUMMARY = LOGS_DIR / "movement-summary.json"
 
-
 def _load_json(path, default=None):
     if path.exists():
         try:
@@ -60,11 +59,9 @@ def _load_json(path, default=None):
             pass
     return default if default is not None else {}
 
-
 def _save_json(path, data):
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, default=str)
-
 
 class MovementFeed:
     """
@@ -404,13 +401,11 @@ class MovementFeed:
 
         print("\n" + "=" * 60)
 
-
 def generate_movement_feed(hours: int = 24):
     """Generate and print the movement feed."""
     mf = MovementFeed()
     mf.print_feed(hours)
     return mf.generate_feed(hours)
-
 
 if __name__ == "__main__":
     generate_movement_feed()

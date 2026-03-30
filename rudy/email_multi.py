@@ -19,21 +19,20 @@ import smtplib
 import email
 import json
 import os
-import time
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+
+from dataclasses import dataclass
+from datetime import datetime
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
 from pathlib import Path
-from typing import Optional, List, Dict
+from typing import List
 
 DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
 LOGS = DESKTOP / "rudy-logs"
 CONFIG_FILE = LOGS / "email-providers.json"
 HEALTH_FILE = LOGS / "email-health.json"
-
 
 @dataclass
 class EmailProvider:
@@ -53,7 +52,6 @@ class EmailProvider:
         d = self.__dict__.copy()
         d["password"] = "***"  # Never log passwords
         return d
-
 
 # ── Default provider configs ──────────────────────────────
 DEFAULT_PROVIDERS = {
@@ -93,7 +91,6 @@ DEFAULT_PROVIDERS = {
         enabled=False,
     ),
 }
-
 
 class EmailHealth:
     """Tracks provider health and send counts."""
@@ -151,7 +148,6 @@ class EmailHealth:
 
     def get_summary(self) -> dict:
         return self.data
-
 
 class MultiEmail:
     """
@@ -379,11 +375,9 @@ class MultiEmail:
             "health": self.health.get_summary(),
         }
 
-
 def quick_send(to: str, subject: str, body: str, **kwargs) -> dict:
     """One-liner email send."""
     return MultiEmail().send(to=to, subject=subject, body=body, **kwargs)
-
 
 if __name__ == "__main__":
     mailer = MultiEmail()

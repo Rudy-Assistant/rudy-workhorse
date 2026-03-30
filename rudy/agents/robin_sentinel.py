@@ -1,3 +1,10 @@
+# CONSOLIDATION NOTE (2026-03-29T16:50:24.074430):
+# This file is the Batcave boot resilience and NightShift module.
+# The passive SentinelObserver class has been moved to rudy/agents/sentinel.py.
+# This file is kept separate because boot resilience (832 lines) is a distinct concern
+# from the Sentinel's awareness scanning (993 lines).
+# Imported by: robin_main.py (run_boot_sequence), robin_presence.py (run_night_shift)
+
 #!/usr/bin/env python3
 
 """
@@ -31,7 +38,14 @@ import socket
 import subprocess
 import sys
 import time
-from datetime import datetime, timedelta
+
+# Task queue for autonomous operation
+try:
+    from rudy.robin_taskqueue import seed_standard_nightwatch, seed_deep_work, process_all
+    TASKQUEUE_AVAILABLE = True
+except ImportError:
+    TASKQUEUE_AVAILABLE = False
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
 
@@ -97,7 +111,6 @@ DEFAULT_KNOWN_GOOD: dict[str, Any] = {
     "recovery_playbook": {},
 }
 
-
 def load_known_good() -> dict:
     """Load known-good state, falling back to defaults."""
     if KNOWN_GOOD_STATE.exists():
@@ -108,7 +121,6 @@ def load_known_good() -> dict:
             log.warning("Corrupted known-good state, using defaults: %s", e)
     return DEFAULT_KNOWN_GOOD.copy()
 
-
 def save_known_good(state: dict) -> None:
     """Persist known-good state with immune memory updates."""
     state["last_updated"] = datetime.now().isoformat()
@@ -116,7 +128,6 @@ def save_known_good(state: dict) -> None:
     with open(tmp, "w") as f:
         json.dump(state, f, indent=2)
     tmp.replace(KNOWN_GOOD_STATE)
-
 
 def load_immune_memory() -> dict:
     """Load immune memory — record of what went wrong and what fixed it."""
@@ -127,7 +138,6 @@ def load_immune_memory() -> dict:
         except (json.JSONDecodeError, OSError):
             pass
     return {"fixes": [], "patterns": {}}
-
 
 def record_fix(memory: dict, problem: str, fix: str, success: bool) -> None:
     """Record a fix attempt in immune memory."""
@@ -144,7 +154,6 @@ def record_fix(memory: dict, problem: str, fix: str, success: bool) -> None:
     with open(tmp, "w") as f:
         json.dump(memory, f, indent=2)
     tmp.replace(IMMUNE_MEMORY)
-
 
 # ---------------------------------------------------------------------------
 # Phase 0: Am I alive?
@@ -188,7 +197,6 @@ def phase_0_self_check() -> dict:
     log.info("Phase 0 complete: %s", "HEALTHY" if status["healthy"] else "DEGRADED")
     return status
 
-
 def _check_ollama() -> dict:
     """Check if Ollama is responding on localhost:11434."""
     try:
@@ -210,7 +218,6 @@ def _check_ollama() -> dict:
             return {"ok": True, "action": "started"}
         except Exception as e:
             return {"ok": False, "error": str(e)}
-
 
 # ---------------------------------------------------------------------------
 # Phase 1: Are critical services alive?
@@ -243,7 +250,6 @@ def phase_1_services(state: dict) -> dict:
     log.info("Phase 1 complete: %s", "HEALTHY" if status["healthy"] else "DEGRADED")
     return status
 
-
 def _check_windows_service(name: str) -> dict:
     """Check Windows service status via sc query."""
     try:
@@ -255,7 +261,6 @@ def _check_windows_service(name: str) -> dict:
         return {"ok": running, "state": "running" if running else "stopped"}
     except Exception as e:
         return {"ok": False, "error": str(e)}
-
 
 def _restart_windows_service(name: str, max_attempts: int = 3) -> bool:
     """Attempt to restart a Windows service."""
@@ -273,7 +278,6 @@ def _restart_windows_service(name: str, max_attempts: int = 3) -> bool:
         except Exception:
             continue
     return False
-
 
 def _check_rustdesk_zombies(state: dict, status: dict) -> None:
     """Kill zombie RustDesk processes (the exact cascade that caused the lockout)."""
@@ -304,7 +308,6 @@ def _check_rustdesk_zombies(state: dict, status: dict) -> None:
     except Exception as e:
         log.error("RustDesk zombie check failed: %s", e)
 
-
 # ---------------------------------------------------------------------------
 # Phase 2: Is the agent framework alive?
 # ---------------------------------------------------------------------------
@@ -331,7 +334,6 @@ def phase_2_agents(state: dict) -> dict:
     log.info("Phase 2 complete: %s", "HEALTHY" if status["healthy"] else "DEGRADED")
     return status
 
-
 def _check_scheduled_task(name: str) -> dict:
     """Check if a Windows scheduled task exists and is enabled."""
     try:
@@ -345,7 +347,6 @@ def _check_scheduled_task(name: str) -> dict:
         return {"ok": False, "state": "not_found"}
     except Exception as e:
         return {"ok": False, "error": str(e)}
-
 
 # ---------------------------------------------------------------------------
 # Phase 3: Can I reach the outside world?
@@ -385,7 +386,6 @@ def phase_3_connectivity(state: dict) -> dict:
     log.info("Phase 3 complete: %s", "ONLINE" if status["online"] else "OFFLINE")
     return status
 
-
 def _check_tcp(host: str, port: int, timeout: int = 5) -> dict:
     """Test TCP connectivity to host:port."""
     try:
@@ -394,7 +394,6 @@ def _check_tcp(host: str, port: int, timeout: int = 5) -> dict:
         return {"ok": True}
     except (OSError, socket.timeout) as e:
         return {"ok": False, "error": str(e)}
-
 
 # ---------------------------------------------------------------------------
 # Phase 4: Full assessment
@@ -430,7 +429,6 @@ def phase_4_assessment(results: list[dict], state: dict) -> dict:
         log.info("System NOMINAL — all phases healthy")
 
     return assessment
-
 
 # ---------------------------------------------------------------------------
 # Night Shift: Robin takes the wheel
@@ -501,30 +499,35 @@ class NightShift:
         return max(signals) if signals else None
 
     def run(self) -> dict:
-        """Execute the night shift."""
+        """Execute the night shift using the task queue for autonomous operation."""
         self.log.info("=== ROBIN NIGHT SHIFT ACTIVATED ===")
         results = {"started": datetime.now().isoformat(), "tasks_completed": [], "errors": []}
 
         try:
-            # 1. Process robin-tasks from GitHub (if online)
+            # Phase 1: Seed and run the task queue (primary work engine)
+            if TASKQUEUE_AVAILABLE:
+                self.log.info("Step 1: Seeding task queue (nightwatch + deep work)")
+                seed_standard_nightwatch()
+                if self.online:
+                    seed_deep_work()
+                self.log.info("Step 2: Processing task queue (max 30 min)")
+                tq_results = process_all(max_tasks=20, max_minutes=30)
+                results["taskqueue"] = tq_results
+                self.log.info("Task queue: %d completed, %d failed",
+                              tq_results.get("completed", 0), tq_results.get("failed", 0))
+            else:
+                self.log.warning("Task queue not available — falling back to legacy steps")
+                # Legacy fallback: hardcoded steps
+                if self.online:
+                    results["bridge_tasks"] = self._run_bridge_tasks()
+                results["improvements"] = self._review_immune_memory()
+                results["code_quality"] = self._run_code_quality()
+                if self.online:
+                    results["morning_briefing"] = self._prepare_morning_briefing()
+
+            # Phase 2: Prepare morning briefing (always, task queue or not)
             if self.online:
-                self.log.info("Step 1: Processing robin-tasks from alfred-skills")
-                bridge_results = self._run_bridge_tasks()
-                results["bridge_tasks"] = bridge_results
-
-            # 2. Run health improvements from immune memory
-            self.log.info("Step 2: Reviewing immune memory for improvements")
-            improvements = self._review_immune_memory()
-            results["improvements"] = improvements
-
-            # 3. Code quality checks (if rudy-workhorse is a git repo)
-            self.log.info("Step 3: Code quality checks")
-            quality = self._run_code_quality()
-            results["code_quality"] = quality
-
-            # 4. Prepare morning briefing
-            if self.online:
-                self.log.info("Step 4: Preparing morning briefing")
+                self.log.info("Step 3: Preparing morning briefing")
                 briefing = self._prepare_morning_briefing()
                 results["morning_briefing"] = briefing
 
@@ -618,7 +621,6 @@ class NightShift:
             json.dump(briefing, f, indent=2)
         return {"status": "draft_prepared", "file": str(briefing_file)}
 
-
 # ---------------------------------------------------------------------------
 # Escalation
 # ---------------------------------------------------------------------------
@@ -641,7 +643,6 @@ def _escalate(message: str) -> None:
     except Exception:
         pass  # Non-critical if notification fails
 
-
 # ---------------------------------------------------------------------------
 # Status Reporting
 # ---------------------------------------------------------------------------
@@ -652,7 +653,6 @@ def write_status(assessment: dict) -> None:
     with open(tmp, "w") as f:
         json.dump(assessment, f, indent=2)
     tmp.replace(SENTINEL_STATUS)
-
 
 def report_to_notion(assessment: dict) -> None:
     """If online, update Notion Watchdog Health Log."""
@@ -665,7 +665,6 @@ def report_to_notion(assessment: dict) -> None:
         log.debug("Notion client not available")
     except Exception as e:
         log.warning("Failed to report to Notion: %s", e)
-
 
 # ---------------------------------------------------------------------------
 # Main: Full Boot Sequence
@@ -720,7 +719,6 @@ def run_boot_sequence() -> dict:
 
     return assessment
 
-
 def run_night_shift(state: dict, online: bool) -> dict:
     """Enter night shift mode."""
     ns = NightShift(state, online)
@@ -729,7 +727,6 @@ def run_night_shift(state: dict, online: bool) -> dict:
     else:
         log.info("Night shift conditions not met — standing by")
         return {"status": "standby"}
-
 
 def run_continuous() -> None:
     """
@@ -782,7 +779,6 @@ def run_continuous() -> None:
             _escalate(f"Monitoring loop error: {e}")
             time.sleep(60)  # Back off on error
 
-
 # ---------------------------------------------------------------------------
 # Entry Point
 # ---------------------------------------------------------------------------
@@ -825,7 +821,6 @@ def main() -> None:
     # Default: full boot sequence
     assessment = run_boot_sequence()
     print(json.dumps(assessment, indent=2))
-
 
 if __name__ == "__main__":
     main()

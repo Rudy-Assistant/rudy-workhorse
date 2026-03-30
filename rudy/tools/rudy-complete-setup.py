@@ -18,7 +18,7 @@ import imaplib
 import smtplib
 import json
 import sys
-import os
+
 from pathlib import Path
 from email.mime.text import MIMEText
 

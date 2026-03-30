@@ -30,7 +30,7 @@ import hashlib
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, List, Dict
+from typing import Optional, List
 
 DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
 MODELS_DIR = DESKTOP / "rudy-data" / "models"
@@ -104,7 +104,6 @@ SYSTEM_PROMPTS = {
     ),
 }
 
-
 def _load_json(path, default=None):
     if Path(path).exists():
         try:
@@ -114,12 +113,10 @@ def _load_json(path, default=None):
             pass
     return default if default is not None else {}
 
-
 def _save_json(path, data):
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w") as f:
         json.dump(data, f, indent=2, default=str)
-
 
 class ResponseCache:
     """Simple cache for repeated queries (avoids re-inference)."""
@@ -162,7 +159,6 @@ class ResponseCache:
                 del entries[old_key]
         _save_json(self.cache_file, self.cache)
 
-
 # Ollama model name mapping (our names → Ollama names)
 OLLAMA_MODEL_MAP = {
     "phi3-mini": "phi3:mini",
@@ -171,7 +167,6 @@ OLLAMA_MODEL_MAP = {
 }
 
 OLLAMA_URL = "http://localhost:11434"
-
 
 class OllamaBackend:
     """Ollama HTTP API backend — primary inference engine."""
@@ -236,7 +231,6 @@ class OllamaBackend:
         with urllib.request.urlopen(req, timeout=120) as resp:
             data = json.loads(resp.read().decode())
             return data.get("response", "").strip()
-
 
 class LocalAI:
     """
@@ -579,7 +573,6 @@ class LocalAI:
         return {"status": "no_backend",
                 "note": "No AI backend available. Start Ollama or download a GGUF model."}
 
-
 class OfflineAI:
     """
     Simplified interface for use by other Rudy modules during offline operation.
@@ -638,7 +631,6 @@ class OfflineAI:
         if not self.ensure_ready():
             return {"severity": 3, "action": "log", "summary": alert_text[:100]}
         return self.ai.triage_alert(alert_text)
-
 
 if __name__ == "__main__":
     ai = LocalAI()

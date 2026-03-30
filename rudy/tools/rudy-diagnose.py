@@ -22,7 +22,7 @@ import socket
 import ssl
 import os
 import sys
-import json
+
 import ctypes
 import subprocess
 from datetime import datetime
@@ -120,7 +120,6 @@ class DiagReport:
             f.write("\n".join(self.lines))
         print(f"\n  Report saved: {REPORT_FILE}")
 
-
 # ─────────────────────────────────────────────
 # CHECKS
 # ─────────────────────────────────────────────
@@ -160,7 +159,6 @@ def check_env_vars(report):
     except Exception as e:
         report.warn(f"Could not check Claude CLI: {e}")
 
-
 def check_dns(report):
     """Test DNS resolution for Gmail servers."""
     report.header("2. DNS RESOLUTION")
@@ -174,7 +172,6 @@ def check_dns(report):
             report.fail(f"{host} DNS resolution failed: {e}",
                         f"Add '{GMAIL_IMAP_IPS[0]} {host}' to {HOSTS_FILE} "
                         "(run rudy-diagnose.py --fix as admin)")
-
 
 def check_tcp_connectivity(report):
     """Test raw TCP connections to Gmail."""
@@ -200,7 +197,6 @@ def check_tcp_connectivity(report):
             except Exception as e2:
                 report.fail(f"{label} — All connection methods failed: {e2}",
                             "Check firewall/antivirus settings; ensure port 993/465 not blocked")
-
 
 def check_imap_auth(report):
     """Test IMAP authentication — this is the critical test."""
@@ -270,7 +266,6 @@ def check_imap_auth(report):
         report.fail(f"Unexpected IMAP error: {e}")
         return False
 
-
 def check_smtp(report):
     """Test SMTP send capability."""
     report.header("5. SMTP (OUTBOUND EMAIL)")
@@ -298,7 +293,6 @@ def check_smtp(report):
 
     report.fail("All SMTP hosts unreachable", "Check network/firewall")
     return False
-
 
 def check_imap_idle(report):
     """Test IMAP IDLE capability."""
@@ -340,7 +334,6 @@ def check_imap_idle(report):
         mail.logout()
     except Exception as e:
         report.warn(f"IDLE check failed: {e}")
-
 
 def check_listener_process(report):
     """Check if the Rudy listener is currently running."""
@@ -392,7 +385,6 @@ def check_listener_process(report):
     else:
         report.info("No rudy.log found yet (listener hasn't run)")
 
-
 def check_files(report):
     """Verify all Rudy files are present and correct."""
     report.header("8. FILE INTEGRITY")
@@ -410,7 +402,6 @@ def check_files(report):
         else:
             report.fail(f"{name} missing", f"Re-create {path}")
 
-
 # ─────────────────────────────────────────────
 # AUTO-FIX
 # ─────────────────────────────────────────────
@@ -421,7 +412,6 @@ def is_admin():
         return ctypes.windll.shell32.IsUserAnAdmin() != 0
     except Exception:
         return False
-
 
 def auto_fix_dns(report):
     """Add Gmail IPs to hosts file if DNS is broken."""
@@ -466,7 +456,6 @@ def auto_fix_dns(report):
     except Exception as e:
         report.fail(f"Could not modify hosts file: {e}")
 
-
 def send_test_email(report):
     """Send a test email from Rudy to Chris to verify the full pipeline."""
     report.header("SENDING TEST EMAIL")
@@ -499,7 +488,6 @@ def send_test_email(report):
         report.fail("All SMTP hosts failed")
     except Exception as e:
         report.fail(f"Test email error: {e}")
-
 
 # ─────────────────────────────────────────────
 # MAIN
@@ -547,7 +535,6 @@ def main():
     report.save()
 
     return 0 if report.failed == 0 else (1 if do_fix else 2)
-
 
 if __name__ == "__main__":
     sys.exit(main())

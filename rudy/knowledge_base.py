@@ -20,7 +20,7 @@ import re
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, List, Dict, Tuple
+from typing import List
 
 DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
 LOGS = DESKTOP / "rudy-logs"
@@ -63,7 +63,6 @@ COLLECTIONS = {
     },
 }
 
-
 def _file_hash(filepath: Path) -> str:
     """Quick hash of file for change detection."""
     h = hashlib.md5()
@@ -71,7 +70,6 @@ def _file_hash(filepath: Path) -> str:
     h.update(str(filepath.stat().st_mtime).encode())
     h.update(str(filepath.stat().st_size).encode())
     return h.hexdigest()[:16]
-
 
 def _chunk_text(text: str, chunk_size: int = 500, overlap: int = 50) -> List[str]:
     """Split text into overlapping chunks for embedding."""
@@ -97,7 +95,6 @@ def _chunk_text(text: str, chunk_size: int = 500, overlap: int = 50) -> List[str
 
     return chunks
 
-
 def _read_file(filepath: Path) -> str:
     """Read a file's content for indexing."""
     try:
@@ -110,7 +107,6 @@ def _read_file(filepath: Path) -> str:
                 return f.read()[:10000]
     except Exception:
         return ""
-
 
 class KnowledgeBase:
     """
@@ -360,7 +356,6 @@ class KnowledgeBase:
             "last_full_index": self._state.get("last_full_index"),
             "collections": collections_info,
         }
-
 
 if __name__ == "__main__":
     kb = KnowledgeBase()

@@ -1,0 +1,18 @@
+{
+  "id": "5767f836",
+  "type": "audit",
+  "title": "Lucius network security scan",
+  "description": "Run passive network recon and save findings",
+  "priority": 20,
+  "estimated_minutes": 2,
+  "status": "completed",
+  "command": null,
+  "python_code": null,
+  "depends_on": [],
+  "metadata": {},
+  "created": "2026-03-29T21:27:03.450831",
+  "started": null,
+  "completed": "2026-03-29T21:42:28.645215",
+  "result": "============================================================\nLucius Fox \ufffd Network Security Passive Recon\nSCAN + REPORT ONLY \ufffd No active hardening\n============================================================\n\n============================================================\nFINDINGS: 10 total\n============================================================\n\n  [INFO] Network Security Audit Summary (9 findings)\n\n  [MEDIUM] CONCERNING: Port 135/RPC is open\n    Detail: Port 135 (RPC) is open. RPC (common attack vector for Windows exploits). This port is commonly targeted by attackers.\n    Action: PROPOSED: Investigate why port 135 is open. If not needed, close via Windows Firewall. ROLLBACK: netsh advfirewall firew\n\n  [MEDIUM] CONCERNING: Port 445/SMB is open\n    Detail: Port 445 (SMB) is open. SMB (major attack surface \ufffd WannaCry, EternalBlue). This port is commonly targeted by attackers.\n    Action: PROPOSED: Investigate why port 445 is open. If not needed, close via Windows Firewall. ROLLBACK: netsh advfirewall firew\n\n  [INFO] Expected port 11434/Ollama is open\n\n  [LOW] 12 service(s) listening on all interfaces (0.0.0.0)\n\n  [INFO] Windows Firewall enabled for Domain profile\n\n  [INFO] Windows Firewall enabled for Private profile\n\n  [INFO] Windows Firewall enabled for Public profile\n\n  [INFO] 57 active TCP connections to 21 unique IPs\n\n  [INFO] Host 'HPLaptop' has 3 IPv4 address(es)\n\nFindings saved: C:\\Users\\ccimi\\Desktop\\rudy-data\\lucius-audits\\network-security-20260329-214228.json\nCould not find platform independent libraries <prefix>\nINFO:lucius.network_security:========================================\nINFO:lucius.network_security:LUCIUS FOX \ufffd Network Security Audit (Passive Recon)\nINFO:lucius.network_security:========================================\nINFO:lucius.network_security:Running: Port Scan...\nINFO:lucius.network_security:Scanning 26 common ports on 127.0.0.1...\nINFO:lucius.network_security:  Port Scan: 3 findings\nINFO:lucius.network_security:Running: Listening Services...\nINFO:lucius.network_security:  Listening Services: 1 findings\nINFO:lucius.network_security:Running: Firewall Status...\nINFO:lucius.network_security:  Firewall Status: 3 findings\nINFO:lucius.network_security:Running: Active Connections...\nINFO:lucius.network_security:  Active Connections: 1 findings\nINFO:lucius.network_security:Running: Network Interfaces...\nINFO:lucius.network_security:  Network Interfaces: 1 findings\nINFO:lucius.network_security:Network security audit complete: 9 total findings in 25961ms\n",
+  "error": null
+}

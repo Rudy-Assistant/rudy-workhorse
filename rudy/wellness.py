@@ -21,10 +21,9 @@ All tiers feed into the same alert pipeline → email/notification to Chris.
 """
 import json
 import os
-import time
-from datetime import datetime, timedelta
+
+from datetime import datetime
 from pathlib import Path
-from collections import defaultdict
 
 DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
 LOGS_DIR = DESKTOP / "rudy-logs"
@@ -37,7 +36,6 @@ PRESENCE_CURRENT = LOGS_DIR / "presence-current.json"
 PRESENCE_DEVICES = LOGS_DIR / "presence-devices.json"
 PRESENCE_LOG = LOGS_DIR / "presence-log.json"
 PRESENCE_ROUTINES = LOGS_DIR / "presence-routines.json"
-
 
 class WellnessMonitor:
     """
@@ -342,7 +340,6 @@ class WellnessMonitor:
         lines.append("\n" + "=" * 50)
         return "\n".join(lines)
 
-
 def run_wellness_check():
     """Run a wellness check and print dashboard."""
     monitor = WellnessMonitor()
@@ -355,7 +352,6 @@ def run_wellness_check():
             print(f"  [{a['severity'].upper()}] {a['message']}")
 
     return findings
-
 
 if __name__ == "__main__":
     run_wellness_check()

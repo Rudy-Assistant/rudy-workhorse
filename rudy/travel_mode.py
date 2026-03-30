@@ -34,7 +34,7 @@ import subprocess
 import socket
 import hashlib
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 
 DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
@@ -72,7 +72,6 @@ HOME_NETWORK = {
     "scan_interval_minutes": 15,
     "alert_threshold": "normal",
 }
-
 
 class NetworkFingerprint:
     """Captures the identity of the current network."""
@@ -207,7 +206,6 @@ class NetworkFingerprint:
 
     def matches(self, other_id: str) -> bool:
         return self.fingerprint_id == other_id
-
 
 class TravelMode:
     """
@@ -691,7 +689,6 @@ class TravelMode:
             self._save_state()
             print(f"Network {network_id[:8]} labeled: {name} ({trust_level})")
 
-
 def check_network_change():
     """Check for network changes — call from SystemMaster or Sentinel."""
     tm = TravelMode()
@@ -699,14 +696,12 @@ def check_network_change():
     print(tm.get_report())
     return result
 
-
 def activate_travel_scan():
     """Force a travel-mode reconnaissance scan on the current network."""
     fp = NetworkFingerprint().capture()
     tm = TravelMode()
     tm._first_contact_scan(fp)
     return tm.get_report()
-
 
 if __name__ == "__main__":
     check_network_change()

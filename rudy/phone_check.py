@@ -33,14 +33,13 @@ import subprocess
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, List, Dict, Tuple
+from typing import List, Tuple
 
 DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
 LOGS = DESKTOP / "rudy-logs"
 PHONE_CHECK_DIR = DESKTOP / "rudy-data" / "phone-check"
 IOC_DIR = PHONE_CHECK_DIR / "iocs"
 REPORTS_DIR = PHONE_CHECK_DIR / "reports"
-
 
 def _run(cmd: str, timeout: int = 30) -> Tuple[str, str, int]:
     """Run a command, return (stdout, stderr, returncode)."""
@@ -54,12 +53,10 @@ def _run(cmd: str, timeout: int = 30) -> Tuple[str, str, int]:
     except Exception as e:
         return "", str(e), -1
 
-
 def _save_json(path: Path, data):
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w") as f:
         json.dump(data, f, indent=2, default=str)
-
 
 def _load_json(path: Path, default=None):
     if path.exists():
@@ -69,7 +66,6 @@ def _load_json(path: Path, default=None):
         except Exception:
             pass
     return default if default is not None else {}
-
 
 # ── Known Threat Indicators ──────────────────────────────────
 # Curated from MVT, Amnesty Tech, Citizen Lab, and public threat intel
@@ -128,7 +124,6 @@ IOS_SUSPICIOUS_PROCESSES = [
 IOS_SUSPICIOUS_PROFILES = [
     "MDM", "Configuration Profile", "VPN Profile",
 ]
-
 
 class DeviceDetector:
     """Detect connected mobile devices (iOS and Android)."""
@@ -379,7 +374,6 @@ class DeviceDetector:
             if rc == 0 and stdout:
                 info[key] = stdout.strip()
         return info
-
 
 class AndroidScanner:
     """Security scanner for Android devices."""
@@ -690,7 +684,6 @@ class AndroidScanner:
 
         return {"score": score, "level": level, "finding_count": len(self.findings)}
 
-
 class iOSScanner:
     """Security scanner for iOS devices."""
 
@@ -918,7 +911,6 @@ class iOSScanner:
 
         return {"score": score, "level": level, "finding_count": len(self.findings)}
 
-
 class MVTIntegration:
     """Integration with Mobile Verification Toolkit (Amnesty International)."""
 
@@ -997,7 +989,6 @@ class MVTIntegration:
             "stdout": stdout[:2000],
             "stderr": stderr[:500],
         }
-
 
 class PhoneCheck:
     """
@@ -1203,7 +1194,6 @@ class PhoneCheck:
         lines.append("=" * 60)
 
         return "\n".join(lines)
-
 
 class ForensicPhoneCheck(PhoneCheck):
     """Extended phone scanner with full forensic depth.
@@ -1587,7 +1577,6 @@ class ForensicPhoneCheck(PhoneCheck):
             "level": level,
             "factors": factors,
         }
-
 
 if __name__ == "__main__":
     print("Phone Check — Mobile Device Security Scanner")

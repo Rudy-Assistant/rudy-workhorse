@@ -1,0 +1,18 @@
+{
+  "id": "a094e9b3",
+  "type": "report",
+  "title": "Generate activity summary",
+  "description": "Summarize completed tasks for Batman review",
+  "priority": 80,
+  "estimated_minutes": 1,
+  "status": "failed",
+  "command": null,
+  "python_code": null,
+  "depends_on": [],
+  "metadata": {},
+  "created": "2026-03-29T21:27:03.450831",
+  "started": null,
+  "completed": "2026-03-29T22:42:02.672047",
+  "result": "Could not find platform independent libraries <prefix>\n  File \"<string>\", line 1\n    import sys, json, pathlib, datetime; sys.path.insert(0, r'C:\\Users\\ccimi\\Desktop\\rudy-workhorse'); reports = list(pathlib.Path(str(QUEUE_DIR / 'completed')).glob('*.json')); print(f'Completed tasks: {len(reports)}'); for r in sorted(reports)[-5:]:   d = json.loads(r.read_text());   print(f\"  [{d.get('type','?')}] {d.get('title','?')} - {d.get('status','?')}\")\n                                                                                                                                                                                                                             ^^^\nSyntaxError: invalid syntax\n",
+  "error": null
+}

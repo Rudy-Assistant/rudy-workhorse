@@ -16,18 +16,17 @@ Capabilities:
 import hashlib
 import json
 import os
-import re
+
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional, List, Dict
+from typing import Optional, List
 from urllib.parse import urlparse, urljoin
 
 DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
 LOGS = DESKTOP / "rudy-logs"
 WATCH_DIR = DESKTOP / "rudy-data" / "web-watch"
 WATCH_STATE = WATCH_DIR / "watch-state.json"
-
 
 def _load_json(path, default=None):
     if Path(path).exists():
@@ -38,12 +37,10 @@ def _load_json(path, default=None):
             pass
     return default if default is not None else {}
 
-
 def _save_json(path, data):
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, default=str)
-
 
 class ArticleExtractor:
     """Extract clean article text from any URL."""
@@ -129,7 +126,6 @@ class ArticleExtractor:
     def extract_batch(self, urls: List[str]) -> List[dict]:
         """Extract articles from multiple URLs."""
         return [self.extract(url) for url in urls]
-
 
 class PageWatcher:
     """
@@ -240,7 +236,6 @@ class PageWatcher:
         """List all watched URLs."""
         return [{"id": k, **v} for k, v in self.state["watches"].items()]
 
-
 class DomainIntel:
     """Domain and IP intelligence lookups."""
 
@@ -305,7 +300,6 @@ class DomainIntel:
             "dns": self.dns_lookup(domain),
         }
 
-
 class JobMonitor:
     """Monitor job boards for relevant postings."""
 
@@ -360,7 +354,6 @@ class JobMonitor:
         _save_json(self.state_file, self.state)
         return results
 
-
 class WebIntelligence:
     """Master controller for all web intelligence capabilities."""
 
@@ -391,7 +384,6 @@ class WebIntelligence:
             "job_keywords": self.job_monitor.state["keywords"],
             "total_checks": self.watcher.state.get("checks", 0),
         }
-
 
 if __name__ == "__main__":
     wi = WebIntelligence()

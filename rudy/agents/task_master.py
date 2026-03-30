@@ -4,10 +4,9 @@ Manages the work queue, generates daily briefings, and monitors
 all other agents for health and progress.
 """
 import json
-import os
+
 from datetime import datetime
 from . import AgentBase, DESKTOP, LOGS_DIR
-
 
 class TaskMaster(AgentBase):
     name = "task_master"
@@ -124,13 +123,11 @@ class TaskMaster(AgentBase):
                       f"{len(queue.get('in_progress', []))} active")
         self._save_queue(queue)
 
-
 if __name__ == "__main__":
     import sys
     mode = sys.argv[1] if len(sys.argv) > 1 else "briefing"
     agent = TaskMaster()
     agent.execute(mode=mode)
-
 
     def _run_financial_briefing(self):
         """Generate financial snapshot for morning briefing."""

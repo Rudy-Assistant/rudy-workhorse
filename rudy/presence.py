@@ -18,9 +18,8 @@ import os
 import re
 import subprocess
 import time
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
-from collections import defaultdict
 
 DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
 LOGS_DIR = DESKTOP / "rudy-logs"
@@ -65,7 +64,6 @@ DEVICES_FILE = LOGS_DIR / "presence-devices.json"
 LOG_FILE = LOGS_DIR / "presence-log.json"
 CURRENT_FILE = LOGS_DIR / "presence-current.json"
 ROUTINES_FILE = LOGS_DIR / "presence-routines.json"
-
 
 class PresenceMonitor:
     """WiFi-based presence detection via ARP scanning."""
@@ -351,7 +349,6 @@ class PresenceMonitor:
 
         return "\n".join(lines)
 
-
 # Convenience function for command runner invocation
 def run_scan(run_analytics=True):
     """Run a single presence scan, optionally followed by analytics."""
@@ -387,7 +384,6 @@ def run_scan(run_analytics=True):
             print(f"  [Intruder] Warning: {e}")
 
     return result
-
 
 if __name__ == "__main__":
     run_scan()

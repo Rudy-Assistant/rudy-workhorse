@@ -52,7 +52,7 @@ import subprocess
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Dict, List, Tuple
+from typing import Dict, List
 
 DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
 LOGS_DIR = DESKTOP / "rudy-logs"
@@ -62,7 +62,6 @@ WHITELIST_FILE = DATA_DIR / "usb-whitelist.json"
 QUARANTINE_STATE = QUARANTINE_DIR / "quarantine-state.json"
 KILL_SWITCH_FILE = DATA_DIR / "SECURITY-DISABLED"
 DEPLOYMENT_PHASE = 1  # 1=log-only, 2=prompt, 3=auto-block+safeguards, 4=full autonomous
-
 
 # ── Risk classification by USB device class ───────────────────
 
@@ -177,7 +176,6 @@ KNOWN_MALICIOUS_DEVICES = {
     ("0CF3", "9271"): "Atheros WiFi (Hak5 WiFi Pineapple platform)",
 }
 
-
 # ── Helpers ───────────────────────────────────────────────────
 
 def _run(cmd, timeout=15):
@@ -190,7 +188,6 @@ def _run(cmd, timeout=15):
     except Exception as e:
         return "", str(e), -1
 
-
 def _run_ps(script, timeout=15):
     """Run a PowerShell script."""
     cmd = ["powershell", "-NoProfile", "-Command", script]
@@ -202,7 +199,6 @@ def _run_ps(script, timeout=15):
     except Exception as e:
         return "", str(e), -1
 
-
 def _load_json(path, default=None):
     if path.exists():
         try:
@@ -211,12 +207,10 @@ def _load_json(path, default=None):
             pass
     return default if default is not None else {}
 
-
 def _save_json(path, data):
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, default=str)
-
 
 # ── Core: Device Fingerprinting ──────────────────────────────
 
@@ -284,7 +278,6 @@ class DeviceFingerprint:
             "risk_reasons": self.risk_reasons,
             "recommended_action": self.recommended_action,
         }
-
 
 def fingerprint_device(instance_id: str) -> DeviceFingerprint:
     """Deep fingerprint a USB device by its InstanceId."""
@@ -360,7 +353,6 @@ $result | ConvertTo-Json -Compress
 
     return fp
 
-
 def _check_composite(fp: DeviceFingerprint):
     """Check if this device presents multiple device classes (composite)."""
     ps_script = f'''
@@ -396,7 +388,6 @@ $siblings | Select-Object InstanceId, Class, FriendlyName, Status | ConvertTo-Js
             fp.is_composite = len(classes) > 1
         except json.JSONDecodeError:
             pass
-
 
 def _assess_threat(fp: DeviceFingerprint):
     """Calculate threat score and risk level."""
@@ -485,13 +476,11 @@ def _assess_threat(fp: DeviceFingerprint):
 
     fp.risk_reasons = reasons
 
-
 # ── Fortress Paradox Safeguards ────────────────────────────────
 
 def _is_kill_switch_active() -> bool:
     """Check if the emergency kill switch file exists."""
     return KILL_SWITCH_FILE.exists()
-
 
 def _system_uptime_minutes() -> float:
     """Get system uptime in minutes."""
@@ -506,7 +495,6 @@ def _system_uptime_minutes() -> float:
     # Fallback: assume been up long enough (safe default)
     return 999
 
-
 def _is_hid_device(device_class: str, device_classes: list = None) -> bool:
     """Check if a device is a Human Interface Device."""
     hid_classes = {'HIDClass', 'Keyboard', 'Mouse'}
@@ -516,7 +504,6 @@ def _is_hid_device(device_class: str, device_classes: list = None) -> bool:
         return True
     return False
 
-
 def _has_whitelisted_hid_connected(whitelist: dict) -> bool:
     """Check if at least one whitelisted HID device is currently connected."""
     hid_classes = {'HIDClass', 'Keyboard', 'Mouse'}
@@ -524,7 +511,6 @@ def _has_whitelisted_hid_connected(whitelist: dict) -> bool:
         if info.get("class") in hid_classes or info.get("device_class") in hid_classes:
             return True
     return False
-
 
 def _should_block_device(fp, whitelist: dict) -> tuple:
     """Determine if a device should be blocked, with all Fortress Paradox safeguards.
@@ -560,7 +546,6 @@ def _should_block_device(fp, whitelist: dict) -> tuple:
 
     # Phase 3+ with safeguards passed: allow blocking
     return True, "All safeguards passed — blocking authorized"
-
 
 # ── Core: Quarantine Protocol ─────────────────────────────────
 
@@ -1004,7 +989,6 @@ Write-Output "CONNS:$conns"
 
         return results
 
-
 # ── Entry Points ─────────────────────────────────────────────
 
 def check_devices() -> Dict:
@@ -1012,12 +996,10 @@ def check_devices() -> Dict:
     q = USBQuarantine()
     return q.scan()
 
-
 def whitelist(device_key: str, name: str) -> bool:
     """Whitelist a device by its key (VID:PID:Serial)."""
     q = USBQuarantine()
     return q.whitelist_device(device_key, name)
-
 
 def get_status() -> Dict:
     """Get current quarantine state."""
@@ -1028,7 +1010,6 @@ def get_status() -> Dict:
         "whitelisted": len(wl.get("devices", {})),
         "last_scan": state.get("last_scan", "never"),
     }
-
 
 if __name__ == "__main__":
     import sys

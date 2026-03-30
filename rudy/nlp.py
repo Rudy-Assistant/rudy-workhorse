@@ -16,12 +16,11 @@ import json
 import os
 import re
 from collections import Counter
-from datetime import datetime
+
 from pathlib import Path
-from typing import Optional, List, Dict, Tuple
+from typing import List, Tuple
 
 DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
-
 
 class SentimentAnalyzer:
     """Analyze sentiment of text."""
@@ -93,7 +92,6 @@ class SentimentAnalyzer:
 
     def analyze_batch(self, texts: List[str]) -> List[dict]:
         return [self.analyze(t) for t in texts]
-
 
 class EntityExtractor:
     """Extract named entities from text."""
@@ -169,7 +167,6 @@ class EntityExtractor:
 
         return {"entities": entities, "engine": "regex"}
 
-
 class TextSummarizer:
     """Summarize long text."""
 
@@ -213,7 +210,6 @@ class TextSummarizer:
         counter = Counter(words)
         return counter.most_common(top_n)
 
-
 class LanguageDetector:
     """Detect the language of text."""
 
@@ -238,7 +234,6 @@ class LanguageDetector:
             return {"language": "ar", "engine": "heuristic"}
 
         return {"language": "en", "engine": "default"}
-
 
 class NLP:
     """Unified NLP interface."""
@@ -268,7 +263,6 @@ class NLP:
 
     def get_entities(self, text: str) -> dict:
         return self.entities.extract(text)
-
 
 if __name__ == "__main__":
     nlp = NLP()

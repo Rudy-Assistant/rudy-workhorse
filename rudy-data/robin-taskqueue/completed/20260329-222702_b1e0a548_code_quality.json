@@ -1,0 +1,18 @@
+{
+  "id": "b1e0a548",
+  "type": "code_quality",
+  "title": "Run linter on rudy/ package",
+  "description": "Check code quality with ruff",
+  "priority": 50,
+  "estimated_minutes": 3,
+  "status": "failed",
+  "command": null,
+  "python_code": null,
+  "depends_on": [],
+  "metadata": {},
+  "created": "2026-03-29T21:27:03.450831",
+  "started": null,
+  "completed": "2026-03-29T22:27:02.428488",
+  "result": "Could not find platform independent libraries <prefix>\nC:\\Python312\\python.exe: No module named ruff\n",
+  "error": null
+}

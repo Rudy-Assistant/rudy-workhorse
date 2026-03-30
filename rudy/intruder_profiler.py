@@ -24,10 +24,8 @@ import json
 import os
 import re
 import subprocess
-import time
-import hashlib
-from collections import defaultdict, Counter
-from datetime import datetime, timedelta
+
+from datetime import datetime
 from pathlib import Path
 
 DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
@@ -64,7 +62,6 @@ CONSUMER_OUI = {
     "apple", "samsung", "google", "amazon", "roku", "sonos",
     "ring", "nest", "wyze", "tp-link", "netgear", "arris",
 }
-
 
 class IntruderProfiler:
     """
@@ -466,7 +463,6 @@ class IntruderProfiler:
         lines.append("\n" + "=" * 55)
         return "\n".join(lines)
 
-
 def run_intruder_scan():
     """Run intruder profiling against current presence data."""
     from rudy.presence import PresenceMonitor
@@ -486,7 +482,6 @@ def run_intruder_scan():
             print(f"    {i['ip']} [{i['mac']}] — Threat Score: {i['threat_score']}")
 
     return result
-
 
 if __name__ == "__main__":
     run_intruder_scan()

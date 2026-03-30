@@ -33,13 +33,13 @@ import json
 import math
 import os
 import random
-import re
+
 import string
 import time
-from dataclasses import dataclass, field, asdict
+
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional, Tuple, List, Dict, Callable
+from typing import Tuple, List
 
 # --- Paths ---
 DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
@@ -48,7 +48,6 @@ SESSIONS_DIR = DESKTOP / "data" / "sessions"
 SIM_STATE_FILE = LOGS_DIR / "human-sim-state.json"
 SIM_LOG_FILE = LOGS_DIR / "human-sim-log.json"
 BOT_DETECTION_LOG = LOGS_DIR / "bot-detection-log.json"
-
 
 def _load_json(path, default=None):
     if path.exists():
@@ -59,12 +58,10 @@ def _load_json(path, default=None):
             pass
     return default if default is not None else {}
 
-
 def _save_json(path, data):
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, default=str)
-
 
 # ============================================================================
 #  TIMING ENGINE — Gaussian distributions tuned to human norms
@@ -216,7 +213,6 @@ class TimingEngine:
         self._welford_m2 = 0.0
         self._fatigue_factor = 1.0
         self._session_start = time.time()
-
 
 # ============================================================================
 #  MOUSE ENGINE — Bezier curves with human-like acceleration
@@ -388,7 +384,6 @@ class MouseEngine:
 
         return increments
 
-
 # ============================================================================
 #  KEYBOARD ENGINE — Realistic typing patterns
 # ============================================================================
@@ -510,7 +505,6 @@ class KeyboardEngine:
         ]
         return random.choice(neighbors) if neighbors else char
 
-
 # ============================================================================
 #  SESSION MANAGER — Persistent, coherent browser sessions
 # ============================================================================
@@ -611,7 +605,6 @@ class SessionManager:
             self.state["sessions"] = {}
         self.state["sessions"][self.session_name] = self.session_data
         _save_json(SIM_STATE_FILE, self.state)
-
 
 # ============================================================================
 #  BOT DETECTION FAILSAFE — Detect and respond to challenges
@@ -789,7 +782,6 @@ class BotDetectionFailsafe:
             "consecutive_current": self._consecutive_detections,
             "current_backoff_s": round(self.get_backoff_seconds(), 1),
         }
-
 
 # ============================================================================
 #  FINGERPRINT MANAGER — Coherent, persistent browser identity
@@ -986,7 +978,6 @@ class FingerprintManager:
             "timezone": fp.get("timezone"),
             "cores": fp.get("hardware_concurrency"),
         }
-
 
 # ============================================================================
 #  HUMAN SIMULATOR — Unified interface for all human behavior
@@ -1300,7 +1291,6 @@ class HumanSimulator:
 
         print("\n" + "=" * 55)
 
-
 # ============================================================================
 #  CONVENIENCE FUNCTIONS
 # ============================================================================
@@ -1308,7 +1298,6 @@ class HumanSimulator:
 def create_simulator(session_name: str = "default") -> HumanSimulator:
     """Create a pre-configured HumanSimulator instance."""
     return HumanSimulator(session_name=session_name)
-
 
 def demo_timing():
     """Demo the timing engine distributions."""
@@ -1322,7 +1311,6 @@ def demo_timing():
               f"range=[{min(samples):6.1f}, {max(samples):7.1f}]")
     print(f"\n  Timing stats: {te.timing_stats}")
 
-
 def demo_mouse():
     """Demo mouse path generation."""
     me = MouseEngine()
@@ -1331,7 +1319,6 @@ def demo_mouse():
     print(f"  First 5: {path[:5]}")
     print(f"  Last 5: {path[-5:]}")
     print(f"  Velocity variance: {me.velocity_variance}")
-
 
 if __name__ == "__main__":
     print("Human Behavior Simulation Module\n")

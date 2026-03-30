@@ -13,14 +13,13 @@ Usage:
     success, output = run_elevated_ps("Get-Service RustDesk | Restart-Service")
 """
 import subprocess
-import tempfile
+
 import os
 import time
 from pathlib import Path
 
 DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
 LOG_DIR = DESKTOP / "rudy-logs"
-
 
 def run_elevated(cmd: str, timeout: int = 60) -> tuple[bool, str]:
     """Run a command with admin elevation. Returns (success, output)."""
@@ -44,7 +43,6 @@ def run_elevated(cmd: str, timeout: int = 60) -> tuple[bool, str]:
         return result.returncode == 0, output
     except Exception as e:
         return False, str(e)
-
 
 def run_elevated_ps(script: str, timeout: int = 60) -> tuple[bool, str]:
     """Run a PowerShell script with admin elevation. Returns (success, output)."""
@@ -72,7 +70,6 @@ def run_elevated_ps(script: str, timeout: int = 60) -> tuple[bool, str]:
     except Exception as e:
         script_file.unlink(missing_ok=True)
         return False, str(e)
-
 
 def is_elevated() -> bool:
     """Check if we're currently running with admin privileges."""

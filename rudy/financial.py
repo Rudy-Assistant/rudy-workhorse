@@ -12,10 +12,10 @@ Capabilities:
 
 import json
 import os
-import time
-from datetime import datetime, timedelta
+
+from datetime import datetime
 from pathlib import Path
-from typing import Optional, List, Dict
+from typing import List
 
 DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
 LOGS = DESKTOP / "rudy-logs"
@@ -26,7 +26,6 @@ WATCHLIST_FILE = FIN_DIR / "watchlist.json"
 PORTFOLIO_FILE = FIN_DIR / "portfolio.json"
 ALERTS_FILE = FIN_DIR / "price-alerts.json"
 
-
 def _load_json(path, default=None):
     if Path(path).exists():
         try:
@@ -36,12 +35,10 @@ def _load_json(path, default=None):
             pass
     return default if default is not None else {}
 
-
 def _save_json(path, data):
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w") as f:
         json.dump(data, f, indent=2, default=str)
-
 
 class MarketData:
     """Fetch market data using yfinance (no API key required)."""
@@ -125,7 +122,6 @@ class MarketData:
         """Get cryptocurrency price."""
         return self.get_quote(f"{symbol}-USD")
 
-
 class Portfolio:
     """Track holdings and P&L."""
 
@@ -207,7 +203,6 @@ class Portfolio:
             "positions": positions,
         }
 
-
 class PriceAlerts:
     """Price alerts with email notification."""
 
@@ -282,7 +277,6 @@ class PriceAlerts:
         except Exception:
             pass  # Best-effort notification
 
-
 class Watchlist:
     """Curated list of tickers to monitor."""
 
@@ -315,7 +309,6 @@ class Watchlist:
             "forex": forex_rates,
         }
 
-
 class FinancialIntelligence:
     """Master financial intelligence controller."""
 
@@ -333,7 +326,6 @@ class FinancialIntelligence:
             "portfolio": self.portfolio.get_snapshot(),
             "triggered_alerts": self.alerts.check_alerts(),
         }
-
 
 if __name__ == "__main__":
     fi = FinancialIntelligence()

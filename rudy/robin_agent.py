@@ -47,6 +47,12 @@ from typing import Optional
 
 from rudy.robin_mcp_client import MCPServerRegistry, MCPToolResult
 
+try:
+    from rudy.robin_logger import log_task_to_notion
+    HAS_LOGGER = True
+except ImportError:
+    HAS_LOGGER = False
+
 log = logging.getLogger("robin_agent")
 
 # ---------------------------------------------------------------------------
@@ -57,24 +63,59 @@ DEFAULT_MAX_STEPS = 15
 DEFAULT_MAX_TOOL_OUTPUT = 4000  # chars -- truncate long tool outputs
 
 AGENT_SYSTEM_PROMPT = """\
-You are Robin, the autonomous AI agent for the Batcave system.
-You run on Oracle (the always-on Workhorse PC).
-You have access to MCP tools that let you interact with the real world.
+You are Robin, Batman's autonomous proxy on this machine.
+When Batman is away, YOU are the user. You operate the computer on his behalf --
+clicking, typing, navigating, managing files, running commands, just as he would.
+You are mentored by Alfred (Claude, the cloud AI). Alfred assigns tasks, reviews
+your work, and helps you improve. Together you are the Batcave field team.
+
+YOUR ROLE:
+- You ARE the human operator of this PC when Batman is away
+- You execute real actions: shell commands, UI clicks, file management, git ops
+- You can see the screen (Snapshot), click things (Click), type text (Type)
+- You research, analyze, install, configure, and troubleshoot
+- You log everything you do so Alfred and Batman can review
 
 YOUR CAPABILITIES:
-- Execute PowerShell commands on Oracle via windows-mcp.Shell
-- Take screenshots and click UI elements via windows-mcp
-- Manage GitHub repos, branches, PRs via github tools
-- Read/write Notion pages for knowledge management
-- Search and read emails via Gmail tools
+- windows-mcp.Shell: Run any PowerShell/cmd command
+- windows-mcp.Snapshot: See the desktop (use_vision=true for screenshot)
+- windows-mcp.Click: Click at screen coordinates
+- windows-mcp.Type: Type text into the focused window
+- windows-mcp.Scroll: Scroll in any direction
+- windows-mcp.App: Launch applications
+- windows-mcp.Shortcut: Send keyboard shortcuts (Ctrl+C, Alt+Tab, etc.)
+- brave-search: Search the web for information
+- github: Manage repos, branches, PRs, issues
+
+MULTI-STEP WORKFLOW PATTERN:
+For UI tasks, follow this loop:
+  1. Snapshot (see the screen)
+  2. Decide what to do based on what you see
+  3. Act (Click, Type, Shell, etc.)
+  4. Snapshot again to verify the result
+  5. Repeat until done
+
+TOOL SELECTION GUIDE (CRITICAL):
+- To READ FILES: Use windows-mcp.Shell with Get-Content or type command
+  NEVER use Snapshot to read files. Snapshot shows the screen, not file contents.
+- To RUN SCRIPTS: Use windows-mcp.Shell with python or PowerShell commands
+- To SEE THE SCREEN: Use windows-mcp.Snapshot (only for UI/visual tasks)
+- To SEARCH THE WEB: Use brave-search
+
+DIRECTIVE TASKS FROM ALFRED:
+When you receive a directive with numbered steps, follow them EXACTLY in order.
+If a step says "Run command: X", use windows-mcp.Shell with that exact command.
+Do NOT substitute Snapshot when Shell is indicated.
 
 RULES:
-1. Be decisive. Execute actions, don't just describe them.
-2. After each tool call, analyze the result before deciding next steps.
-3. If a tool call fails, try an alternative approach.
-4. When the task is complete, respond with your final summary.
-5. Never expose secrets, tokens, or passwords in your responses.
-6. If you're unsure about a destructive action, explain why and stop.
+1. ACT FIRST, explain later. Execute the tool call, don't just describe it.
+2. After each tool result, analyze it, then decide the next step.
+3. If something fails, try a different approach -- don't give up on step 1.
+4. For complex tasks, break them into steps and execute one at a time.
+5. Never expose secrets, tokens, or passwords.
+6. For destructive actions (delete, format, uninstall), state what you plan
+   to do and why, then proceed unless the task is ambiguous.
+7. When done, give a concise summary of what you did and the result.
 
 TO USE A TOOL, you MUST wrap the JSON in <tool_call> tags like this:
 
@@ -82,10 +123,37 @@ TO USE A TOOL, you MUST wrap the JSON in <tool_call> tags like this:
 {"tool": "server_name.tool_name", "args": {"param1": "value1"}}
 </tool_call>
 
-IMPORTANT: Always include the <tool_call> and </tool_call> tags.
-Do NOT output bare JSON without the tags -- it will not be recognized.
-You can include reasoning text before and after the tool_call block.
-Only ONE tool_call per response. Wait for the result before calling another.
+CRITICAL FORMAT RULES:
+You MUST use <tool_call> tags with valid JSON. Here are concrete examples:
+
+EXAMPLE 1 - Running a shell command (MOST COMMON):
+<tool_call>
+{"tool": "windows-mcp.Shell", "args": {"command": "Get-Content C:\\path\to\file.txt"}}
+</tool_call>
+
+EXAMPLE 2 - Running a Python script:
+<tool_call>
+{"tool": "windows-mcp.Shell", "args": {"command": "C:\\Python312\\python.exe C:\\path\\script.py"}}
+</tool_call>
+
+EXAMPLE 3 - Taking a screenshot (only for UI tasks):
+<tool_call>
+{"tool": "windows-mcp.Snapshot", "args": {"use_vision": true}}
+</tool_call>
+
+EXAMPLE 3 - Searching the web:
+<tool_call>
+{"tool": "brave-search.brave_web_search", "args": {"query": "example search"}}
+</tool_call>
+
+FORMAT: {"tool": "SERVER.TOOL_NAME", "args": {PARAMETERS}}
+- ALWAYS use <tool_call> and </tool_call> tags
+- The JSON must have exactly two keys: "tool" and "args"
+- "tool" is "server_name.tool_name" (with a dot)
+- "args" is an object with the tool parameters
+- Only ONE tool_call per response. Wait for the result before the next.
+- Include your reasoning BEFORE the <tool_call> block.
+- When the task is done, respond with plain text only (no tags).
 
 AVAILABLE TOOLS:
 {tools_prompt}
@@ -126,12 +194,30 @@ class AgentResult:
 # Tool Call Parser
 # ---------------------------------------------------------------------------
 
+# --- Tool call detection patterns (ordered by priority) ---
+# Primary: <tool_call>{"tool": "...", "args": {...}}</tool_call>
 TOOL_CALL_PATTERN = re.compile(
     r"<tool_call>\s*(\{.*?\})\s*</tool_call>",
     re.DOTALL,
 )
 
-# Fallback: bare JSON with "tool" key (DeepSeek sometimes omits the tags)
+# DeepSeek variant: <tool>...</tool> (wrong tag name but same intent)
+TOOL_TAG_PATTERN = re.compile(
+    r"<tool>\s*(.*?)\s*</tool>",
+    re.DOTALL,
+)
+
+# Other common LLM variants
+FUNCTION_CALL_PATTERN = re.compile(
+    r"<function_call>\s*(\{.*?\})\s*</function_call>",
+    re.DOTALL,
+)
+ACTION_PATTERN = re.compile(
+    r"<action>\s*(\{.*?\})\s*</action>",
+    re.DOTALL,
+)
+
+# Fallback: bare JSON with "tool" key (DeepSeek sometimes omits all tags)
 BARE_TOOL_CALL_PATTERN = re.compile(
     r'(\{\s*"tool"\s*:\s*"[^"]+\.\w+"\s*,\s*"args"\s*:\s*\{.*?\}\s*\})',
     re.DOTALL,
@@ -143,30 +229,108 @@ THINK_PATTERN = re.compile(
 )
 
 
-def parse_tool_call(text: str) -> Optional[dict]:
-    """Extract a tool call from DeepSeek's response."""
-    # Try tagged format first
-    match = TOOL_CALL_PATTERN.search(text)
-    if match:
-        raw = match.group(1)
-    else:
-        # Fallback: bare JSON with "tool" key containing a dot (server.tool)
-        match = BARE_TOOL_CALL_PATTERN.search(text)
-        if match:
-            raw = match.group(1)
-            log.info("Detected bare tool call (no <tool_call> tags)")
-        else:
-            return None
+def _normalize_tool_json(raw: str) -> Optional[dict]:
+    """Try to parse a tool call string into a normalized dict.
 
+    Handles both JSON format and DeepSeek's comma-separated format:
+      - {"tool": "server.name", "args": {...}}
+      - server.tool_name, {"key": "value"}
+      - server.tool_name {"key": "value"}
+    """
+    raw = raw.strip()
+
+    # Try standard JSON first
     try:
         call = json.loads(raw)
-        if "tool" in call and "." in call["tool"]:
-            return {
-                "tool": call["tool"],
-                "args": call.get("args", call.get("arguments", {})),
-            }
-    except json.JSONDecodeError as e:
-        log.warning("Failed to parse tool call JSON: %s", e)
+        if isinstance(call, dict):
+            tool = call.get("tool", call.get("name", call.get("function", "")))
+            if tool and "." in str(tool):
+                return {
+                    "tool": str(tool),
+                    "args": call.get("args", call.get("arguments", call.get("parameters", {}))),
+                }
+    except json.JSONDecodeError:
+        pass
+
+    # Try DeepSeek's "server.tool, {args}" comma-separated format
+    comma_match = re.match(
+        r'([a-zA-Z_][\w-]*\.[a-zA-Z_]\w*)\s*[,\s]\s*(\{.*\})',
+        raw, re.DOTALL
+    )
+    if comma_match:
+        tool_name = comma_match.group(1)
+        args_str = comma_match.group(2)
+        try:
+            args = json.loads(args_str)
+            return {"tool": tool_name, "args": args if isinstance(args, dict) else {}}
+        except json.JSONDecodeError:
+            log.warning("Parsed tool name '%s' but args JSON failed: %s", tool_name, args_str[:100])
+
+    # Try "server.tool {args}" space-separated format (no comma)
+    space_match = re.match(
+        r'([a-zA-Z_][\w-]*\.[a-zA-Z_]\w*)\s+(\{.*\})',
+        raw, re.DOTALL
+    )
+    if space_match:
+        tool_name = space_match.group(1)
+        args_str = space_match.group(2)
+        try:
+            args = json.loads(args_str)
+            return {"tool": tool_name, "args": args if isinstance(args, dict) else {}}
+        except json.JSONDecodeError:
+            pass
+
+    return None
+
+
+def parse_tool_call(text: str) -> Optional[dict]:
+    """Extract a tool call from DeepSeek's response.
+
+    Handles multiple format variations that DeepSeek-R1 produces:
+    1. <tool_call>{"tool": "x.y", "args": {...}}</tool_call>  (intended)
+    2. <tool>x.y, {"key": "val"}</tool>                       (common variant)
+    3. <function_call>{"tool": "x.y", ...}</function_call>     (rare variant)
+    4. <action>{"tool": "x.y", ...}</action>                   (rare variant)
+    5. Bare JSON: {"tool": "x.y", "args": {...}}               (no tags)
+    """
+    # 1. Try <tool_call> tags (primary format)
+    match = TOOL_CALL_PATTERN.search(text)
+    if match:
+        result = _normalize_tool_json(match.group(1))
+        if result:
+            return result
+
+    # 2. Try <tool> tags (DeepSeek's most common mistake)
+    match = TOOL_TAG_PATTERN.search(text)
+    if match:
+        result = _normalize_tool_json(match.group(1))
+        if result:
+            log.info("Detected tool call with <tool> tags (normalized)")
+            return result
+
+    # 3. Try <function_call> tags
+    match = FUNCTION_CALL_PATTERN.search(text)
+    if match:
+        result = _normalize_tool_json(match.group(1))
+        if result:
+            log.info("Detected tool call with <function_call> tags (normalized)")
+            return result
+
+    # 4. Try <action> tags
+    match = ACTION_PATTERN.search(text)
+    if match:
+        result = _normalize_tool_json(match.group(1))
+        if result:
+            log.info("Detected tool call with <action> tags (normalized)")
+            return result
+
+    # 5. Fallback: bare JSON with "tool" key
+    match = BARE_TOOL_CALL_PATTERN.search(text)
+    if match:
+        result = _normalize_tool_json(match.group(1))
+        if result:
+            log.info("Detected bare tool call (no tags)")
+            return result
 
     return None
 
@@ -195,6 +359,28 @@ def truncate_output(text: str, max_len: int = DEFAULT_MAX_TOOL_OUTPUT) -> str:
 # ---------------------------------------------------------------------------
 # Robin Agent
 # ---------------------------------------------------------------------------
+
+
+
+# Heuristic keywords that suggest DeepSeek is reasoning about calling
+# a tool but has not actually produced a tool_call block.
+_NUDGE_KEYWORDS = [
+    "tool_call", "tool call", "execute", "should output",
+    "will use", "let me", "i need to", "run the command",
+    "use the tool", "call the", "invoke", "i should",
+]
+
+
+def _needs_nudge(text: str) -> bool:
+    """Return True if the response looks like meta-reasoning about tools.
+
+    DeepSeek-R1:8b sometimes describes what it wants to do instead of
+    actually producing the <tool_call> block. This detects that pattern.
+    """
+    lower = text.lower()
+    hits = sum(1 for kw in _NUDGE_KEYWORDS if kw in lower)
+    return hits >= 2  # At least 2 keyword matches to trigger nudge
+
 
 class RobinAgent:
     """
@@ -328,7 +514,30 @@ class RobinAgent:
                 messages.append({"role": "user", "content": result_msg})
 
             else:
-                # No tool call -- this is the final answer
+                # No tool call detected -- check if DeepSeek is
+                # meta-reasoning about tools instead of calling them
+                if step_num == 1 and tool_calls == 0 and _needs_nudge(clean_response):
+                    log.info("[Step %d] Nudging: response is planning, not executing", step_num)
+                    steps.append(AgentStep(
+                        step_num=step_num,
+                        timestamp=datetime.now().isoformat(),
+                        action="think",
+                        content=clean_response,
+                        thinking=thinking,
+                        duration_ms=step_duration,
+                    ))
+                    messages.append({"role": "assistant", "content": response})
+                    nudge = (
+                        "You described what you want to do but did not call a tool. "
+                        "Output the tool call NOW:\n\n"
+                        "<tool_call>\n"
+                        '{"tool": "server.tool_name", "args": {"param": "value"}}\n'
+                        "</tool_call>\n\n"
+                        "Do NOT explain. Just output the <tool_call> block."
+                    )
+                    messages.append({"role": "user", "content": nudge})
+                    continue
+                # Genuine final answer
                 log.info("[Step %d] Final answer: %s", step_num, clean_response[:200])
 
                 steps.append(AgentStep(
@@ -407,7 +616,7 @@ class RobinAgent:
     def run_with_report(self, task: str, context: dict = None) -> dict:
         """Run a task and return a serializable report."""
         result = self.run(task, context)
-        return {
+        report = {
             "task": result.task,
             "success": result.success,
             "final_answer": result.final_answer,
@@ -426,6 +635,28 @@ class RobinAgent:
                 for s in result.steps
             ],
         }
+
+        # Auto-log to Notion
+        if HAS_LOGGER:
+            tools_used = list(set(
+                s.tool_name for s in result.steps
+                if s.tool_name
+            ))
+            try:
+                log_task_to_notion(
+                    task=result.task,
+                    success=result.success,
+                    final_answer=result.final_answer,
+                    total_steps=result.total_steps,
+                    total_tool_calls=result.total_tool_calls,
+                    duration_ms=result.total_duration_ms,
+                    tools_used=tools_used,
+                    error=result.error,
+                )
+            except Exception as e:
+                log.warning("Auto-log to Notion failed: %s", e)
+
+        return report
 
 
 # ---------------------------------------------------------------------------
