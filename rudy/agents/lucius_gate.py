@@ -1,5 +1,5 @@
-"""
-Lucius Gate — Session governance with circuit breakers and degraded-mode fallbacks.
+﻿"""
+Lucius Gate â€” Session governance with circuit breakers and degraded-mode fallbacks.
 
 ADR-004 v2.1 Addendum (2026-03-30): Phase 1A deliverable.
 Phase 1C (2026-03-30): Real MCP connectivity checks, chaos testing.
@@ -193,7 +193,7 @@ def load_mcp_tiers(config_path: Optional[str] = None) -> Dict[str, MCPTier]:
     # Attempt to load YAML
     if config_path and os.path.isfile(config_path):
         try:
-            import yaml  # noqa: F401, E402 — delayed import per C3
+            import yaml  # noqa: F401, E402 â€” delayed import per C3
             with open(config_path, "r", encoding="utf-8") as f:
                 raw = yaml.safe_load(f)
         except ImportError:
@@ -274,7 +274,7 @@ PROTECTED_BRANCHES = frozenset({"main", "master"})
 
 
 # ---------------------------------------------------------------------------
-# Circuit Breaker — run_check()
+# Circuit Breaker â€” run_check()
 # ---------------------------------------------------------------------------
 
 
@@ -516,10 +516,11 @@ def _check_mcp_github() -> GateCheck:
             pat_candidates.append(REPO_ROOT.parent / "rudy-logs" / "github-classic-pat.txt")
         except ImportError:
             pass
+        home = Path.home()
         pat_candidates.extend([
-            Path("C:/Users/ccimi/Downloads/github-recovery-codes.txt"),
-            Path("C:/Users/ccimi/Desktop/rudy-logs/github-classic-pat.txt"),
-            Path("C:/Users/ccimi/Desktop/rudy-workhorse/rudy-logs/github-classic-pat.txt"),
+            home / "Downloads" / "github-recovery-codes.txt",
+            home / "Desktop" / "rudy-logs" / "github-classic-pat.txt",
+            home / "Desktop" / "rudy-workhorse" / "rudy-logs" / "github-classic-pat.txt",
         ])
         for p in pat_candidates:
             try:
@@ -963,7 +964,7 @@ def pre_commit_check(
 
     Returns:
         GateResult. If DEGRADED, the caller (Robin) should log and allow
-        the push — bricking Robin is worse than a branch violation.
+        the push â€” bricking Robin is worse than a branch violation.
     """
     gate_start = time.perf_counter()
     checks: List[GateCheck] = []
