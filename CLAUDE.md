@@ -783,9 +783,25 @@ Before building ANY custom solution, you MUST:
 2. **Before writing ANY new Python file**: Check `rudy-logs/capability-manifest.json` for existing solutions. Also check: Cowork skills (30+), MCP connectors (5), rudy/ modules (31+), installed packages (100+), scheduled tasks (24). The Capability Index below is your cheat sheet.
 3. **Before building custom**: Search the MCP registry, check installed pip packages (`pip list` on Workhorse), and review the Cowork Capability Index. If you're writing >50 lines of Python for something that sounds generic, you almost certainly missed an existing tool.
 
+### Finding Capture Protocol (HARD RULE — Session 14)
+
+When any investigation, audit, review, or incidental observation surfaces an issue — **regardless of its origin** — Alfred must follow this triage:
+
+**Immediate fix** (under ~15 min effort): Fix it in the current branch or a stacked commit. No excuses about it being "pre-existing" or "structural." If you found it, you own it.
+
+**Deferred fix** (over ~15 min, or blocked): Log it as a tracked item with severity, file/line, and enough context for the next session to act on it. Acceptable locations: GitHub issue, SESSION-HANDOFF.md P-level entry, or Lucius audit findings. **Never silently dismiss a finding.**
+
+Rationalizations that are explicitly banned:
+- "This is pre-existing" → *So fix it or log it.*
+- "This is structural" → *Structural problems are still problems.*
+- "Out of scope" → *Then file it in scope for later.*
+- "Only X findings remain" → *Zero is the target, always.*
+
+**Context window evaluations:** At session recaps and before handoff, include a context window utilization estimate (e.g. "~40% consumed, proceeding" or "~70% consumed, prioritizing remaining items"). This helps determine whether to continue, hand off, or triage.
+
 ### Anti-Patterns (learned the hard way)
 - **Don't ask Chris to handle files** → use allow_cowork_file_delete, request_cowork_directory
-- **Don't guess the Desktop path** → it's `~/Desktop` (maps to `C:\Users\C\Desktop`)
+- **Don't hardcode ANY path** → import from `rudy.paths` (REPO_ROOT, RUDY_DATA, RUDY_LOGS, DESKTOP, HOME, PYTHON_EXE, GIT_EXE). Lucius enforces this at zero tolerance.
 - **Don't write new scan scripts** → use existing modules (PhoneCheck, NetworkDefense, etc.)
 - **Don't leave "items for Chris"** → use every tool available to self-serve
 - **Don't forget Notion** → log improvements, track tools, persist sprint state
