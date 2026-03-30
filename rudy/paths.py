@@ -68,6 +68,9 @@ LUCIUS_AUDITS = RUDY_DATA / "lucius-audits"
 # Environment profile (written by environment_profiler.py)
 ENVIRONMENT_PROFILE = RUDY_DATA / "environment-profile.json"
 
+# Handoff directory: Alfred writes handoff briefs, Robin scans on activation
+HANDOFFS_DIR = RUDY_DATA / "handoffs"
+
 # BatcaveVault: local Obsidian memory vault (gitignored, per-Oracle)
 BATCAVE_VAULT = REPO_ROOT / "vault"
 
@@ -75,7 +78,7 @@ BATCAVE_VAULT = REPO_ROOT / "vault"
 # Ensure critical directories exist at import time
 # ---------------------------------------------------------------------------
 
-for _d in [RUDY_DATA, RUDY_LOGS, RUDY_COMMANDS, ROBIN_INBOX, SCREENSHOT_DIR, LUCIUS_AUDITS, BATCAVE_VAULT]:
+for _d in [RUDY_DATA, RUDY_LOGS, RUDY_COMMANDS, ROBIN_INBOX, SCREENSHOT_DIR, LUCIUS_AUDITS, HANDOFFS_DIR, BATCAVE_VAULT]:
     _d.mkdir(parents=True, exist_ok=True)
 
 # Scaffold BatcaveVault Home.md if missing (per-Oracle, gitignored)

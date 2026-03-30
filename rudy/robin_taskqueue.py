@@ -415,6 +415,22 @@ def execute_task(task: dict) -> tuple[bool, str]:
         )
         return _execute_python(code, timeout=30)
 
+    elif task_type == "handoff":
+        # Check for Alfred handoff briefs with unfinished priorities
+        code = (
+            f"import sys; sys.path.insert(0, r'{RUDY_ROOT}'); "
+            f"from rudy.workflows.handoff import HandoffScanner; "
+            f"scanner = HandoffScanner(); "
+            f"latest = scanner.get_latest_handoff(); "
+            f"needs = scanner.needs_new_session(); "
+            f"print(f'Latest handoff: session {{latest.get(\"session_number\", \"none\") if latest else \"none\"}}'); "
+            f"print(f'Needs new session: {{needs}}'); "
+            f"if needs and latest: "
+            f"  prompt = scanner.format_bootstrap_prompt(latest); "
+            f"  print(f'Bootstrap prompt ready ({{len(prompt)}} chars)')"
+        )
+        return _execute_python(code, timeout=30)
+
     else:
         return False, f"Unknown task type: {task_type}"
 
@@ -585,6 +601,11 @@ def seed_standard_nightwatch(force: bool = False):
         make_task("code_quality", "Run linter on rudy/ package",
                   "Check code quality with ruff",
                   priority=50, estimated_minutes=3),
+
+        make_task("handoff", "Check for Alfred handoff briefs",
+                  "Scan rudy-data/handoffs/ for unfinished priorities. "
+                  "If a new Alfred session is needed, prepare bootstrap prompt.",
+                  priority=15, estimated_minutes=1),
 
         make_task("report", "Generate activity summary",
                   "Summarize completed tasks for Batman review",
