@@ -48,7 +48,8 @@ log = logging.getLogger("robin_autonomy")
 # ---------------------------------------------------------------------------
 
 from rudy.paths import (  # noqa: E402
-    GIT_EXE, HANDOFFS_DIR, LUCIUS_AUDITS, REPO_ROOT, RUDY_DATA, RUDY_LOGS,
+    BATCAVE_VAULT, GIT_EXE, HANDOFFS_DIR, LUCIUS_AUDITS, REPO_ROOT,
+    RUDY_DATA, RUDY_LOGS,
 )
 
 COORD_DIR = RUDY_DATA / "coordination"
@@ -263,8 +264,21 @@ class SituationalAwareness:
 
     Robin should be able to wake up with zero instructions and figure out
     what matters by reading the room — git log, Lucius findings, system
-    health, coordination state, open PRs, stale files.
+    health, coordination state, open PRs, stale files, and the vault.
     """
+
+    # Key vault documents Robin should read for grounding and context.
+    # Paths relative to BATCAVE_VAULT. Ordered by importance.
+    # The mission doc grounds Robin's identity. Standing orders are law.
+    # Session log and ops log give recent history. Trackers show gaps.
+    VAULT_KEY_DOCS = [
+        ("mission", "Architecture/Mission.md"),
+        ("standing_orders", "Directives/Standing-Orders.md"),
+        ("session_log", "Briefings/Alfred-Session-Log.md"),
+        ("robin_ops_log", "Briefings/Robin-Operations-Log.md"),
+        ("gap_closers", "Trackers/Gap-Closers.md"),
+        ("improvement_log", "Trackers/Improvement-Log.md"),
+    ]
 
     def gather(self) -> dict:
         """Collect all available signals into a single state dict."""
@@ -282,6 +296,7 @@ class SituationalAwareness:
             ("open_prs", self._open_pull_requests),
             ("robin_health", self._robin_system_health),
             ("coordination", self._coordination_state),
+            ("vault", self._vault_key_documents),
         ]:
             try:
                 state["signals"][name] = fn()
@@ -358,6 +373,37 @@ class SituationalAwareness:
             lines.append("SYSTEM HEALTH: DEGRADED")
             for item in health.get("degraded_items", []):
                 lines.append(f"  - {item}")
+            lines.append("")
+
+        # Vault — institutional memory
+        vault = signals.get("vault", {})
+        if vault.get("available"):
+            # Mission is Robin's identity grounding — always include
+            if vault.get("mission"):
+                lines.append("BATCAVE MISSION (from vault):")
+                lines.append(f"  {vault['mission'][:500]}")
+                lines.append("")
+            # Standing orders are law
+            if vault.get("standing_orders"):
+                lines.append("STANDING ORDERS (from vault):")
+                lines.append(f"  {vault['standing_orders'][:400]}")
+                lines.append("")
+            # Recent session history (tail of Alfred's session log)
+            if vault.get("recent_session_history"):
+                lines.append("RECENT SESSION HISTORY (from vault):")
+                lines.append(f"  {vault['recent_session_history'][:600]}")
+                lines.append("")
+            # Tracked gaps and improvements
+            if vault.get("gap_closers"):
+                lines.append("GAP CLOSERS TRACKER (from vault):")
+                lines.append(f"  {vault['gap_closers'][:400]}")
+                lines.append("")
+            if vault.get("improvement_log"):
+                lines.append("IMPROVEMENT LOG (from vault):")
+                lines.append(f"  {vault['improvement_log'][:400]}")
+                lines.append("")
+        elif vault.get("error"):
+            lines.append(f"VAULT: unavailable ({vault['error']})")
             lines.append("")
 
         # Coordination
@@ -466,7 +512,7 @@ class SituationalAwareness:
                 "Authorization": f"Bearer {pat}",
                 "Accept": "application/vnd.github.v3+json",
             })
-            with urllib.request.urlopen(req, timeout=15) as resp:
+            with urllib.request.urlopen(req, timeout=15) as resp:  # nosec B310 — GitHub API
                 prs = json.loads(resp.read())
             return {
                 "count": len(prs),
@@ -525,6 +571,75 @@ class SituationalAwareness:
         if robin_inbox_count:
             result["unread_robin_inbox"] = robin_inbox_count
         return result
+
+    def _vault_key_documents(self) -> dict:
+        """Read key BatcaveVault documents for institutional memory.
+
+        The vault is Robin's persistent memory — mission, standing orders,
+        session history, and trackers. Robin reads it the same way a deputy
+        reads the team's shared drive when they come on shift.
+
+        Note: BATCAVE_VAULT is per-Oracle (gitignored). If the vault
+        doesn't exist on this Oracle, Robin operates without it — degraded
+        but functional, like every other signal in SituationalAwareness.
+        """
+        if not BATCAVE_VAULT.exists():
+            return {"available": False, "error": "vault directory missing"}
+
+        result = {"available": True}
+
+        for key, rel_path in self.VAULT_KEY_DOCS:
+            filepath = BATCAVE_VAULT / rel_path
+            if not filepath.exists():
+                continue
+            try:
+                content = filepath.read_text(encoding="utf-8")
+                if key == "session_log":
+                    # Session log grows — only include the last ~2000 chars
+                    # (most recent sessions) to keep context manageable.
+                    result["recent_session_history"] = content[-2000:]
+                elif key == "mission":
+                    # Extract the core mission, skip the ASCII art stack
+                    # diagram that Ollama doesn't need.
+                    result["mission"] = self._extract_mission_core(content)
+                else:
+                    result[key] = content[:1500]
+            except Exception as e:
+                log.debug("[SitAware] vault %s unreadable: %s", key, e)
+
+        # Semantic search bonus: if ChromaDB has a vault collection indexed,
+        # pull the most relevant chunks for "current priorities and gaps".
+        try:
+            from rudy.knowledge_base import KnowledgeBase
+            kb = KnowledgeBase()
+            if kb._collection_exists("vault"):
+                hits = kb.search(
+                    "current priorities gaps improvements needed",
+                    collection="vault", n_results=3,
+                )
+                if hits:
+                    result["semantic_context"] = [
+                        f"[{h['source']}] {h['text'][:200]}" for h in hits
+                    ]
+        except Exception:
+            pass  # ChromaDB/sentence-transformers not available — fine
+
+        return result
+
+    @staticmethod
+    def _extract_mission_core(mission_text: str) -> str:
+        """Extract the narrative core from Mission.md, skip diagrams."""
+        lines = mission_text.splitlines()
+        core_lines = []
+        skip_code_block = False
+        for line in lines:
+            if line.strip().startswith("```"):
+                skip_code_block = not skip_code_block
+                continue
+            if skip_code_block:
+                continue
+            core_lines.append(line)
+        return "\n".join(core_lines).strip()[:800]
 
 
 # ---------------------------------------------------------------------------
@@ -649,7 +764,7 @@ pr_review, finding_fix, health_check"""
                 "http://localhost:11434/api/generate",
                 data=data, headers={"Content-Type": "application/json"},
             )
-            with urllib.request.urlopen(req, timeout=90) as resp:
+            with urllib.request.urlopen(req, timeout=90) as resp:  # nosec B310 — localhost Ollama
                 result = json.loads(resp.read().decode())
 
             response_text = result.get("response", "").strip()
@@ -973,7 +1088,7 @@ class AutonomyEngine:
             import urllib.request
             data = json.dumps({"model": self._get_model(), "prompt": prompt, "stream": False}).encode()
             req = urllib.request.Request("http://localhost:11434/api/generate", data=data, headers={"Content-Type": "application/json"})
-            with urllib.request.urlopen(req, timeout=120) as resp:
+            with urllib.request.urlopen(req, timeout=120) as resp:  # nosec B310 — localhost Ollama
                 result = json.loads(resp.read().decode())
             return {"success": True, "summary": result.get("response", "")[:500], "total_steps": 1}
         except Exception as e:
