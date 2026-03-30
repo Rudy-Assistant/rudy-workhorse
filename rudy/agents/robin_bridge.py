@@ -62,8 +62,8 @@ log = logging.getLogger("robin_bridge")
 ALFRED_REPO = "Rudy-Assistant/rudy-workhorse"
 TASKS_PATH = "docs/robin-tasks"
 POLL_INTERVAL = 300  # 5 minutes
-HOME = Path(os.environ.get("USERPROFILE", os.path.expanduser("~")))
-BRIDGE_LOG = HOME / "Desktop" / "rudy-logs" / "robin-bridge.log"
+from rudy.paths import REPO_ROOT, RUDY_LOGS  # noqa: E402
+BRIDGE_LOG = RUDY_LOGS / "robin-bridge.log"
 
 def _get_github_token() -> str:
     """Retrieve GitHub PAT from keyring or environment."""
@@ -79,7 +79,8 @@ def _get_github_token() -> str:
         return token
 
     # Fall back to .env file
-    env_file = HOME / "Desktop" / "rudy-data" / ".env"
+    from rudy.paths import RUDY_DATA
+    env_file = RUDY_DATA / ".env"
     if env_file.exists():
         for line in env_file.read_text().splitlines():
             if line.startswith("GITHUB_TOKEN=") or line.startswith("GITHUB_PERSONAL_ACCESS_TOKEN="):
@@ -314,8 +315,8 @@ class RobinBridge:
             # Find MCP config locations
             mcp_configs = [
                 Path(os.environ.get("APPDATA", "")) / "Claude" / "claude_desktop_config.json",
-                HOME / ".claude" / "mcp.json",
-                HOME / "Desktop" / "rudy-workhorse" / ".claude" / "mcp.json",
+                Path.home() / ".claude" / "mcp.json",
+                REPO_ROOT / ".claude" / "mcp.json",
             ]
 
             configured = []

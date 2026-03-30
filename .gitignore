@@ -108,3 +108,7 @@ rudy-data/alfred-inbox/
 rudy-data/robin-inbox/
 rudy-data/coordination/robin-status.json
 rudy-data/environment-profile.json
+
+# BatcaveVault — each Oracle's local memory (NEVER push to repo)
+vault/
+!vault/README.md

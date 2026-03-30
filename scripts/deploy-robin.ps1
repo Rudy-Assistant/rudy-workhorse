@@ -17,9 +17,11 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$RudyRoot = "$env:USERPROFILE\Desktop\rudy-workhorse"
-$RudyData = "$env:USERPROFILE\Desktop\rudy-data"
-$RudyLogs = "$env:USERPROFILE\Desktop\rudy-logs"
+
+# Dynamic path resolution: repo root is parent of scripts/ directory
+$RudyRoot = if ($PSScriptRoot) { (Resolve-Path "$PSScriptRoot\..").Path } else { "$env:USERPROFILE\Desktop\rudy-workhorse" }
+$RudyData = (Split-Path $RudyRoot -Parent) + "\rudy-data"
+$RudyLogs = (Split-Path $RudyRoot -Parent) + "\rudy-logs"
 
 Write-Host "=== ROBIN DEPLOYMENT ===" -ForegroundColor Cyan
 Write-Host "Oracle: $env:COMPUTERNAME" -ForegroundColor Gray
@@ -77,7 +79,8 @@ if ($missing.Count -gt 0) {
 # ---------------------------------------------------------------------------
 Write-Host "[3/6] Ensuring data directories..." -ForegroundColor Yellow
 
-foreach ($dir in @($RudyData, $RudyLogs, "$env:USERPROFILE\Desktop\rudy-commands")) {
+$RudyCommands = (Split-Path $RudyRoot -Parent) + "\rudy-commands"
+foreach ($dir in @($RudyData, $RudyLogs, $RudyCommands)) {
     if (-not (Test-Path $dir)) {
         New-Item -ItemType Directory -Path $dir -Force | Out-Null
         Write-Host "  Created: $dir" -ForegroundColor Green

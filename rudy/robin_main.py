@@ -31,19 +31,18 @@ from pathlib import Path
 from typing import Optional
 
 # ---------------------------------------------------------------------------
-# Paths
+# Paths (canonical — all from rudy.paths)
 # ---------------------------------------------------------------------------
 
-HOME = Path(os.environ.get("USERPROFILE", os.path.expanduser("~")))
-DESKTOP = HOME / "Desktop"
-RUDY_ROOT = DESKTOP / "rudy-workhorse"
-RUDY_DATA = DESKTOP / "rudy-data"
-RUDY_LOGS = DESKTOP / "rudy-logs"
-RUDY_CONFIG = RUDY_DATA / "robin-config.json"
-ROBIN_STATE = RUDY_DATA / "robin-state.json"
-
-for d in [RUDY_DATA, RUDY_LOGS]:
-    d.mkdir(parents=True, exist_ok=True)
+from rudy.paths import (  # noqa: E402
+    REPO_ROOT as RUDY_ROOT,
+    RUDY_DATA,
+    RUDY_LOGS,
+    ROBIN_CONFIG as RUDY_CONFIG,
+    ROBIN_STATE,
+    ROBIN_INBOX,
+    HOME,
+)
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -732,8 +731,8 @@ def _run_nightwatch() -> None:
                 # Also check for high-priority Alfred messages
                 _has_urgent = False
                 try:
-                    from pathlib import Path as _P
-                    _robin_inbox = _P(r"C:\Users\ccimi\Desktop\rudy-data\robin-inbox")
+                    from rudy.paths import ROBIN_INBOX as _robin_inbox_path
+                    _robin_inbox = _robin_inbox_path
                     for _mf in _robin_inbox.glob("*.json"):
                         try:
                             import json as _j

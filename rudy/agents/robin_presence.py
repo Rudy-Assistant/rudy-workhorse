@@ -39,13 +39,12 @@ from typing import Optional
 # Paths
 # ---------------------------------------------------------------------------
 
-HOME = Path(os.environ.get("USERPROFILE", os.path.expanduser("~")))
-DESKTOP = HOME / "Desktop"
-RUDY_DATA = DESKTOP / "rudy-data"
-RUDY_LOGS = DESKTOP / "rudy-logs"
+from rudy.paths import DESKTOP, RUDY_DATA, RUDY_LOGS  # noqa: E402
+
 PRESENCE_STATE = RUDY_DATA / "robin-presence.json"
 HANDOFF_LOG = RUDY_LOGS / "robin-handoff.log"
 COWORK_MARKER = RUDY_LOGS / "last-cowork-activity.txt"
+COMMANDS_DIR = DESKTOP / "rudy-commands"
 
 for d in [RUDY_DATA, RUDY_LOGS]:
     d.mkdir(parents=True, exist_ok=True)
@@ -198,9 +197,8 @@ class CoworkDetector:
                 return True
 
         # Check for recent command dispatches
-        commands_dir = DESKTOP / "rudy-commands"
-        if commands_dir.exists():
-            for f in commands_dir.iterdir():
+        if COMMANDS_DIR.exists():
+            for f in COMMANDS_DIR.iterdir():
                 if f.suffix in (".py", ".ps1"):
                     age_minutes = (
                         datetime.now() - datetime.fromtimestamp(f.stat().st_mtime)

@@ -10,16 +10,19 @@
 #>
 
 $ErrorActionPreference = "Stop"
-$RudyRoot = "$env:USERPROFILE\Desktop\rudy-workhorse"
-$RudyData = "$env:USERPROFILE\Desktop\rudy-data"
-$RudyLogs = "$env:USERPROFILE\Desktop\rudy-logs"
+
+# Dynamic path resolution: repo root is parent of scripts/ directory
+$RudyRoot = if ($PSScriptRoot) { (Resolve-Path "$PSScriptRoot\..").Path } else { "$env:USERPROFILE\Desktop\rudy-workhorse" }
+$RudyData = (Split-Path $RudyRoot -Parent) + "\rudy-data"
+$RudyLogs = (Split-Path $RudyRoot -Parent) + "\rudy-logs"
 $SecretsFile = "$RudyData\robin-secrets.json"
 
 Write-Host "`n=== ROBIN GO ===" -ForegroundColor Cyan
 Write-Host "Oracle: $env:COMPUTERNAME | $(Get-Date -Format 'yyyy-MM-dd HH:mm')" -ForegroundColor Gray
 
 # --- Step 1: Ensure directories ---
-foreach ($dir in @($RudyData, $RudyLogs, "$env:USERPROFILE\Desktop\rudy-commands")) {
+$RudyCommands = (Split-Path $RudyRoot -Parent) + "\rudy-commands"
+foreach ($dir in @($RudyData, $RudyLogs, $RudyCommands)) {
     if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
 }
 
@@ -33,7 +36,8 @@ if (Test-Path $RudyRoot) {
     Write-Host "  OK" -ForegroundColor Green
 } else {
     Write-Host "  Cloning rudy-workhorse..." -ForegroundColor Yellow
-    Push-Location "$env:USERPROFILE\Desktop"
+    $cloneParent = Split-Path $RudyRoot -Parent
+    Push-Location $cloneParent
     git clone https://github.com/Rudy-Assistant/rudy-workhorse.git 2>&1
     Pop-Location
     Write-Host "  OK" -ForegroundColor Green

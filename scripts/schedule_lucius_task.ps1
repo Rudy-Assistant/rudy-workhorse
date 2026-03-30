@@ -1,9 +1,15 @@
-﻿# Run this script as Administrator to schedule Lucius Fox weekly audit
+# Run this script as Administrator to schedule Lucius Fox weekly audit
 # Usage: Right-click PowerShell -> Run as Administrator -> .\schedule_lucius_task.ps1
+#
+# Portable: resolves paths from this script's location.
 
 $taskName = "BatFamily\LuciusFoxAudit"
-$pythonPath = "C:\Python312\python.exe"
-$scriptPath = "C:\Users\ccimi\Desktop\rudy-workhorse\scripts\run_lucius_audit.py"
+$RudyRoot = if ($PSScriptRoot) { (Resolve-Path "$PSScriptRoot\..").Path } else { "$env:USERPROFILE\Desktop\rudy-workhorse" }
+$scriptPath = "$RudyRoot\scripts\run_lucius_audit.py"
+
+# Find Python dynamically
+$pythonPath = (Get-Command python -ErrorAction SilentlyContinue).Source
+if (-not $pythonPath) { $pythonPath = "C:\Python312\python.exe" }
 
 # Remove existing if present
 Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue
