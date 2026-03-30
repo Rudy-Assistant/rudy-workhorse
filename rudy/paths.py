@@ -74,11 +74,14 @@ HANDOFFS_DIR = RUDY_DATA / "handoffs"
 # BatcaveVault: local Obsidian memory vault (gitignored, per-Oracle)
 BATCAVE_VAULT = REPO_ROOT / "vault"
 
+# Vault Handoffs: canonical handoff location inside Obsidian (most-used folder)
+VAULT_HANDOFFS = BATCAVE_VAULT / "Handoffs"
+
 # ---------------------------------------------------------------------------
 # Ensure critical directories exist at import time
 # ---------------------------------------------------------------------------
 
-for _d in [RUDY_DATA, RUDY_LOGS, RUDY_COMMANDS, ROBIN_INBOX, SCREENSHOT_DIR, LUCIUS_AUDITS, HANDOFFS_DIR, BATCAVE_VAULT]:
+for _d in [RUDY_DATA, RUDY_LOGS, RUDY_COMMANDS, ROBIN_INBOX, SCREENSHOT_DIR, LUCIUS_AUDITS, HANDOFFS_DIR, BATCAVE_VAULT, VAULT_HANDOFFS]:
     _d.mkdir(parents=True, exist_ok=True)
 
 # Scaffold BatcaveVault Home.md if missing (per-Oracle, gitignored)

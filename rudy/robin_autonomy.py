@@ -278,6 +278,7 @@ class SituationalAwareness:
         ("robin_ops_log", "Briefings/Robin-Operations-Log.md"),
         ("gap_closers", "Trackers/Gap-Closers.md"),
         ("improvement_log", "Trackers/Improvement-Log.md"),
+        # Handoffs/ is the most-used vault folder — latest handoff read separately
     ]
 
     def gather(self) -> dict:
@@ -463,14 +464,30 @@ class SituationalAwareness:
             return {"state": "unreadable"}
 
     def _latest_handoff(self) -> dict:
-        """Check for the latest handoff brief — but don't require it."""
-        sidecars = sorted(HANDOFFS_DIR.glob("session-*-handoff.json"), reverse=True)
+        """Check for the latest handoff brief — vault/Handoffs/ first, then rudy-data.
+
+        The canonical handoff location is vault/Handoffs/ (inside Obsidian).
+        Falls back to rudy-data/handoffs/ for backward compatibility.
+        """
+        # Check vault/Handoffs/ first (canonical location)
+        vault_handoffs = BATCAVE_VAULT / "Handoffs"
+        sidecars = []
+        if vault_handoffs.exists():
+            sidecars = sorted(
+                vault_handoffs.glob("Session-*-Handoff.json"), reverse=True
+            )
+        # Fallback to legacy rudy-data/handoffs/
+        if not sidecars:
+            sidecars = sorted(
+                HANDOFFS_DIR.glob("session-*-handoff.json"), reverse=True
+            )
         if not sidecars:
             return {"has_handoff": False}
         try:
             data = json.loads(sidecars[0].read_text(encoding="utf-8"))
             return {
                 "has_handoff": True,
+                "source": str(sidecars[0].parent.name),
                 "session_number": data.get("session_number"),
                 "context_estimate": data.get("context_estimate"),
                 "priorities": data.get("next_priorities", []),
