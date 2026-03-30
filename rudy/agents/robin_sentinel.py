@@ -1,3 +1,10 @@
+# CONSOLIDATION NOTE (2026-03-29T16:50:24.074430):
+# This file is the Batcave boot resilience and NightShift module.
+# The passive SentinelObserver class has been moved to rudy/agents/sentinel.py.
+# This file is kept separate because boot resilience (832 lines) is a distinct concern
+# from the Sentinel's awareness scanning (993 lines).
+# Imported by: robin_main.py (run_boot_sequence), robin_presence.py (run_night_shift)
+
 #!/usr/bin/env python3
 
 """

@@ -990,3 +990,122 @@ class Sentinel(AgentBase):
             return
 
         # Clean up any stale lock files
+
+
+# ============================================================
+# SentinelObserver - Merged from rudy/robin_sentinel.py
+# Consolidation date: 2026-03-29T16:50:24.074430
+# Original: Passive environmental observer for Robin nightwatch
+# ============================================================
+
+class SentinelObserver:
+    """
+    Passive environmental observer - runs on EVERY Robin cycle.
+    
+    Merged into sentinel.py from rudy/robin_sentinel.py per Lucius Fox
+    audit finding (triple sentinel duplication).
+    
+    Observes friction signals in three categories:
+    - Environment health (disk, processes, services)
+    - Coordination gaps (stale messages, silence)
+    - Code quality (errors, deprecations)
+    
+    Does NOT take action. Reports observations for InitiativeEngine.
+    """
+    
+    MAX_OBSERVATIONS = 500
+    
+    def __init__(self):
+        self.observations_file = LOGS_DIR / "sentinel-observations-passive.json"
+        self.observations = self._load()
+    
+    def _load(self):
+        if self.observations_file.exists():
+            try:
+                with open(self.observations_file, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except Exception:
+                return []
+        return []
+    
+    def _save(self):
+        # Trim to max
+        if len(self.observations) > self.MAX_OBSERVATIONS:
+            self.observations = self.observations[-self.MAX_OBSERVATIONS:]
+        with open(self.observations_file, "w", encoding="utf-8") as f:
+            json.dump(self.observations, f, indent=2, ensure_ascii=False)
+    
+    def _record(self, category, signal, details=""):
+        self.observations.append({
+            "timestamp": datetime.now().isoformat(),
+            "category": category,
+            "signal": signal,
+            "details": details
+        })
+    
+    def observe(self):
+        """Run all passive observation checks."""
+        self._observe_environment()
+        self._observe_coordination()
+        self._observe_code_quality()
+        self._save()
+        return self.observations[-10:]  # Return recent
+    
+    def _observe_environment(self):
+        """Check disk, process count, service health."""
+        import shutil
+        # Disk check
+        try:
+            usage = shutil.disk_usage("C:\\")
+            free_pct = (usage.free / usage.total) * 100
+            if free_pct < 10:
+                self._record("env_health", "low_disk", f"Only {free_pct:.1f}% free")
+        except Exception:
+            pass
+        
+        # Log file sizes
+        for log_file in LOGS_DIR.glob("*.log"):
+            try:
+                size_mb = log_file.stat().st_size / (1024 * 1024)
+                if size_mb > 50:
+                    self._record("env_health", "large_log", f"{log_file.name}: {size_mb:.1f}MB")
+            except Exception:
+                pass
+    
+    def _observe_coordination(self):
+        """Check inbox freshness, stale messages."""
+        coord_dir = DESKTOP / "rudy-data"
+        alfred_inbox = coord_dir / "alfred-inbox"
+        robin_inbox = coord_dir / "robin-inbox"
+        
+        # Check for stale directives in robin-inbox
+        for f in robin_inbox.glob("*.json"):
+            try:
+                age_hours = (datetime.now().timestamp() - f.stat().st_mtime) / 3600
+                if age_hours > 1:
+                    self._record("coordination", "stale_directive", f"{f.name}: {age_hours:.1f}h old")
+            except Exception:
+                pass
+    
+    def _observe_code_quality(self):
+        """Check for error patterns in recent logs."""
+        for log_file in LOGS_DIR.glob("*.log"):
+            try:
+                with open(log_file, "r", encoding="utf-8", errors="ignore") as f:
+                    lines = f.readlines()
+                # Check last 50 lines for errors
+                for line in lines[-50:]:
+                    if "ERROR" in line or "CRITICAL" in line:
+                        self._record("code_quality", "error_in_log", f"{log_file.name}: {line.strip()[:100]}")
+                        break  # One per file is enough
+            except Exception:
+                pass
+    
+    def get_priority_boost(self, area):
+        """Return priority boost for an area based on recent observations."""
+        recent = [o for o in self.observations[-50:] if o.get("category") == area]
+        if len(recent) > 5:
+            return 2  # High friction
+        elif len(recent) > 2:
+            return 1  # Some friction
+        return 0
