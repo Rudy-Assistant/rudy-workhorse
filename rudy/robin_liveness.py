@@ -35,10 +35,14 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from rudy.paths import REPO_ROOT, RUDY_DATA, RUDY_LOGS
+from rudy.paths import REPO_ROOT, RUDY_DATA, RUDY_LOGS, ROBIN_STATE
 
 COORD_DIR = RUDY_DATA / "coordination"
-STATUS_FILE = COORD_DIR / "robin-status.json"
+# Robin writes state to ROBIN_STATE (rudy-data/robin-state.json) from robin_main.py
+# The alfred_protocol writes a separate robin-status.json in coordination/
+# We check BOTH — ROBIN_STATE is the primary heartbeat source
+STATUS_FILE = ROBIN_STATE
+COORD_STATUS_FILE = COORD_DIR / "robin-status.json"
 LIVENESS_LOG = RUDY_LOGS / "robin-liveness.log"
 
 # How long before we consider Robin's heartbeat stale
@@ -134,25 +138,39 @@ def check_status() -> dict:
         "checked_at": datetime.now().isoformat(),
     }
 
-    # Read status file
-    try:
-        with open(STATUS_FILE) as f:
-            status = json.load(f)
-        result["pid"] = status.get("pid", 0)
-        result["status_state"] = status.get("state", "unknown")
+    # Read status file — try both locations (robin-state.json primary,
+    # coordination/robin-status.json fallback from alfred_protocol)
+    status = None
+    for candidate in [STATUS_FILE, COORD_STATUS_FILE]:
+        try:
+            with open(candidate) as f:
+                status = json.load(f)
+            break
+        except (FileNotFoundError, json.JSONDecodeError):
+            continue
 
-        # Check heartbeat freshness
-        updated = status.get("updated_at", "")
-        if updated:
-            try:
-                last_beat = datetime.fromisoformat(updated)
-                age = (datetime.now() - last_beat).total_seconds()
-                result["heartbeat_age_seconds"] = age
-            except (ValueError, TypeError):
-                pass
-    except (FileNotFoundError, json.JSONDecodeError):
-        result["details"] = "No robin-status.json found"
+    if status is None:
+        result["details"] = "No robin state file found"
+        # Still check for running processes before giving up
+        robin_pids = _find_robin_processes()
+        if robin_pids:
+            result["alive"] = True
+            result["pid"] = robin_pids[0]
+            result["details"] = f"Robin running (PID {robin_pids}) but no state file"
         return result
+
+    result["pid"] = status.get("pid", 0)
+    result["status_state"] = status.get("state", "unknown")
+
+    # Check heartbeat freshness
+    updated = status.get("updated_at", status.get("last_heartbeat", ""))
+    if updated:
+        try:
+            last_beat = datetime.fromisoformat(updated)
+            age = (datetime.now() - last_beat).total_seconds()
+            result["heartbeat_age_seconds"] = age
+        except (ValueError, TypeError):
+            pass
 
     # Check if PID is alive
     pid = result["pid"]
