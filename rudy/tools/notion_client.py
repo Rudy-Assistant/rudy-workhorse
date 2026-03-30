@@ -26,6 +26,7 @@ import os
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
+from rudy.paths import RUDY_DATA
 
 try:
     import keyring
@@ -66,8 +67,8 @@ def _get_notion_token() -> str:
     if token:
         return token
 
-    # Fall back to .env
-    env_file = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop" / "rudy-data" / ".env"
+    # Fall back to .env in canonical data directory
+    env_file = RUDY_DATA / ".env"
     if env_file.exists():
         for line in env_file.read_text().splitlines():
             if line.startswith("NOTION_TOKEN=") or line.startswith("NOTION_INTEGRATION_TOKEN="):
