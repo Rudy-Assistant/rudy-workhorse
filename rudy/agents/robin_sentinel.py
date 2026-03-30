@@ -53,11 +53,13 @@ from typing import Any, Optional
 # Paths
 # ---------------------------------------------------------------------------
 
-HOME = Path(os.environ.get("USERPROFILE", os.path.expanduser("~")))
-DESKTOP = HOME / "Desktop"
-RUDY_DATA = DESKTOP / "rudy-data"
-RUDY_LOGS = DESKTOP / "rudy-logs"
-RUDY_COMMANDS = DESKTOP / "rudy-commands"
+from rudy.paths import (  # noqa: E402
+    HOME,
+    REPO_ROOT as RUDY_ROOT,
+    RUDY_DATA,
+    RUDY_LOGS,
+    RUDY_COMMANDS,
+)
 KNOWN_GOOD_STATE = RUDY_DATA / "known-good-state.json"
 ESCALATION_LOG = RUDY_DATA / "robin-escalation.log"
 IMMUNE_MEMORY = RUDY_DATA / "robin-immune-memory.json"
@@ -580,7 +582,7 @@ class NightShift:
 
     def _run_code_quality(self) -> dict:
         """Run basic code quality checks on rudy-workhorse."""
-        rudy_dir = DESKTOP / "rudy"
+        rudy_dir = RUDY_ROOT / "rudy"
         if not rudy_dir.exists():
             return {"status": "rudy_dir_not_found"}
 

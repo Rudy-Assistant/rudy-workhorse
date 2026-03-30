@@ -48,7 +48,7 @@ MAX_TEXT_LENGTH = 8000
 DEFAULT_TIMEOUT_MS = 30000
 
 # Screenshot save location
-SCREENSHOT_DIR = Path(r"C:\Users\ccimi\Desktop\rudy-logs\screenshots")
+from rudy.paths import SCREENSHOT_DIR  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Result dataclass

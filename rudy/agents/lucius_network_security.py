@@ -521,8 +521,8 @@ if __name__ == "__main__":
         print()
 
     # Save findings
-    import pathlib
-    out = pathlib.Path(r"C:\Users\ccimi\Desktop\rudy-data\lucius-audits")
+    from rudy.paths import LUCIUS_AUDITS
+    out = LUCIUS_AUDITS
     out.mkdir(parents=True, exist_ok=True)
     ts = time.strftime("%Y%m%d-%H%M%S")
     outfile = out / f"network-security-{ts}.json"

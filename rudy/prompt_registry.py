@@ -20,8 +20,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 
-DESKTOP = Path(os.environ.get("USERPROFILE", "C:/Users/ccimi")) / "Desktop"
-REGISTRY_DIR = DESKTOP / "rudy-data" / "prompt-registry"
+from rudy.paths import RUDY_DATA  # noqa: E402
+REGISTRY_DIR = RUDY_DATA / "prompt-registry"
 
 
 class PromptRegistry:

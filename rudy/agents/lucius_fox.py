@@ -35,16 +35,17 @@ import os
 
 from datetime import datetime
 from pathlib import Path
-from . import AgentBase, DESKTOP, LOGS_DIR
+from rudy.paths import REPO_ROOT, RUDY_DATA, RUDY_LOGS, DESKTOP
+from . import AgentBase, LOGS_DIR
 
 class LuciusFox(AgentBase):
     name = "lucius-fox"
     version = "1.0"
 
-    REVIEWS_DIR = DESKTOP / "rudy-data" / "lucius-reviews"
-    AUDIT_DIR = DESKTOP / "rudy-data" / "lucius-audits"
-    CODEBASE_ROOT = DESKTOP / "rudy-workhorse"
-    RUDY_PKG = CODEBASE_ROOT / "rudy"
+    REVIEWS_DIR = RUDY_DATA / "lucius-reviews"
+    AUDIT_DIR = RUDY_DATA / "lucius-audits"
+    CODEBASE_ROOT = REPO_ROOT
+    RUDY_PKG = REPO_ROOT / "rudy"
 
     # Known agent modules (the "Bat Family" roster)
     KNOWN_AGENTS = [

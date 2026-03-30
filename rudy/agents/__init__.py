@@ -16,13 +16,13 @@ import time
 import traceback as tb_module
 from datetime import datetime
 from pathlib import Path
+from rudy.paths import RUDY_LOGS
 
-DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
-LOGS_DIR = DESKTOP / "rudy-logs"
+LOGS_DIR = RUDY_LOGS
 LOGS_DIR.mkdir(exist_ok=True)
 
 # Add rudy package to path
-sys.path.insert(0, str(DESKTOP))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 
 class AgentBase:

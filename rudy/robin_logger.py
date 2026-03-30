@@ -30,8 +30,9 @@ NOTION_VERSION = "2022-06-28"
 
 def _get_notion_token() -> Optional[str]:
     """Get Notion token from robin-secrets.json or environment."""
+    from rudy.paths import RUDY_DATA
     # Try robin-secrets.json first
-    secrets_path = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop" / "rudy-data" / "robin-secrets.json"
+    secrets_path = RUDY_DATA / "robin-secrets.json"
     if secrets_path.exists():
         try:
             with open(secrets_path) as f:
@@ -73,7 +74,8 @@ def _notion_request(method: str, path: str, token: str, data: dict = None) -> di
         return json.loads(resp.read().decode())
 
 
-LOCAL_LOG_DIR = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop" / "rudy-logs"
+from rudy.paths import RUDY_LOGS
+LOCAL_LOG_DIR = RUDY_LOGS
 LOCAL_LOG_DIR.mkdir(parents=True, exist_ok=True)
 
 

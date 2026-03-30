@@ -27,7 +27,7 @@ from flask import Flask, request, jsonify, Response, stream_with_context
 # ---------------------------------------------------------------------------
 # Config
 # ---------------------------------------------------------------------------
-RUDY_DATA = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop" / "rudy-data"
+from rudy.paths import RUDY_DATA  # noqa: E402
 SECRETS_FILE = RUDY_DATA / "robin-secrets.json"
 CHAT_LOG_DIR = RUDY_DATA / "chat-logs"
 CHAT_LOG_DIR.mkdir(parents=True, exist_ok=True)

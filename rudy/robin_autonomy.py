@@ -46,10 +46,8 @@ log = logging.getLogger("robin_autonomy")
 # Paths
 # ---------------------------------------------------------------------------
 
-HOME = Path(os.environ.get("USERPROFILE", os.path.expanduser("~")))
-DESKTOP = HOME / "Desktop"
-RUDY_DATA = DESKTOP / "rudy-data"
-RUDY_LOGS = DESKTOP / "rudy-logs"
+from rudy.paths import REPO_ROOT, RUDY_DATA, RUDY_LOGS  # noqa: E402
+
 COORD_DIR = RUDY_DATA / "coordination"
 ALFRED_INBOX = RUDY_DATA / "alfred-inbox"
 ROBIN_INBOX = RUDY_DATA / "robin-inbox"
@@ -368,7 +366,7 @@ class InitiativeEngine:
         return {"needs_work": False}
 
     def _assess_codebase(self):
-        rudy_dir = DESKTOP / "rudy-workhorse" / "rudy"
+        rudy_dir = REPO_ROOT / "rudy"
         if not rudy_dir.exists():
             return {"needs_work": False}
         return {"needs_work": True, "action": "git_status_and_quality",
@@ -520,7 +518,7 @@ class AutonomyEngine:
             "ping_alfred": None,
             "review_unanswered_messages": None,
             "system_health_check": "Run a system health check: CPU usage, RAM usage, disk free space, Ollama status (curl localhost:11434/api/tags), and report any concerns.",
-            "git_status_and_quality": "Check git status of C:\\Users\\ccimi\\Desktop\\rudy-workhorse. Report uncommitted changes, current branch, and any files that look problematic.",
+            "git_status_and_quality": f"Check git status of {REPO_ROOT}. Report uncommitted changes, current branch, and any files that look problematic.",
             "research_improvements": "Analyze the current Batcave architecture (robin_main.py, robin_agent.py, robin_presence.py, robin_autonomy.py, robin_alfred_protocol.py). Identify the single highest-impact improvement. Write a brief proposal to rudy-data/improvement-proposal.txt",
             "update_documentation": "Review rudy-workhorse/rudy/ and write an updated architecture summary to rudy-data/architecture-summary.txt covering the current state of all modules.",
             "run_health_check": "Run a quick health check: verify Ollama is responding, disk space is adequate, and no Python processes are consuming excessive memory.",

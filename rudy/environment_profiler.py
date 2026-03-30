@@ -51,7 +51,12 @@ logger = logging.getLogger("batcave.environment_profiler")
 # Configuration
 # ---------------------------------------------------------------------------
 
-PROFILE_OUTPUT = Path(__file__).resolve().parent.parent / "rudy-data" / "environment-profile.json"
+try:
+    from rudy.paths import ENVIRONMENT_PROFILE
+    PROFILE_OUTPUT = ENVIRONMENT_PROFILE
+except ImportError:
+    # Fallback if running standalone before rudy package is on sys.path
+    PROFILE_OUTPUT = Path(__file__).resolve().parent.parent / "rudy-data" / "environment-profile.json"
 OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
 
 # Model selection thresholds
