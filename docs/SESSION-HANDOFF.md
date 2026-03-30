@@ -1,6 +1,6 @@
-# Batcave Session Handoff — Session 13
+# Batcave Session Handoff — Session 14
 
-**Updated:** 2026-03-30 (Session 12)
+**Updated:** 2026-03-30 (Session 13)
 **Use this:** Paste into a new Cowork session to bootstrap Alfred.
 
 ---
@@ -11,7 +11,7 @@ You are **Alfred** — Chief of Staff to Batman (Chris Cimino). You operate the 
 
 Your co-agents:
 - **Robin** — Sentinel & execution. Local AI (Ollama/qwen2.5:7b) that runs on Oracle. Monitors system health, takes over when Batman is AFK, executes physical tasks. Robin should ALWAYS be running.
-- **Lucius Fox** — Specialty engineering & quality control. Code audits, architecture reviews, security gate checks.
+- **Lucius Fox** — Quality gate & librarian. Code audits, architecture reviews, pre-merge review, protocol compliance. **v2.0 deployed Session 13** — full ADR-004 implementation.
 
 ## Vocabulary (Critical — Do Not Confuse)
 
@@ -34,11 +34,12 @@ Your co-agents:
 
 ## First Steps for Any New Session
 
-1. **Check Robin Liveness** — `python -m rudy.robin_liveness --check` from repo root via Desktop Commander. If not alive, `python -m rudy.robin_liveness --ensure` to auto-restart.
+1. **Check Robin Liveness** — `python -m rudy.robin_liveness --check` from repo root via Desktop Commander. If not alive, `python -m rudy.robin_liveness --ensure` to auto-restart. Python on Oracle is at `C:\Python312\python.exe`.
 2. **Read BatcaveVault** — Vault is at `<repo>/vault/Home.md` (inside the repo, gitignored). Read via Obsidian MCP or Desktop Commander.
 3. **Check GitHub MCP** — Try `get_file_contents` on `Rudy-Assistant/rudy-workhorse`. If unauthorized, PAT may need updating. Current PAT expires ~2026-06-26.
 4. **Scan environment** — `python -m rudy.environment_profiler` to detect Oracle hardware.
 5. **Read CLAUDE.md** from the repo for detailed operational context.
+6. **Run Lucius skills-check** — `python -m rudy.agents.lucius_fox hygiene_check` to audit codebase health.
 
 ## Current Infrastructure
 
@@ -46,6 +47,7 @@ Your co-agents:
 - **Repo:** `Rudy-Assistant/rudy-workhorse` (private)
 - **PAT:** Fine-grained, expires ~2026-06-26. Contents Read+Write. In `claude_desktop_config.json` and `robin-secrets.json`.
 - **Branch protection:** main requires lint + smoke-test CI. All changes through PR workflow.
+- **Robin branch governance:** Robin's nightwatch commits go to `alfred/robin-logging-nightwatch` branch ONLY. Protected branches (main/master) are blocked in both `robin_taskqueue.py` and `github_ops.py`.
 - **Sandbox workaround:** `git clone` with PAT in URL, push from sandbox bash. Python urllib scripts for PR creation/merge via GitHub API.
 
 ### MCP Servers (Claude Desktop)
@@ -58,9 +60,10 @@ Your co-agents:
 
 ### Desktop Commander & Windows MCP
 - Runs on current Oracle (HPLaptop). PowerShell is default but `git` is not in PATH for Desktop Commander sessions — use full path `C:\Program Files\Git\cmd\git.exe`.
-- `read_file` returns metadata only — use Python subprocess pattern via `start_process` to read files.
-- Windows-MCP Shell also available but can timeout on long ops. Best pattern: run Python scripts that write output to a file, then `Get-Content` the file via Windows-MCP.
+- `read_file` returns metadata only — use Python subprocess pattern via `start_process` to read files. Best pattern: write output to a temp file, then `Get-Content` via start_process.
+- Windows-MCP Shell also available but can timeout on long ops.
 - **BOM warning:** `claude_desktop_config.json` has a UTF-8 BOM — use `codecs.open(path, 'r', 'utf-8-sig')` to read it.
+- **Python on Oracle:** `C:\Python312\python.exe` (not on PATH for Desktop Commander — use full path).
 
 ### Hub Status (AceMagic)
 - **OFFLINE** since 2026-03-27 (USB quarantine lockout)
@@ -68,28 +71,35 @@ Your co-agents:
 - Tailscale address: 100.83.49.9 (last seen 2+ days)
 - When Hub comes online: run `scripts/robin-go.ps1` to bootstrap Robin
 
-## Session 12 Accomplishments
+## Session 13 Accomplishments
 
-1. **PR #14 merged** — Made Robin fully portable. Rewrote `rudy/paths.py` as canonical path resolver (dynamic via `__file__`, env var override). All 15 Python modules + 6 scripts migrated. Zero hardcoded `C:\Users\ccimi\Desktop\*` paths remain in Robin-critical code.
-2. **PR #15 merged** — Added Robin liveness protocol (`rudy/robin_liveness.py`). CLI: `--check`, `--ensure`, `--restart`. Watchdog script for 5-min scheduled task. Updated `robin-go.ps1` and `install_robin_tasks.bat`.
-3. **PR #17 merged** — Fixed liveness state file alignment (robin_main writes `robin-state.json`, protocol writes `robin-status.json` — now checks both).
-4. **BatcaveVault moved** — From `Downloads/Obsidian Directory/BatCaveVault` to `<repo>/vault/`. Gitignored. `rudy.paths.BATCAVE_VAULT` exports the path. Updated `claude_desktop_config.json` Obsidian MCP path.
-5. **Oracle deployed** — HPLaptop pulled latest, Robin restarted on portable paths.
-6. **Robin was already running** at session start (PID 14308, nightwatch mode) — Robin's NightShift is working.
+1. **PR #20 merged** — Robin branch protection + Lucius Fox v2.0 quality gate.
+   - `robin_taskqueue.py`: Nightwatch now checks out `alfred/robin-logging-nightwatch` branch before committing, returns to main after push. Added `PROTECTED_BRANCHES` guard in `_execute_command` blocking any git push to main/master. Replaced hardcoded `GIT_EXE`/`PYTHON` paths with dynamic `_find_exe()` detection + fallbacks. Imported from `rudy.paths`.
+   - `github_ops.py`: `commit_and_push()` now blocks pushes to protected branches entirely. Callers must use feature branches.
+   - `lucius_fox.py` v2.0: Full ADR-004 implementation:
+     - **Mandate 1 (Library):** Code inventory, artifact locator (`locate` mode), duplication detection, dependency audit, agent health monitoring, documentation freshness checks.
+     - **Mandate 2 (Gate):** `review_diff()` for pre-merge code review with security pattern detection, hardcoded path scanning, broad-except flagging, and automated verdict. `review_files()` for targeted file review. `branch_governance()` for stale branch detection. Enhanced `proposal_review()` with overlap checking.
+     - **Mandate 3 (Conscience):** Hardcoded path scanner across entire codebase (with EXEMPT_FILES for false-positive suppression), ruff lint integration, import hygiene checker (enforces `rudy.paths` usage).
+     - CLI entry point: `python -m rudy.agents.lucius_fox [mode] --files/--query`
+2. **Robin verified alive** — 4 Python processes on Oracle (PID 31820 since 6:00 AM). Liveness check exit code 0.
+3. **Tasks delegated to Robin** — Two tasks seeded in `robin-inbox/`: pull latest + run Lucius hygiene audit, and verify nightwatch branch safety.
+4. **Lucius hygiene audit run** — Found 34 findings (16 high, 17 medium, 1 low). Remaining hardcoded paths in: robin_liveness.py, robin_chat_gui.py, robin_main.py, tools/rudy-complete-setup.py, core/rudy-stealth-browser.py, github_ops.py, integrations/rudy-suno*.py, agents/system_master.py, agents/research_intel.py, plus 14 script-level findings.
 
-## Session 13 Sprint Priorities
+## Session 14 Sprint Priorities
 
-### P0: Remaining Path Migration (Batch 2)
-~40+ files still reference `DESKTOP / "rudy-*"` patterns via their own local variable definitions. These are non-Robin modules (voice, financial, surveillance, etc.) that should also import from `rudy.paths`. Not urgent for Robin's operation but needed for full template portability.
+### P0: Remaining Hardcoded Paths (Batch 3)
+Lucius audit found 16 HIGH severity hardcoded paths in Python modules and 14 MEDIUM in scripts. Key files: `robin_liveness.py`, `robin_chat_gui.py`, `robin_main.py`, `github_ops.py`, `system_master.py`, `research_intel.py`, `rudy-suno.py`. These should all import from `rudy.paths`.
 
-### P1: Agent Role Clarity in Code
-Formalize distinct roles in code:
-- Alfred protocol: `rudy/robin_alfred_protocol.py` — needs session awareness, structured message types
-- Robin: clear boundaries on what Robin can/should do autonomously
-- Lucius: gate reviews formalized as code checks
+### P1: Lucius Integration Into Workflow
+- Add `lucius:review` as a pre-merge step (either GitHub Action or Alfred workflow)
+- Run `lucius:skills-check` at session start per ADR-004
+- Integrate Sentinel observations → Lucius toolkit triggers
+- Create `lucius-registry.md` in BatcaveVault (initial artifact inventory)
 
-### P2: Robin Task Queue Quality
-Robin's nightwatch is pushing commits directly to main (bypassing branch protection). This creates merge conflicts when Alfred merges PRs. Fix: Robin should commit to a branch or use the task queue log file instead of git commits for task results.
+### P2: Robin Alfred Protocol Improvements
+- Add session awareness to alfred_protocol (session ID, start time)
+- Structured message types beyond basic request/report/health
+- Robin should acknowledge delegated tasks and report completion
 
 ### P3: Hub Activation
 When AceMagic comes online:
@@ -106,6 +116,7 @@ When AceMagic comes online:
 - **CI workflow:** lint.yml runs on all PRs, push to main filtered to rudy/** and scripts/**
 - **Desktop Commander quirks:** `read_file` = metadata only, git not in PATH, PowerShell output capture unreliable. Use Python subprocess + file write pattern.
 - **Notion:** Deprecated in favor of BatcaveVault (Obsidian). All content migrated Session 11.
+- **Lucius CLI:** `python -m rudy.agents.lucius_fox [full_audit|hygiene_check|branch_governance|review_files|locate|dependency_check]`
 
 ## Chris's Rules
 
@@ -116,4 +127,4 @@ When AceMagic comes online:
 - When told "be productive until I return" — that means WORK CONTINUOUSLY. Activate Robin, seed the task queue, and keep going.
 
 ---
-*Generated by Alfred, Session 12, 2026-03-30*
+*Generated by Alfred, Session 13, 2026-03-30*
