@@ -1,0 +1,39 @@
+# Lucius MCP Criticality Tiers — ADR-004 v2.1 Section 2.3
+#
+# Three tiers control session behavior when an MCP is unavailable:
+#   CRITICAL  — Session blocked. Cannot proceed.
+#   IMPORTANT — Session starts in degraded mode. Warning logged.
+#               Skills requiring these MCPs excluded from recommendations.
+#   OPTIONAL  — Logged only. No session impact.
+#
+# Tier assignments are configurable here. Batman can promote or demote
+# MCPs without a code change.
+#
+# Timeout overrides (per-check, in seconds) will be set in Phase 1C
+# after real-world baselines from Phase 1B are collected.
+# Until then, all checks use the default 30s timeout.
+
+mcps:
+  # CRITICAL — session cannot proceed without these
+  github: CRITICAL
+  desktop-commander: CRITICAL
+
+  # IMPORTANT — session starts degraded, relevant skills excluded
+  gmail: IMPORTANT
+  google-calendar: IMPORTANT
+  notion: IMPORTANT
+  windows-mcp: IMPORTANT
+
+  # OPTIONAL — logged only, no session impact
+  brave-search: OPTIONAL
+  huggingface: OPTIONAL
+  context7: OPTIONAL
+  chrome: OPTIONAL
+
+# Per-check timeout overrides (seconds).
+# Leave empty until Phase 1C measurement.
+# Example:
+#   timeouts:
+#     github: 10
+#     notion: 15
+timeouts: {}
