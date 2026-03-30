@@ -64,13 +64,32 @@ def _sanitize_metadata_string(value: str, max_length: int = 500, url_mode: bool 
 # Paths
 # ---------------------------------------------------------------------------
 
-QUEUE_DIR = Path(__file__).resolve().parent.parent / "rudy-data" / "robin-taskqueue"
+from rudy.paths import REPO_ROOT, RUDY_DATA
+
+QUEUE_DIR = RUDY_DATA / "robin-taskqueue"
 ACTIVE_QUEUE = QUEUE_DIR / "active.json"
 COMPLETED_DIR = QUEUE_DIR / "completed"
 BLOCKED_DIR = QUEUE_DIR / "blocked"
-RUDY_ROOT = Path(__file__).resolve().parent.parent
-GIT_EXE = r"C:\Program Files\Git\cmd\git.exe"
-PYTHON = r"C:\Python312\python.exe"
+RUDY_ROOT = REPO_ROOT
+
+# Executable paths — detect dynamically, fall back to known Windows locations
+def _find_exe(name: str, fallbacks: list) -> str:
+    """Find an executable on PATH or in known locations."""
+    import shutil
+    found = shutil.which(name)
+    if found:
+        return found
+    for fb in fallbacks:
+        if Path(fb).exists():
+            return fb
+    return name  # Last resort: bare name, hope PATH resolves it
+
+GIT_EXE = _find_exe("git", [r"C:\Program Files\Git\cmd\git.exe", r"C:\Program Files (x86)\Git\cmd\git.exe"])
+PYTHON = _find_exe("python", [r"C:\Python312\python.exe", r"C:\Python311\python.exe", sys.executable])
+
+# Branch protection: Robin must NEVER push directly to main
+PROTECTED_BRANCHES = frozenset({"main", "master"})
+NIGHTWATCH_BRANCH = "alfred/robin-logging-nightwatch"
 
 # ---------------------------------------------------------------------------
 # Task Schema
@@ -253,7 +272,20 @@ def _release_lock():
 # ---------------------------------------------------------------------------
 
 def _execute_command(cmd: list, timeout: int = 120) -> tuple[bool, str]:
-    """Run a subprocess command and return (success, output)."""
+    """Run a subprocess command and return (success, output).
+
+    Includes branch protection: blocks any git push to protected branches.
+    """
+    # ── Branch protection guard ──
+    if len(cmd) >= 3 and "git" in str(cmd[0]).lower():
+        if cmd[1] == "push":
+            # Check if any arg is a protected branch name
+            push_args = cmd[2:]
+            for arg in push_args:
+                if arg in PROTECTED_BRANCHES:
+                    logger.error(f"BLOCKED: Robin attempted to push to protected branch '{arg}'")
+                    return False, f"BLOCKED: push to protected branch '{arg}' is forbidden"
+
     try:
         result = subprocess.run(
             cmd, capture_output=True, text=True, timeout=timeout,
@@ -318,6 +350,23 @@ def execute_task(task: dict) -> tuple[bool, str]:
             return _execute_command([GIT_EXE, "status", "--short"])
         elif action == "commit_and_push":
             msg = _sanitize_metadata_string(task.get("metadata", {}).get("message", "Robin automated commit"))
+            nightwatch_branch = NIGHTWATCH_BRANCH
+
+            # ── Safety: ensure we NEVER commit on main ──
+            _, current_branch = _execute_command([GIT_EXE, "rev-parse", "--abbrev-ref", "HEAD"])
+            current_branch = (current_branch or "").strip()
+
+            # Switch to nightwatch branch (create if needed)
+            if current_branch != nightwatch_branch:
+                # Try to checkout existing branch, or create from current HEAD
+                ok_co, _ = _execute_command([GIT_EXE, "checkout", nightwatch_branch])
+                if not ok_co:
+                    ok_co, _ = _execute_command([GIT_EXE, "checkout", "-b", nightwatch_branch])
+                if not ok_co:
+                    logger.error("Cannot switch to nightwatch branch — aborting commit")
+                    return False, "Failed to switch to nightwatch branch"
+                logger.info(f"Switched to branch: {nightwatch_branch}")
+
             # F1: Explicit file list instead of blind git add -A
             safe_paths = [
                 "rudy-data/robin-taskqueue/",
@@ -336,9 +385,14 @@ def execute_task(task: dict) -> tuple[bool, str]:
                         staged_files.append(sp)
             logger.info(f"Staged {len(staged_files)} paths: {staged_files}")
             if not staged_files:
+                # Switch back to main even if nothing to stage
+                _execute_command([GIT_EXE, "checkout", "main"])
                 return False, "No files to stage"
             success2, out2 = _execute_command([GIT_EXE, "commit", "-m", msg])
-            success3, out3 = _execute_command([GIT_EXE, "push", "origin", "alfred/robin-logging-nightwatch"])
+            success3, out3 = _execute_command([GIT_EXE, "push", "origin", nightwatch_branch])
+
+            # Always return to main after nightwatch commit
+            _execute_command([GIT_EXE, "checkout", "main"])
             return all([success2, success3]), f"Staged: {staged_files}\n{out2}\n{out3}"
         return False, f"Unknown git action: {action}"
 
