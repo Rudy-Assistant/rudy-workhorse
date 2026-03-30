@@ -891,10 +891,11 @@ The vault replaced Notion (migrated Session 11). Obsidian is an improvement over
 
 ### Lucius Gate — Session Governance (ADR-004 v2.1)
 
-**Core module:** `rudy/agents/lucius_gate.py` (~597 lines, landed in PR #39)
+**Core module:** `rudy/agents/lucius_gate.py` (~1024 lines, Phase 1A in PR #39, Phase 1B+1C in PR #40)
 **MCP tier config:** `rudy/agents/lucius_mcp_tiers.yml`
 **Integration module:** `rudy/workflows/session_gate.py`
 **Integration tests:** `tests/test_lucius_gate_integration.py` (24 tests)
+**Chaos tests:** `tests/test_lucius_gate_chaos.py` (31 tests — YAML corruption, timeout behavior, import failures, circuit breaker stress, .claude.json corruption, edge cases)
 
 Lucius Gate is the governance layer that wraps session lifecycle with pre-flight checks, commit guards, and post-session compliance scoring. It uses a circuit-breaker pattern — every check is wrapped by `run_check()` so exceptions become DEGRADED, never crashes.
 
@@ -923,6 +924,14 @@ mcps:
 ```
 If the YAML is missing or corrupt, hardcoded fallback tiers are used (defined in `lucius_gate.py`).
 
+**Per-MCP timeouts** (also in `lucius_mcp_tiers.yml`):
+- Process checks (desktop-commander, github, context7): 5s
+- Process checks (windows-mcp): 3s
+- TCP socket (gmail): 3s
+- Config file reads (google-calendar, notion, chrome, brave-search, huggingface): 2s
+
+**GitHub PAT location:** `~/Downloads/github-recovery-codes.txt` (classic PAT at bottom of file, after recovery codes). Also checked: `GITHUB_TOKEN` env var, `REPO_ROOT/rudy-logs/github-classic-pat.txt`. Paths resolved dynamically via `Path.home()` — never hardcode user paths (batcave-paths CI enforces this).
+
 **Compliance scoring:** `HandoffWriter` sets `compliance_score` based on `post_session_gate()` result:
 - Gate PASS (no degradation) → `compliance_score = 100`
 - Gate DEGRADED or BLOCKED → `compliance_score = 0`
@@ -935,7 +944,7 @@ The compliance score and full gate result are written to the JSON sidecar alongs
 **Import isolation (C3):** All imports from `lucius_gate` are inside function bodies with try/except. If `lucius_gate` is broken or missing, every consumer degrades gracefully — HandoffWriter still writes, GitHubOps still pushes, sessions still start. **Never brick Robin.**
 
 **Troubleshooting:**
-- Gate always DEGRADED for MCPs → MCP stubs in Phase 1A return DEGRADED by design. Real connectivity checks come in Phase 1C.
+- Gate DEGRADED for an MCP → Check if the MCP process is actually running. Use `Get-CimInstance Win32_Process` to verify. Per-MCP check strategies: process detection (desktop-commander, windows-mcp, github, context7), TCP socket (gmail → smtp.zoho.com:587), .claude.json flags (google-calendar, notion, chrome, brave-search, huggingface).
 - `compliance_score = 0` on every handoff → Check if `lucius_gate` imports successfully: `python -c "from rudy.agents.lucius_gate import post_session_gate; print('OK')"`
 - Gate timing slow → Check `GateMetrics` in gate log files at `rudy-logs/gate-results/`. Per-check timings are in `GateResult.to_dict()["check_timings"]`.
 - Protected branch rejected → By design. All automated pushes must go through feature branches + PRs. Use `git checkout -b alfred/your-feature` first.
