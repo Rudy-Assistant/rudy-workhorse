@@ -192,7 +192,7 @@ def load_mcp_tiers(config_path: Optional[str] = None) -> Dict[str, MCPTier]:
     # Attempt to load YAML
     if config_path and os.path.isfile(config_path):
         try:
-            import yaml  # noqa: delayed import per C3
+            import yaml  # noqa: F401, E402 — delayed import per C3
             with open(config_path, "r", encoding="utf-8") as f:
                 raw = yaml.safe_load(f)
         except ImportError:
@@ -323,7 +323,7 @@ def _check_mcp_connection(mcp_name: str) -> GateCheck:
     return GateCheck(
         name=f"mcp_{mcp_name}",
         passed=None,
-        detail=f"MCP connection check not wired (Phase 1A stub)",
+        detail="MCP connection check not wired (Phase 1A stub)",
         state=GateCheckState.DEGRADED,
     )
 
