@@ -847,8 +847,11 @@ class LuciusFox(AgentBase):
                     uses_file_path = "Path(__file__)" in content
                     imports_rudy_paths = "from rudy.paths" in content or "import rudy.paths" in content
 
-                    if uses_file_path and not imports_rudy_paths:
-                        # This is fine for paths.py itself, but other modules should import
+                    # Exempt: sys.path bootstrap pattern (e.g. scripts that insert repo root
+                    # before importing rudy.paths — the bootstrap IS the path to rudy.paths)
+                    is_bootstrap = "sys.path.insert" in content and "Path(__file__)" in content
+
+                    if uses_file_path and not imports_rudy_paths and not is_bootstrap:
                         self.findings.append({
                             "type": "import_hygiene",
                             "severity": "medium",

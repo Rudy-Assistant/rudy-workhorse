@@ -78,6 +78,19 @@ BATCAVE_VAULT = REPO_ROOT / "vault"
 for _d in [RUDY_DATA, RUDY_LOGS, RUDY_COMMANDS, ROBIN_INBOX, SCREENSHOT_DIR, LUCIUS_AUDITS, BATCAVE_VAULT]:
     _d.mkdir(parents=True, exist_ok=True)
 
+# Scaffold BatcaveVault Home.md if missing (per-Oracle, gitignored)
+_vault_home = BATCAVE_VAULT / "Home.md"
+if not _vault_home.exists():
+    _vault_home.write_text(
+        "# BatcaveVault\n\n"
+        "Local knowledge vault for this Oracle instance.\n\n"
+        "## Quick Links\n\n"
+        "- [[Session Log]]\n"
+        "- [[Standing Orders]]\n"
+        "- [[Agent Roster]]\n",
+        encoding="utf-8",
+    )
+
 
 # ---------------------------------------------------------------------------
 # Executable finder — replaces hardcoded Python/Git paths across codebase
