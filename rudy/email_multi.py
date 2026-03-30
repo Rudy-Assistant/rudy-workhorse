@@ -29,8 +29,9 @@ from email import encoders
 from pathlib import Path
 from typing import List
 
-DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
-LOGS = DESKTOP / "rudy-logs"
+from rudy.paths import RUDY_LOGS  # noqa: E402
+
+LOGS = RUDY_LOGS
 CONFIG_FILE = LOGS / "email-providers.json"
 HEALTH_FILE = LOGS / "email-health.json"
 

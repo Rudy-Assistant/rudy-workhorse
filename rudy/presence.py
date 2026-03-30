@@ -21,8 +21,9 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
-LOGS_DIR = DESKTOP / "rudy-logs"
+from rudy.paths import RUDY_LOGS  # noqa: E402
+
+LOGS_DIR = RUDY_LOGS
 LOGS_DIR.mkdir(exist_ok=True)
 
 # Config — auto-detect subnet from active network

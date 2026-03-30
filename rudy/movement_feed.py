@@ -30,8 +30,9 @@ import os
 from datetime import datetime, timedelta
 from pathlib import Path
 
-DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
-LOGS_DIR = DESKTOP / "rudy-logs"
+from rudy.paths import RUDY_LOGS  # noqa: E402
+
+LOGS_DIR = RUDY_LOGS
 
 # Input sources
 PRESENCE_LOG = LOGS_DIR / "presence-log.json"

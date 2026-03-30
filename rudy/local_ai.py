@@ -32,10 +32,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional, List
 
-DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
-MODELS_DIR = DESKTOP / "rudy-data" / "models"
-LOGS = DESKTOP / "rudy-logs"
-CACHE_DIR = DESKTOP / "rudy-data" / "ai-cache"
+from rudy.paths import RUDY_LOGS, RUDY_DATA  # noqa: E402
+
+MODELS_DIR = RUDY_DATA / "models"
+LOGS = RUDY_LOGS
+CACHE_DIR = RUDY_DATA / "ai-cache"
 
 # Model registry — download URLs and expected sizes
 MODEL_REGISTRY = {

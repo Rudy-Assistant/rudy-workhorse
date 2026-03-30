@@ -16,8 +16,9 @@ import os
 from pathlib import Path
 from typing import List
 
-DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
-OCR_DIR = DESKTOP / "rudy-data" / "ocr-output"
+from rudy.paths import RUDY_DATA  # noqa: E402
+
+OCR_DIR = RUDY_DATA / "ocr-output"
 OCR_DIR.mkdir(parents=True, exist_ok=True)
 
 class ImageOCR:

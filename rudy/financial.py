@@ -17,9 +17,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import List
 
-DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
-LOGS = DESKTOP / "rudy-logs"
-FIN_DIR = DESKTOP / "rudy-data" / "financial"
+from rudy.paths import RUDY_LOGS, RUDY_DATA  # noqa: E402
+
+LOGS = RUDY_LOGS
+FIN_DIR = RUDY_DATA / "financial"
 FIN_DIR.mkdir(parents=True, exist_ok=True)
 
 WATCHLIST_FILE = FIN_DIR / "watchlist.json"

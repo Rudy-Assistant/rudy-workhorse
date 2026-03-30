@@ -16,8 +16,9 @@ import time
 from pathlib import Path
 from typing import List
 
-DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
-AUDIO_DIR = DESKTOP / "rudy-data" / "audio"
+from rudy.paths import RUDY_DATA  # noqa: E402
+
+AUDIO_DIR = RUDY_DATA / "audio"
 AUDIO_DIR.mkdir(parents=True, exist_ok=True)
 
 class TextToSpeech:

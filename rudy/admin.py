@@ -18,8 +18,9 @@ import os
 import time
 from pathlib import Path
 
-DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
-LOG_DIR = DESKTOP / "rudy-logs"
+from rudy.paths import RUDY_LOGS  # noqa: E402
+
+LOG_DIR = RUDY_LOGS
 
 def run_elevated(cmd: str, timeout: int = 60) -> tuple[bool, str]:
     """Run a command with admin elevation. Returns (success, output)."""

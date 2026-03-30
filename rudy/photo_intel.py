@@ -28,9 +28,10 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional, List, Tuple
 
-DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
-LOGS = DESKTOP / "rudy-logs"
-PHOTO_DIR = DESKTOP / "rudy-data" / "photo-intel"
+from rudy.paths import RUDY_LOGS, RUDY_DATA  # noqa: E402
+
+LOGS = RUDY_LOGS
+PHOTO_DIR = RUDY_DATA / "photo-intel"
 CACHE_DIR = PHOTO_DIR / "geocode-cache"
 REPORTS_DIR = PHOTO_DIR / "reports"
 

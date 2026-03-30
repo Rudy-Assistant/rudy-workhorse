@@ -36,10 +36,11 @@ import logging
 from pathlib import Path
 from datetime import datetime
 
-DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
-COMMANDS_DIR = DESKTOP / "rudy-commands"
+from rudy.paths import RUDY_COMMANDS, RUDY_LOGS, DESKTOP  # noqa: E402
+
+COMMANDS_DIR = RUDY_COMMANDS
 COMMANDS_DIR.mkdir(exist_ok=True)
-LOG_DIR = DESKTOP / "rudy-logs"
+LOG_DIR = RUDY_LOGS
 LOG_DIR.mkdir(exist_ok=True)
 
 POLL_INTERVAL = 2  # seconds

@@ -27,12 +27,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import List
 
-DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
-AVATAR_DIR = DESKTOP / "rudy-data" / "avatar"
+from rudy.paths import RUDY_LOGS, RUDY_DATA  # noqa: E402
+
+AVATAR_DIR = RUDY_DATA / "avatar"
 MODELS_DIR = AVATAR_DIR / "models"
 OUTPUT_DIR = AVATAR_DIR / "output"
 TEMP_DIR = AVATAR_DIR / "temp"
-LOGS = DESKTOP / "rudy-logs"
+LOGS = RUDY_LOGS
 
 def _save_json(path: Path, data):
     path.parent.mkdir(parents=True, exist_ok=True)

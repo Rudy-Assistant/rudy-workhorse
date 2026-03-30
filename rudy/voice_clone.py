@@ -30,12 +30,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import List
 
-DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
-VOICE_DIR = DESKTOP / "rudy-data" / "voice-clone"
+from rudy.paths import RUDY_LOGS, RUDY_DATA  # noqa: E402
+
+VOICE_DIR = RUDY_DATA / "voice-clone"
 PROFILES_DIR = VOICE_DIR / "profiles"
 OUTPUT_DIR = VOICE_DIR / "output"
 TEMP_DIR = VOICE_DIR / "temp"
-LOGS = DESKTOP / "rudy-logs"
+LOGS = RUDY_LOGS
 
 def _save_json(path: Path, data):
     path.parent.mkdir(parents=True, exist_ok=True)

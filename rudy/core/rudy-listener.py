@@ -36,6 +36,8 @@ from datetime import datetime
 from pathlib import Path
 from email.mime.text import MIMEText
 
+from rudy.paths import RUDY_LOGS, DESKTOP  # noqa: E402
+
 # ─────────────────────────────────────────────
 # CONFIGURATION
 # ─────────────────────────────────────────────
@@ -59,10 +61,8 @@ INITIAL_BACKOFF = 5       # seconds
 MAX_BACKOFF = 300          # 5 minutes max
 BACKOFF_MULTIPLIER = 2
 
-LOG_DIR = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop" / "rudy-logs"
+LOG_DIR = RUDY_LOGS
 LOG_DIR.mkdir(exist_ok=True)
-
-DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
 
 # ─────────────────────────────────────────────
 # PERMISSION TIERS
