@@ -38,6 +38,13 @@ import socket
 import subprocess
 import sys
 import time
+
+# Task queue for autonomous operation
+try:
+    from rudy.robin_taskqueue import seed_standard_nightwatch, seed_deep_work, process_all
+    TASKQUEUE_AVAILABLE = True
+except ImportError:
+    TASKQUEUE_AVAILABLE = False
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
@@ -492,30 +499,35 @@ class NightShift:
         return max(signals) if signals else None
 
     def run(self) -> dict:
-        """Execute the night shift."""
+        """Execute the night shift using the task queue for autonomous operation."""
         self.log.info("=== ROBIN NIGHT SHIFT ACTIVATED ===")
         results = {"started": datetime.now().isoformat(), "tasks_completed": [], "errors": []}
 
         try:
-            # 1. Process robin-tasks from GitHub (if online)
+            # Phase 1: Seed and run the task queue (primary work engine)
+            if TASKQUEUE_AVAILABLE:
+                self.log.info("Step 1: Seeding task queue (nightwatch + deep work)")
+                seed_standard_nightwatch()
+                if self.online:
+                    seed_deep_work()
+                self.log.info("Step 2: Processing task queue (max 30 min)")
+                tq_results = process_all(max_tasks=20, max_minutes=30)
+                results["taskqueue"] = tq_results
+                self.log.info("Task queue: %d completed, %d failed",
+                              tq_results.get("completed", 0), tq_results.get("failed", 0))
+            else:
+                self.log.warning("Task queue not available — falling back to legacy steps")
+                # Legacy fallback: hardcoded steps
+                if self.online:
+                    results["bridge_tasks"] = self._run_bridge_tasks()
+                results["improvements"] = self._review_immune_memory()
+                results["code_quality"] = self._run_code_quality()
+                if self.online:
+                    results["morning_briefing"] = self._prepare_morning_briefing()
+
+            # Phase 2: Prepare morning briefing (always, task queue or not)
             if self.online:
-                self.log.info("Step 1: Processing robin-tasks from alfred-skills")
-                bridge_results = self._run_bridge_tasks()
-                results["bridge_tasks"] = bridge_results
-
-            # 2. Run health improvements from immune memory
-            self.log.info("Step 2: Reviewing immune memory for improvements")
-            improvements = self._review_immune_memory()
-            results["improvements"] = improvements
-
-            # 3. Code quality checks (if rudy-workhorse is a git repo)
-            self.log.info("Step 3: Code quality checks")
-            quality = self._run_code_quality()
-            results["code_quality"] = quality
-
-            # 4. Prepare morning briefing
-            if self.online:
-                self.log.info("Step 4: Preparing morning briefing")
+                self.log.info("Step 3: Preparing morning briefing")
                 briefing = self._prepare_morning_briefing()
                 results["morning_briefing"] = briefing
 

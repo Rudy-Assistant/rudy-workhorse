@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-03-29T19:48:39.422217",
+  "timestamp": "2026-03-29T20:01:00.393292",
   "profiler_version": "1.0.0",
   "cpu": {
     "architecture": "AMD64",
@@ -13,8 +13,8 @@
   },
   "memory": {
     "total_mb": 16077,
-    "available_mb": 3172,
-    "used_percent": 80.3,
+    "available_mb": 2534,
+    "used_percent": 84.2,
     "swap_total_mb": 27862,
     "swap_used_percent": 2.1
   },
@@ -99,5 +99,5 @@
       "deepseek-r1:8b"
     ]
   },
-  "profile_duration_ms": 4704
+  "profile_duration_ms": 14769
 }

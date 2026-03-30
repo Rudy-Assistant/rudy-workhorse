@@ -122,8 +122,15 @@ def save_queue(tasks: list[dict]):
     )
 
 def add_task(task: dict):
-    """Add a task to the queue."""
+    """Add a task to the queue (skips if duplicate pending task exists)."""
     queue = load_queue()
+    # Dedup: skip if a pending task with same type+title already exists
+    for existing in queue:
+        if (existing.get("status") == "pending"
+                and existing.get("type") == task.get("type")
+                and existing.get("title") == task.get("title")):
+            logger.debug(f"Skipping duplicate: [{task['type']}] {task['title']}")
+            return
     queue.append(task)
     # Sort by priority (lower number = higher priority)
     queue.sort(key=lambda t: t.get("priority", 50))
@@ -441,7 +448,9 @@ if __name__ == "__main__":
             seed_standard_nightwatch()
             seed_deep_work()
         elif cmd == "next":
-            process_next_task()
+            result = process_next_task()
+            if result is None:
+                sys.exit(1)  # Signal empty queue to callers
         elif cmd == "all":
             process_all()
         elif cmd == "status":
