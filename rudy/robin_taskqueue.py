@@ -53,21 +53,12 @@ logger = logging.getLogger("robin.taskqueue")
 # Input Sanitization (F2: prevent injection via task metadata)
 # ---------------------------------------------------------------------------
 
-_SAFE_CHARS = re.compile(r'[^a-zA-Z0-9 _\-\./:\\\n\(\)\[\],\'\"]')
-_SAFE_URL_CHARS = re.compile(r'[^a-zA-Z0-9 _\-\./:\\\n\(\)\[\],\'\"?=&#%+@~]')
+# Shared sanitization (canonical: rudy/sanitize.py)
+from rudy.sanitize import sanitize_str as _sanitize_str_shared
+
 
 def _sanitize_metadata_string(value: str, max_length: int = 500, url_mode: bool = False) -> str:
-    """
-    Sanitize a metadata string before it reaches subprocess.
-    Allowlist approach: only permit safe characters.
-    Args:
-        url_mode: If True, also permit URL-safe chars (?=&#%+@~).
-    """
-    if not isinstance(value, str):
-        return str(value)[:max_length]
-    pattern = _SAFE_URL_CHARS if url_mode else _SAFE_CHARS
-    cleaned = pattern.sub('', value)
-    return cleaned[:max_length]
+    return _sanitize_str_shared(value, max_length=max_length, url_mode=url_mode)
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -377,6 +368,36 @@ def execute_task(task: dict) -> tuple[bool, str]:
 # Main Loop (called by NightShift or directly)
 # ---------------------------------------------------------------------------
 
+
+# --- Mailbox protocol integration (report task results to Alfred) ---
+try:
+    from rudy.robin_alfred_protocol import RobinMailbox as _RobinMailbox
+    _HAS_MAILBOX = True
+except ImportError:
+    _HAS_MAILBOX = False
+
+
+def _notify_alfred(task: dict, success: bool, result: str):
+    """Report task completion/failure to Alfred via mailbox protocol."""
+    if not _HAS_MAILBOX:
+        return
+    try:
+        mailbox = _RobinMailbox()
+        if success:
+            mailbox.report_work(
+                subject=f"Task completed: {task.get('title', 'unknown')}",
+                summary=result[:500] if result else "Completed successfully",
+                files_changed=task.get("files_changed", []),
+            )
+        else:
+            mailbox.escalate(
+                issue=f"Task failed: {task.get('title', 'unknown')}",
+                context=result[:500] if result else "Unknown error",
+                severity="medium" if task.get("priority", 5) > 2 else "high",
+            )
+    except Exception as e:
+        logger.debug(f"Mailbox notification failed (non-fatal): {e}")
+
 def process_next_task() -> Optional[dict]:
     """
     Pick and execute the next task from the queue.
@@ -403,6 +424,7 @@ def process_next_task() -> Optional[dict]:
         if success:
             complete_task(task["id"], result, success=True)
             logger.info(f"Task completed: {task['title']}")
+            _notify_alfred(task, success=True, result=result)
         else:
             # Check if it's a transient error (retry) or permanent (block)
             if "TIMEOUT" in result or "connection" in result.lower():
@@ -411,6 +433,7 @@ def process_next_task() -> Optional[dict]:
             else:
                 complete_task(task["id"], result, success=False)
                 logger.warning(f"Task failed: {task['title']}: {result[:200]}")
+                _notify_alfred(task, success=False, result=result)
 
         task["result"] = result
         return task

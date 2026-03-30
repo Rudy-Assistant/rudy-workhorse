@@ -45,28 +45,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-# --- Input validation (Protocol Salvage fix) ---
-import re as _re
-
-_SAFE_CHARS = _re.compile(r'[^a-zA-Z0-9 _\-\./:\\\n\(\)\[\],\'\"]')
-MAX_PAYLOAD_SIZE = 50_000  # 50KB max per message
-MAX_MESSAGE_AGE_HOURS = 72  # Messages expire after 3 days
-
-def _sanitize_str(value: str, max_length: int = 1000) -> str:
-    """Sanitize a string value for safe storage."""
-    if not isinstance(value, str):
-        return str(value)[:max_length]
-    cleaned = _SAFE_CHARS.sub('', value)
-    return cleaned[:max_length]
-
-def _validate_payload(payload: dict) -> dict:
-    """Validate and sanitize message payload."""
-    if not isinstance(payload, dict):
-        raise ValueError("Payload must be a dict")
-    raw = json.dumps(payload)
-    if len(raw) > MAX_PAYLOAD_SIZE:
-        raise ValueError(f"Payload too large: {len(raw)} > {MAX_PAYLOAD_SIZE}")
-    return payload
+# Shared sanitization (canonical: rudy/sanitize.py)
+from rudy.sanitize import sanitize_str as _sanitize_str
+from rudy.sanitize import validate_payload as _validate_payload
+from rudy.sanitize import MAX_PAYLOAD_SIZE, MAX_MESSAGE_AGE_HOURS
 
 
 # Resolve paths relative to repo root (same pattern as robin_taskqueue.py)
