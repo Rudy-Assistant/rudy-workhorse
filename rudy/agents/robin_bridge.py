@@ -58,7 +58,8 @@ log = logging.getLogger("robin_bridge")
 # Configuration
 # ---------------------------------------------------------------------------
 
-ALFRED_REPO = "Rudy-Assistant/alfred-skills"
+# NOTE: alfred-skills repo archived (Session 11). Bridge now polls workhorse.
+ALFRED_REPO = "Rudy-Assistant/rudy-workhorse"
 TASKS_PATH = "docs/robin-tasks"
 POLL_INTERVAL = 300  # 5 minutes
 HOME = Path(os.environ.get("USERPROFILE", os.path.expanduser("~")))
