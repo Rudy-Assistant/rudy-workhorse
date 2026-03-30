@@ -22,7 +22,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import List
 
-from rudy.paths import RUDY_LOGS, RUDY_DATA, DESKTOP  # noqa: E402
+from rudy.paths import BATCAVE_VAULT, RUDY_LOGS, RUDY_DATA, DESKTOP  # noqa: E402
 
 LOGS = RUDY_LOGS
 KB_DIR = RUDY_DATA / "knowledge-base"
@@ -61,6 +61,12 @@ COLLECTIONS = {
         "paths": [DESKTOP / "memory"],
         "patterns": ["**/*.md", "**/*.json", "**/*.yaml"],
         "description": "Knowledge base files, people, projects",
+    },
+    "vault": {
+        "paths": [BATCAVE_VAULT],
+        "patterns": ["**/*.md"],
+        "description": "BatcaveVault — mission, standing orders, session history, "
+                       "architecture decisions, sprint logs, trackers, protocols",
     },
 }
 
