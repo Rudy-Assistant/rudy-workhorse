@@ -74,6 +74,9 @@ def check_hardcoded_paths(added_lines: list) -> list[dict]:
     """Check for hardcoded Batcave paths that should use rudy.paths."""
     findings = []
     for filepath, line_num, line in added_lines:
+        # Only check Python files — docs/markdown may reference paths legitimately
+        if not filepath.endswith(".py"):
+            continue
         if is_exempt(line):
             continue
         for pattern in HARDCODED_PATH_PATTERNS:
