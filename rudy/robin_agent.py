@@ -128,12 +128,12 @@ You MUST use <tool_call> tags with valid JSON. Here are concrete examples:
 
 EXAMPLE 1 - Running a shell command (MOST COMMON):
 <tool_call>
-{"tool": "windows-mcp.Shell", "args": {"command": "Get-Content C:\path\to\file.txt"}}
+{"tool": "windows-mcp.Shell", "args": {"command": "Get-Content C:\\path\to\file.txt"}}
 </tool_call>
 
 EXAMPLE 2 - Running a Python script:
 <tool_call>
-{"tool": "windows-mcp.Shell", "args": {"command": "C:\Python312\python.exe C:\path\script.py"}}
+{"tool": "windows-mcp.Shell", "args": {"command": "C:\\Python312\\python.exe C:\\path\\script.py"}}
 </tool_call>
 
 EXAMPLE 3 - Taking a screenshot (only for UI tasks):
@@ -231,14 +231,14 @@ THINK_PATTERN = re.compile(
 
 def _normalize_tool_json(raw: str) -> Optional[dict]:
     """Try to parse a tool call string into a normalized dict.
-    
+
     Handles both JSON format and DeepSeek's comma-separated format:
       - {"tool": "server.name", "args": {...}}
       - server.tool_name, {"key": "value"}
       - server.tool_name {"key": "value"}
     """
     raw = raw.strip()
-    
+
     # Try standard JSON first
     try:
         call = json.loads(raw)
@@ -251,7 +251,7 @@ def _normalize_tool_json(raw: str) -> Optional[dict]:
                 }
     except json.JSONDecodeError:
         pass
-    
+
     # Try DeepSeek's "server.tool, {args}" comma-separated format
     comma_match = re.match(
         r'([a-zA-Z_][\w-]*\.[a-zA-Z_]\w*)\s*[,\s]\s*(\{.*\})',
@@ -265,7 +265,7 @@ def _normalize_tool_json(raw: str) -> Optional[dict]:
             return {"tool": tool_name, "args": args if isinstance(args, dict) else {}}
         except json.JSONDecodeError:
             log.warning("Parsed tool name '%s' but args JSON failed: %s", tool_name, args_str[:100])
-    
+
     # Try "server.tool {args}" space-separated format (no comma)
     space_match = re.match(
         r'([a-zA-Z_][\w-]*\.[a-zA-Z_]\w*)\s+(\{.*\})',
@@ -279,13 +279,13 @@ def _normalize_tool_json(raw: str) -> Optional[dict]:
             return {"tool": tool_name, "args": args if isinstance(args, dict) else {}}
         except json.JSONDecodeError:
             pass
-    
+
     return None
 
 
 def parse_tool_call(text: str) -> Optional[dict]:
     """Extract a tool call from DeepSeek's response.
-    
+
     Handles multiple format variations that DeepSeek-R1 produces:
     1. <tool_call>{"tool": "x.y", "args": {...}}</tool_call>  (intended)
     2. <tool>x.y, {"key": "val"}</tool>                       (common variant)
@@ -299,7 +299,7 @@ def parse_tool_call(text: str) -> Optional[dict]:
         result = _normalize_tool_json(match.group(1))
         if result:
             return result
-    
+
     # 2. Try <tool> tags (DeepSeek's most common mistake)
     match = TOOL_TAG_PATTERN.search(text)
     if match:
@@ -307,7 +307,7 @@ def parse_tool_call(text: str) -> Optional[dict]:
         if result:
             log.info("Detected tool call with <tool> tags (normalized)")
             return result
-    
+
     # 3. Try <function_call> tags
     match = FUNCTION_CALL_PATTERN.search(text)
     if match:
@@ -315,7 +315,7 @@ def parse_tool_call(text: str) -> Optional[dict]:
         if result:
             log.info("Detected tool call with <function_call> tags (normalized)")
             return result
-    
+
     # 4. Try <action> tags
     match = ACTION_PATTERN.search(text)
     if match:
@@ -323,7 +323,7 @@ def parse_tool_call(text: str) -> Optional[dict]:
         if result:
             log.info("Detected tool call with <action> tags (normalized)")
             return result
-    
+
     # 5. Fallback: bare JSON with "tool" key
     match = BARE_TOOL_CALL_PATTERN.search(text)
     if match:
@@ -331,7 +331,7 @@ def parse_tool_call(text: str) -> Optional[dict]:
         if result:
             log.info("Detected bare tool call (no tags)")
             return result
-    
+
     return None
 
 

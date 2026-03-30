@@ -163,7 +163,7 @@ class LuciusFox(AgentBase):
                     self.findings.append({
                         "type": "import_overlap",
                         "severity": "low",
-                        "title": f"Cross-import between sentinel variants",
+                        "title": "Cross-import between sentinel variants",
                         "detail": f"{path} imports from robin_sentinel",
                         "recommendation": "Consolidate sentinel functionality",
                     })
@@ -330,7 +330,7 @@ class LuciusFox(AgentBase):
         # Also write human-readable summary
         md_file = self.AUDIT_DIR / f"audit-{timestamp}.md"
         lines = [
-            f"# Lucius Fox Audit Report",
+            "# Lucius Fox Audit Report",
             f"**Date:** {datetime.now().strftime('%Y-%m-%d %H:%M')}",
             f"**Findings:** {len(self.findings)}",
             "",

@@ -998,24 +998,24 @@ class Sentinel(AgentBase):
 class SentinelObserver:
     """
     Passive environmental observer - runs on EVERY Robin cycle.
-    
+
     Merged into sentinel.py from rudy/robin_sentinel.py per Lucius Fox
     audit finding (triple sentinel duplication).
-    
+
     Observes friction signals in three categories:
     - Environment health (disk, processes, services)
     - Coordination gaps (stale messages, silence)
     - Code quality (errors, deprecations)
-    
+
     Does NOT take action. Reports observations for InitiativeEngine.
     """
-    
+
     MAX_OBSERVATIONS = 500
-    
+
     def __init__(self):
         self.observations_file = LOGS_DIR / "sentinel-observations-passive.json"
         self.observations = self._load()
-    
+
     def _load(self):
         if self.observations_file.exists():
             try:
@@ -1024,14 +1024,14 @@ class SentinelObserver:
             except Exception:
                 return []
         return []
-    
+
     def _save(self):
         # Trim to max
         if len(self.observations) > self.MAX_OBSERVATIONS:
             self.observations = self.observations[-self.MAX_OBSERVATIONS:]
         with open(self.observations_file, "w", encoding="utf-8") as f:
             json.dump(self.observations, f, indent=2, ensure_ascii=False)
-    
+
     def _record(self, category, signal, details=""):
         self.observations.append({
             "timestamp": datetime.now().isoformat(),
@@ -1039,7 +1039,7 @@ class SentinelObserver:
             "signal": signal,
             "details": details
         })
-    
+
     def observe(self):
         """Run all passive observation checks."""
         self._observe_environment()
@@ -1047,7 +1047,7 @@ class SentinelObserver:
         self._observe_code_quality()
         self._save()
         return self.observations[-10:]  # Return recent
-    
+
     def _observe_environment(self):
         """Check disk, process count, service health."""
         import shutil
@@ -1059,7 +1059,7 @@ class SentinelObserver:
                 self._record("env_health", "low_disk", f"Only {free_pct:.1f}% free")
         except Exception:
             pass
-        
+
         # Log file sizes
         for log_file in LOGS_DIR.glob("*.log"):
             try:
@@ -1068,13 +1068,13 @@ class SentinelObserver:
                     self._record("env_health", "large_log", f"{log_file.name}: {size_mb:.1f}MB")
             except Exception:
                 pass
-    
+
     def _observe_coordination(self):
         """Check inbox freshness, stale messages."""
         coord_dir = DESKTOP / "rudy-data"
-        alfred_inbox = coord_dir / "alfred-inbox"
+        coord_dir / "alfred-inbox"
         robin_inbox = coord_dir / "robin-inbox"
-        
+
         # Check for stale directives in robin-inbox
         for f in robin_inbox.glob("*.json"):
             try:
@@ -1083,7 +1083,7 @@ class SentinelObserver:
                     self._record("coordination", "stale_directive", f"{f.name}: {age_hours:.1f}h old")
             except Exception:
                 pass
-    
+
     def _observe_code_quality(self):
         """Check for error patterns in recent logs."""
         for log_file in LOGS_DIR.glob("*.log"):
@@ -1097,7 +1097,7 @@ class SentinelObserver:
                         break  # One per file is enough
             except Exception:
                 pass
-    
+
     def get_priority_boost(self, area):
         """Return priority boost for an area based on recent observations."""
         recent = [o for o in self.observations[-50:] if o.get("category") == area]

@@ -1,7 +1,8 @@
 """
 Robin Human Adapter - Adapts human_simulation.py engines for Windows-MCP tools.
 """
-import random, string
+import random
+import string
 from typing import Dict, Any
 from dataclasses import dataclass
 
@@ -21,9 +22,12 @@ class MouseEngineBase:
         self.screen_width = screen_width
         self.screen_height = screen_height
     def generate_bezier_path(self, start, end, num_points=20):
-        x0, y0 = start; x3, y3 = end
-        x1 = x0 + random.uniform(-100, 100); y1 = y0 + random.uniform(-50, 50)
-        x2 = x3 + random.uniform(-100, 100); y2 = y3 + random.uniform(-50, 50)
+        x0, y0 = start
+        x3, y3 = end
+        x1 = x0 + random.uniform(-100, 100)
+        y1 = y0 + random.uniform(-50, 50)
+        x2 = x3 + random.uniform(-100, 100)
+        y2 = y3 + random.uniform(-50, 50)
         path = []
         for i in range(num_points):
             t = i / (num_points - 1)
@@ -36,12 +40,14 @@ class MouseEngineBase:
         speed = random.randint(50, 150)
         while rem > 0:
             amt = int(min(speed, rem) * random.uniform(0.8, 1.2))
-            seq.append({"direction": direction, "amount": amt}); rem -= amt
+            seq.append({"direction": direction, "amount": amt})
+            rem -= amt
         return seq
 
 class KeyboardEngineBase:
     def __init__(self, typo_rate=0.02, correction_rate=0.8):
-        self.typo_rate = typo_rate; self.correction_rate = correction_rate
+        self.typo_rate = typo_rate
+        self.correction_rate = correction_rate
     def generate_keystroke_sequence(self, text):
         seq = []
         for ch in text:
@@ -59,11 +65,13 @@ class KeyboardEngineBase:
 TimingEngine = TimingEngineBase
 MouseEngine = MouseEngineBase
 KeyboardEngine = KeyboardEngineBase
+
 @dataclass
 class MCPToolCall:
     tool: str
     args: Dict[str, Any]
-    def to_dict(self): return {"tool": self.tool, "args": self.args}
+    def to_dict(self):
+        return {"tool": self.tool, "args": self.args}
 
 class RobinHumanInterface:
     """Adapts human simulation engines for Windows-MCP tools."""
@@ -71,13 +79,20 @@ class RobinHumanInterface:
         self.timing = TimingEngine(base_delay=base_delay, variance=mouse_variance)
         self.mouse = MouseEngine(screen_width=screen_width, screen_height=screen_height)
         self.keyboard = KeyboardEngine(typo_rate=typo_rate, correction_rate=0.8)
-        self.sw = screen_width; self.sh = screen_height
-    def _d(s2, s): return MCPToolCall("_delay", {"seconds": max(0.1, s)}).to_dict()
-    def _m(s2, x, y): return MCPToolCall("windows-mcp.Move", {"x": x, "y": y}).to_dict()
-    def _c(s2, x, y, b="left"): return MCPToolCall("windows-mcp.Click", {"x": x, "y": y, "button": b}).to_dict()
-    def _t(s2, txt): return MCPToolCall("windows-mcp.Type", {"text": txt}).to_dict()
-    def _scr(s2, d, a): return MCPToolCall("windows-mcp.Scroll", {"direction": d, "amount": a}).to_dict()
-    def _snap(s2, v=False): return MCPToolCall("windows-mcp.Snapshot", {"use_vision": v}).to_dict()
+        self.sw = screen_width
+        self.sh = screen_height
+    def _d(s2, s):
+        return MCPToolCall("_delay", {"seconds": max(0.1, s)}).to_dict()
+    def _m(s2, x, y):
+        return MCPToolCall("windows-mcp.Move", {"x": x, "y": y}).to_dict()
+    def _c(s2, x, y, b="left"):
+        return MCPToolCall("windows-mcp.Click", {"x": x, "y": y, "button": b}).to_dict()
+    def _t(s2, txt):
+        return MCPToolCall("windows-mcp.Type", {"text": txt}).to_dict()
+    def _scr(s2, d, a):
+        return MCPToolCall("windows-mcp.Scroll", {"direction": d, "amount": a}).to_dict()
+    def _snap(s2, v=False):
+        return MCPToolCall("windows-mcp.Snapshot", {"use_vision": v}).to_dict()
 
     def human_click(self, x, y):
         calls = [self._d(self.timing.get_delay(0.5))]
@@ -94,13 +109,19 @@ class RobinHumanInterface:
         for a in self.keyboard.generate_keystroke_sequence(text):
             if a["type"] == "keystroke":
                 if a["char"] == "BACKSPACE":
-                    if buf: calls.append(self._t(buf)); buf = ""
+                    if buf:
+                        calls.append(self._t(buf))
+                        buf = ""
                     calls.append(MCPToolCall("_keystroke", {"key": "BackSpace"}).to_dict())
-                else: buf += a["char"]
+                else:
+                    buf += a["char"]
             elif a["type"] == "delay":
-                if buf: calls.append(self._t(buf)); buf = ""
+                if buf:
+                    calls.append(self._t(buf))
+                    buf = ""
                 calls.append(self._d(a["duration"]))
-        if buf: calls.append(self._t(buf))
+        if buf:
+            calls.append(self._t(buf))
         return calls
 
     def human_scroll(self, pixels, direction="down"):
@@ -108,7 +129,8 @@ class RobinHumanInterface:
         seq = self.mouse.generate_scroll_sequence(pixels, direction)
         for i, s in enumerate(seq):
             calls.append(self._scr(s["direction"], s["amount"]))
-            if i < len(seq)-1: calls.append(self._d(self.timing.get_burst_delay()))
+            if i < len(seq)-1:
+                calls.append(self._d(self.timing.get_burst_delay()))
         calls.append(self._d(self.timing.get_delay(0.2)))
         return calls
 

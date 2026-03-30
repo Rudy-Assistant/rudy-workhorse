@@ -439,11 +439,11 @@ if __name__ == "__main__":
         for m in ollama["models"]:
             print(f"  - {m['name']} ({m['size_mb']}MB, {m.get('parameter_size', '?')})")
 
-    print(f"\nDisk:")
+    print("\nDisk:")
     for drive, info in profile["disk"].items():
         print(f"  {drive} {info['free_gb']}GB free / {info['total_gb']}GB total ({info['used_percent']}% used)")
 
-    print(f"\nModel Recommendation:")
+    print("\nModel Recommendation:")
     print(f"  Tier: {rec['hardware_tier']}")
     print(f"  Model: {rec['primary_model']}")
     print(f"  Reason: {rec['reason']}")

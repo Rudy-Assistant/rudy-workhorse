@@ -82,7 +82,7 @@ def _log_to_local_json(task, success, final_answer, total_steps=0,
                         tools_used=None, error=None):
     """Write a task entry to local JSON log file (always succeeds)."""
     log_file = LOCAL_LOG_DIR / f"robin-ops-{datetime.now().strftime('%Y%m%d')}.json"
-    
+
     entry = {
         "timestamp": datetime.now().isoformat(),
         "task": task,
@@ -94,7 +94,7 @@ def _log_to_local_json(task, success, final_answer, total_steps=0,
         "tools": tools_used or [],
         "error": error,
     }
-    
+
     # Append to daily log file
     entries = []
     if log_file.exists():
@@ -102,7 +102,7 @@ def _log_to_local_json(task, success, final_answer, total_steps=0,
             entries = json.loads(log_file.read_text())
         except (json.JSONDecodeError, OSError):
             entries = []
-    
+
     entries.append(entry)
     log_file.write_text(json.dumps(entries, indent=2, default=str))
     log.info("Local log: %s -> %s", task[:40], log_file.name)
@@ -216,14 +216,14 @@ def log_nightwatch_checkin(
 ) -> bool:
     """Write a periodic night-watch check-in to Notion."""
     token = _get_notion_token()
-    
+
     # Local log always
     _log_to_local_json(
         task=f"nightwatch-checkin: {status}",
         success=True,
         final_answer=notes or status,
     )
-    
+
     if not token:
         return True  # local log succeeded
 
