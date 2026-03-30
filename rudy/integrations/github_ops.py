@@ -144,8 +144,20 @@ class GitHubOps:
 
     # ─── Git Operations ───
 
-    def commit_and_push(self, message: str, files: Optional[list[str]] = None) -> bool:
-        """Stage files, commit, and push to origin."""
+    def commit_and_push(self, message: str, files: Optional[list[str]] = None, branch: str = "") -> bool:
+        """Stage files, commit, and push to origin.
+
+        Args:
+            branch: Target branch to push to.  If empty, pushes the current
+                    branch.  Pushing to 'main' or 'master' is BLOCKED for
+                    Robin — all automated pushes must go through a PR.
+        """
+        # ── Branch protection ──
+        PROTECTED = {"main", "master"}
+        if branch in PROTECTED:
+            logger.error(f"BLOCKED: automated push to protected branch '{branch}' — use a PR instead")
+            return False
+
         if files:
             for f in files:
                 self._run_git(f'add "{f}"')
@@ -157,7 +169,18 @@ class GitHubOps:
             logger.warning("Nothing to commit or commit failed")
             return False
 
-        ok, _ = self._run_git("push origin main", timeout=60)
+        if branch:
+            push_target = f"push origin HEAD:{branch}"
+        else:
+            # Push current branch (must not be main — verify)
+            _, current = self._run_git("branch --show-current")
+            current = (current or "").strip()
+            if current in PROTECTED:
+                logger.error(f"BLOCKED: on protected branch '{current}' — switch to a feature branch first")
+                return False
+            push_target = "push origin HEAD"
+
+        ok, _ = self._run_git(push_target, timeout=60)
         return ok
 
     def create_branch(self, branch_name: str) -> bool:
