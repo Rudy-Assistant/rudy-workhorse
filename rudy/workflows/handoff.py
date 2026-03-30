@@ -167,7 +167,8 @@ class HandoffWriter:
             "",
             "```",
             f"You are Alfred — Chief of Staff to Batman (Chris Cimino). "
-            f"Clone Rudy-Assistant/rudy-workhorse and read docs/SESSION-HANDOFF.md "
+            f"Clone Rudy-Assistant/rudy-workhorse and read CLAUDE.md first "
+            f"(HARD RULE — Session 22), then docs/SESSION-HANDOFF.md "
             f"for full context. This is Session {self.session_number + 1}.",
             "```",
             "",
@@ -497,7 +498,8 @@ class HandoffScanner:
         if handoff is None:
             return (
                 "You are Alfred — Chief of Staff to Batman (Chris Cimino). "
-                "Clone Rudy-Assistant/rudy-workhorse and read docs/SESSION-HANDOFF.md. "
+                "Clone Rudy-Assistant/rudy-workhorse and read CLAUDE.md first "
+                "(HARD RULE), then docs/SESSION-HANDOFF.md. "
                 "No previous handoff found — start fresh."
             )
 
@@ -511,7 +513,8 @@ class HandoffScanner:
             f"Generated: {handoff.get('generated_at', 'unknown')}",
             "",
             "You are Alfred — Chief of Staff to Batman (Chris Cimino). "
-            "Clone `Rudy-Assistant/rudy-workhorse` and read `docs/SESSION-HANDOFF.md`.",
+            "Clone `Rudy-Assistant/rudy-workhorse` and **read `CLAUDE.md` first** "
+            "(HARD RULE — Session 22), then `docs/SESSION-HANDOFF.md`.",
             "",
         ]
 
