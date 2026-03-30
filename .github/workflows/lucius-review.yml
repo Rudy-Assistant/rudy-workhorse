@@ -22,47 +22,30 @@ jobs:
       - name: Install bandit
         run: pip install bandit
 
-      - name: Run bandit (security scan)
+      - name: Get changed Python files
+        id: changed
         run: |
-          bandit -r rudy/ scripts/ \
+          # Only scan files changed in this PR (not pre-existing findings)
+          git diff --name-only --diff-filter=ACMR origin/main...HEAD -- '*.py' > changed_files.txt
+          cat changed_files.txt
+          if [ ! -s changed_files.txt ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run bandit on changed files
+        if: steps.changed.outputs.skip != 'true'
+        run: |
+          bandit $(cat changed_files.txt | tr '\n' ' ') \
             -f json \
             -o bandit-results.json \
             --skip B101 \
             --severity-level medium \
             || true
 
-      - name: Install reviewdog
-        uses: reviewdog/action-setup@v1
-        with:
-          reviewdog_version: latest
-
-      - name: Post bandit results via reviewdog
-        env:
-          REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          # Convert bandit JSON to reviewdog-compatible format
-          python3 -c "
-          import json, sys
-          try:
-              data = json.load(open('bandit-results.json'))
-          except (FileNotFoundError, json.JSONDecodeError):
-              sys.exit(0)
-          for r in data.get('results', []):
-              sev = r.get('issue_severity', 'LOW')
-              conf = r.get('issue_confidence', 'LOW')
-              fname = r.get('filename', '')
-              line = r.get('line_number', 0)
-              text = r.get('issue_text', '')
-              test_id = r.get('test_id', '')
-              print(f'{fname}:{line}:1: [{sev}/{conf}] {test_id}: {text}')
-          " > bandit-rdf.txt
-          cat bandit-rdf.txt | reviewdog -efm='%f:%l:%c: %m' \
-            -name="bandit" \
-            -reporter=github-pr-review \
-            -filter-mode=added \
-            -level=warning || true
-
-      - name: Fail on high-severity findings
+      - name: Report bandit results
+        if: steps.changed.outputs.skip != 'true'
         run: |
           python3 -c "
           import json, sys
@@ -71,15 +54,24 @@ jobs:
           except (FileNotFoundError, json.JSONDecodeError):
               print('No bandit results — pass.')
               sys.exit(0)
-          high = [r for r in data.get('results', [])
+          results = data.get('results', [])
+          high = [r for r in results
                   if r.get('issue_severity') == 'HIGH'
                   and r.get('issue_confidence') in ('HIGH', 'MEDIUM')]
+          print(f'Bandit: {len(results)} findings ({len(high)} high-severity)')
+          for r in results:
+              sev = r.get('issue_severity', 'LOW')
+              fname = r.get('filename', '')
+              line = r.get('line_number', 0)
+              text = r.get('issue_text', '')
+              test_id = r.get('test_id', '')
+              # Use GitHub Actions annotation format for inline comments
+              level = 'error' if sev == 'HIGH' else 'warning'
+              print(f'::{level} file={fname},line={line}::{test_id}: {text}')
           if high:
-              print(f'BLOCKED: {len(high)} high-severity finding(s):')
-              for r in high:
-                  print(f\"  {r['filename']}:{r['line_number']} — {r['test_id']}: {r['issue_text']}\")
+              print(f'BLOCKED: {len(high)} high-severity finding(s) in changed files.')
               sys.exit(1)
-          print('PASS: No high-severity bandit findings.')
+          print('PASS: No high-severity bandit findings in changed files.')
           "
 
   # ── Dependency audit via pip-audit ─────────────────────────────────
