@@ -26,6 +26,14 @@ if %errorlevel% == 0 (
     echo [FAIL] Robin Continuous - try running as Administrator
 )
 
+REM Task 3: Robin Liveness Watchdog — every 5 minutes, ensure Robin is alive
+schtasks /create /tn "Batcave\Robin Liveness" /tr "\"%SCRIPTS_DIR%robin_liveness_watchdog.bat\"" /sc MINUTE /mo 5 /f
+if %errorlevel% == 0 (
+    echo [OK] Robin Liveness Watchdog installed (every 5 min)
+) else (
+    echo [FAIL] Robin Liveness - try running as Administrator
+)
+
 echo.
 echo Robin tasks installed. Verify with: schtasks /query /tn "Batcave\Robin Watchdog"
 echo.

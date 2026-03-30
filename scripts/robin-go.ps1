@@ -139,6 +139,33 @@ try {
     Write-Host "  You can start Robin manually: python -m rudy.robin_main" -ForegroundColor Gray
 }
 
+# --- Step 6b: Register liveness watchdog (every 5 minutes) ---
+Write-Host "`n[5b] Registering Robin Liveness Watchdog..." -ForegroundColor Yellow
+try {
+    Unregister-ScheduledTask -TaskName "RobinLivenessWatchdog" -Confirm:$false -ErrorAction SilentlyContinue
+    $watchdogAction = New-ScheduledTaskAction `
+        -Execute "python" `
+        -Argument "-m rudy.robin_liveness --ensure" `
+        -WorkingDirectory $RudyRoot
+    $watchdogTrigger = New-ScheduledTaskTrigger -Once -At (Get-Date) `
+        -RepetitionInterval (New-TimeSpan -Minutes 5) `
+        -RepetitionDuration (New-TimeSpan -Days 365)
+    $watchdogSettings = New-ScheduledTaskSettingsSet `
+        -AllowStartIfOnBatteries `
+        -DontStopIfGoingOnBatteries `
+        -ExecutionTimeLimit (New-TimeSpan -Minutes 2)
+    Register-ScheduledTask `
+        -TaskName "RobinLivenessWatchdog" `
+        -Action $watchdogAction `
+        -Trigger $watchdogTrigger `
+        -Settings $watchdogSettings `
+        -Description "Robin Liveness Watchdog -- auto-restart Robin if he dies" `
+        -RunLevel Highest | Out-Null
+    Write-Host "  Registered: RobinLivenessWatchdog (every 5 min)" -ForegroundColor Green
+} catch {
+    Write-Host "  Watchdog registration failed: $($_.Exception.Message)" -ForegroundColor Red
+}
+
 # --- Step 7: Start Robin NOW ---
 Write-Host "`n[6] Starting Robin..." -ForegroundColor Yellow
 Push-Location $RudyRoot

@@ -51,13 +51,12 @@ from rudy.sanitize import validate_payload as _validate_payload
 from rudy.sanitize import MAX_PAYLOAD_SIZE, MAX_MESSAGE_AGE_HOURS
 
 
-# Resolve paths relative to repo root (same pattern as robin_taskqueue.py)
-REPO_ROOT = Path(__file__).resolve().parent.parent
-RUDY_DATA = REPO_ROOT / "rudy-data"
+# Canonical paths
+from rudy.paths import RUDY_DATA, ROBIN_INBOX  # noqa: E402
+
 COORD_DIR = RUDY_DATA / "coordination"
 ALFRED_INBOX = RUDY_DATA / "alfred-inbox"
-ROBIN_INBOX = RUDY_DATA / "robin-inbox"
-ARCHIVE_DIR = RUDY_DATA / "coordination" / "archive"
+ARCHIVE_DIR = COORD_DIR / "archive"
 
 # Ensure directories exist
 for d in [COORD_DIR, ALFRED_INBOX, ROBIN_INBOX, ARCHIVE_DIR]:
