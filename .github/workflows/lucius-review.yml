@@ -5,23 +5,124 @@ on:
     branches: [main]
 
 jobs:
-  lucius-review:
+  # ── Security scanning via bandit (replaces custom regex patterns) ───
+  bandit:
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
       contents: read
-
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Full history for accurate diff
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
-      - name: Run Lucius PR Review
+      - name: Install bandit
+        run: pip install bandit
+
+      - name: Run bandit (security scan)
+        run: |
+          bandit -r rudy/ scripts/ \
+            -f json \
+            -o bandit-results.json \
+            --skip B101 \
+            --severity-level medium \
+            || true
+
+      - name: Install reviewdog
+        uses: reviewdog/action-setup@v1
+        with:
+          reviewdog_version: latest
+
+      - name: Post bandit results via reviewdog
+        env:
+          REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Convert bandit JSON to reviewdog-compatible format
+          python3 -c "
+          import json, sys
+          try:
+              data = json.load(open('bandit-results.json'))
+          except (FileNotFoundError, json.JSONDecodeError):
+              sys.exit(0)
+          for r in data.get('results', []):
+              sev = r.get('issue_severity', 'LOW')
+              conf = r.get('issue_confidence', 'LOW')
+              fname = r.get('filename', '')
+              line = r.get('line_number', 0)
+              text = r.get('issue_text', '')
+              test_id = r.get('test_id', '')
+              print(f'{fname}:{line}:1: [{sev}/{conf}] {test_id}: {text}')
+          " > bandit-rdf.txt
+          cat bandit-rdf.txt | reviewdog -efm='%f:%l:%c: %m' \
+            -name="bandit" \
+            -reporter=github-pr-review \
+            -filter-mode=added \
+            -level=warning || true
+
+      - name: Fail on high-severity findings
+        run: |
+          python3 -c "
+          import json, sys
+          try:
+              data = json.load(open('bandit-results.json'))
+          except (FileNotFoundError, json.JSONDecodeError):
+              print('No bandit results — pass.')
+              sys.exit(0)
+          high = [r for r in data.get('results', [])
+                  if r.get('issue_severity') == 'HIGH'
+                  and r.get('issue_confidence') in ('HIGH', 'MEDIUM')]
+          if high:
+              print(f'BLOCKED: {len(high)} high-severity finding(s):')
+              for r in high:
+                  print(f\"  {r['filename']}:{r['line_number']} — {r['test_id']}: {r['issue_text']}\")
+              sys.exit(1)
+          print('PASS: No high-severity bandit findings.')
+          "
+
+  # ── Dependency audit via pip-audit ─────────────────────────────────
+  pip-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install pip-audit
+        run: pip install pip-audit
+
+      - name: Run pip-audit
+        run: |
+          if [ -f requirements.txt ]; then
+            pip-audit -r requirements.txt --desc --output pip-audit-results.txt || true
+            cat pip-audit-results.txt
+          else
+            echo "No requirements.txt — skipping dependency audit."
+          fi
+        continue-on-error: true  # Advisory only — don't block PRs on upstream CVEs
+
+  # ── Batcave-specific checks (justified custom — no standard equivalent) ─
+  batcave-paths:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Check for hardcoded Batcave paths in diff
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}

@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
 """
-Lucius Fox CI — Lightweight PR review for GitHub Actions.
+Lucius Fox CI — Batcave-specific PR checks.
 
-Runs a subset of Lucius's Gate mandate checks on the PR diff:
-  1. Hardcoded path detection
-  2. Security anti-patterns (eval, exec, subprocess injection, pickle, __import__)
-  3. Overly broad except clauses
-  4. Import hygiene (direct path construction vs rudy.paths)
+ADR-005 COMPLIANT: Security scanning delegated to bandit. PR commenting
+delegated to reviewdog. Dependency auditing delegated to pip-audit.
 
-Outputs a markdown report to stdout and exits non-zero if HIGH findings exist.
-Optionally posts a PR comment via GITHUB_TOKEN.
+This script handles ONLY Batcave-specific checks that have no standard
+tool equivalent:
+  1. Hardcoded path detection (Batcave user paths)  # lucius-exempt: docstring
+  2. Import hygiene (direct path construction vs rudy.paths)
 
 Usage:
     python scripts/ci/lucius_pr_review.py              # diffs HEAD against origin/main
@@ -26,35 +25,24 @@ import urllib.request
 from datetime import datetime
 
 
-# ── Lucius checks (mirrored from rudy/agents/lucius_fox.py) ──────────
-# SAFETY: These are detection PATTERNS, not actual path/security usage.
-# They must contain the strings they scan for. Exempt from self-review.
+# ── Batcave-specific path patterns (no standard tool equivalent) ──────
+# SAFETY: These are detection PATTERNS, not actual path usage.
 
 HARDCODED_PATH_PATTERNS = [  # SAFETY: detection patterns, not path usage
-    r'C:\\Users\\ccimi\\Desktop',  # lucius-exempt: detection pattern
-    r'C:/Users/ccimi/Desktop',  # lucius-exempt: detection pattern
-    r"C:\\\\Users\\\\ccimi",  # lucius-exempt: detection pattern
-    r'~/Desktop/rudy-',  # lucius-exempt: detection pattern
-    r'r"C:\\Users',  # lucius-exempt: detection pattern
-    r"r'C:\\Users",  # lucius-exempt: detection pattern
+    r'C:\\Users\\ccimi\\Desktop',   # lucius-exempt: detection pattern
+    r'C:/Users/ccimi/Desktop',      # lucius-exempt: detection pattern
+    r"C:\\\\Users\\\\ccimi",        # lucius-exempt: detection pattern
+    r'~/Desktop/rudy-',             # lucius-exempt: detection pattern
+    r'r"C:\\Users',                 # lucius-exempt: detection pattern
+    r"r'C:\\Users",                 # lucius-exempt: detection pattern
 ]
 
-SECURITY_PATTERNS = [  # SAFETY: detection patterns, not actual security calls
-    (r'\beval\s*\(', "eval() — potential code injection"),  # SAFETY: pattern string
-    (r'\bexec\s*\(', "exec() — potential code injection"),  # SAFETY: pattern string
-    (r'shell\s*=\s*True', "shell=True — potential injection"),  # SAFETY: pattern string
-    (r'pickle\.loads?\(', "pickle.load — potential deserialization"),  # SAFETY: pattern string
-    (r'__import__\s*\(', "Dynamic __import__ — review for necessity"),  # SAFETY: pattern string
-]
-
-# Safety comments that exempt a line from security findings
+# Safety comments that exempt a line from findings
 SAFETY_EXEMPTIONS = [
-    "noqa: S602",       # shell=True acknowledged
-    "lucius-exempt",    # lucius self-review exemption
-    "# SAFETY:",        # explicit safety annotation
-    "# nosec",          # bandit-style suppression
-    "trusted input",    # our convention
-    "detection pattern",  # CI scanner pattern definitions
+    "lucius-exempt",
+    "# SAFETY:",
+    "# nosec",
+    "detection pattern",
 ]
 
 
@@ -67,7 +55,6 @@ def parse_diff(diff_text: str) -> list[tuple[str, int, str]]:
         if line.startswith("+++ b/"):
             current_file = line[6:]
         elif line.startswith("@@"):
-            # Parse line number from hunk header: @@ -x,y +N,M @@
             match = re.search(r'\+(\d+)', line)
             line_num = int(match.group(1)) if match else 0
         elif line.startswith("+") and not line.startswith("+++"):
@@ -78,12 +65,16 @@ def parse_diff(diff_text: str) -> list[tuple[str, int, str]]:
     return results
 
 
+def is_exempt(line: str) -> bool:
+    """Check if a line has a safety exemption comment."""
+    return any(exemption.lower() in line.lower() for exemption in SAFETY_EXEMPTIONS)
+
+
 def check_hardcoded_paths(added_lines: list) -> list[dict]:
-    """Check for hardcoded paths that should use rudy.paths."""
+    """Check for hardcoded Batcave paths that should use rudy.paths."""
     findings = []
     for filepath, line_num, line in added_lines:
-        # Skip lines with safety exemptions
-        if any(exemption.lower() in line.lower() for exemption in SAFETY_EXEMPTIONS):
+        if is_exempt(line):
             continue
         for pattern in HARDCODED_PATH_PATTERNS:
             if re.search(pattern, line, re.IGNORECASE):
@@ -99,71 +90,25 @@ def check_hardcoded_paths(added_lines: list) -> list[dict]:
     return findings
 
 
-def check_security(added_lines: list) -> list[dict]:
-    """Check for security anti-patterns in added Python lines."""
-    findings = []
-    for filepath, line_num, line in added_lines:
-        if not filepath.endswith(".py"):
-            continue
-        for pattern, desc in SECURITY_PATTERNS:
-            if re.search(pattern, line):
-                # Check for safety exemptions
-                if any(exemption.lower() in line.lower() for exemption in SAFETY_EXEMPTIONS):
-                    continue
-                findings.append({
-                    "type": "security_concern",
-                    "severity": "high",
-                    "file": filepath,
-                    "line": line_num,
-                    "title": f"Security: {desc}",
-                    "detail": line.strip()[:120],
-                    "recommendation": "Review for necessity; add safety comment if intentional (e.g. # SAFETY: ...)",
-                })
-    return findings
-
-
-def check_broad_except(added_lines: list) -> list[dict]:
-    """Check for bare except or overly broad Exception catches."""
-    findings = []
-    for filepath, line_num, line in added_lines:
-        if not filepath.endswith(".py"):
-            continue
-        stripped = line.strip()
-        if re.match(r'^except\s*:', stripped):
-            findings.append({
-                "type": "broad_except",
-                "severity": "medium",
-                "file": filepath,
-                "line": line_num,
-                "title": "Bare except clause",
-                "detail": stripped[:120],
-                "recommendation": "Catch specific exceptions instead of bare except",
-            })
-    return findings
-
-
 def check_import_hygiene(added_lines: list) -> list[dict]:
     """Check for direct path construction that should use rudy.paths."""
     findings = []
     for filepath, line_num, line in added_lines:
         if not filepath.endswith(".py"):
             continue
-        # Skip rudy/paths.py itself
         if filepath.endswith("rudy/paths.py"):
             continue
-        # Skip lines with safety exemptions
-        if any(exemption.lower() in line.lower() for exemption in SAFETY_EXEMPTIONS):
+        if is_exempt(line):
             continue
-        stripped = line.strip()
         # SAFETY: detection pattern for direct path construction
-        if re.search(r'Path\s*\(\s*["\'].*Desktop', stripped):
+        if re.search(r'Path\s*\(\s*["\'].*Desktop', line.strip()):
             findings.append({
                 "type": "import_hygiene",
                 "severity": "medium",
                 "file": filepath,
                 "line": line_num,
                 "title": "Direct path construction (should use rudy.paths)",
-                "detail": stripped[:120],
+                "detail": line.strip()[:120],
                 "recommendation": "Use DESKTOP, REPO_ROOT, etc. from rudy.paths",
             })
     return findings
@@ -171,7 +116,6 @@ def check_import_hygiene(added_lines: list) -> list[dict]:
 
 def get_diff(base: str = "main") -> str:
     """Get the diff between HEAD and the base branch."""
-    # Try origin/base first
     for ref in [f"origin/{base}", base]:
         try:
             result = subprocess.run(
@@ -183,7 +127,6 @@ def get_diff(base: str = "main") -> str:
         except Exception:
             continue
 
-    # Fallback: diff against HEAD~1 (single commit)
     try:
         result = subprocess.run(
             ["git", "diff", "HEAD~1"],
@@ -197,7 +140,7 @@ def get_diff(base: str = "main") -> str:
     return ""
 
 
-def format_report(findings: list, diff_stats: str = "") -> str:
+def format_report(findings: list) -> str:
     """Format findings into a markdown report."""
     high = sum(1 for f in findings if f["severity"] == "high")
     medium = sum(1 for f in findings if f["severity"] == "medium")
@@ -207,23 +150,23 @@ def format_report(findings: list, diff_stats: str = "") -> str:
     icon = "\u2705" if high == 0 else "\u274c"
 
     lines = [
-        f"## {icon} Lucius Review: {verdict}",
+        f"## {icon} Lucius Review — Batcave Paths: {verdict}",
         f"**Findings:** {total} total ({high} high, {medium} medium)",
+        "",
+        "*Security scanning by bandit. Dependency audit by pip-audit. "
+        "This check covers Batcave-specific path hygiene only (ADR-005).*",
         "",
     ]
 
     if not findings:
-        lines.append("No issues found. Clean diff.")
+        lines.append("No Batcave path issues found. Clean diff.")
     else:
-        by_severity: dict[str, list] = {}
-        for f in findings:
-            by_severity.setdefault(f["severity"], []).append(f)
-
-        for sev in ["high", "medium", "low"]:
-            if sev not in by_severity:
+        for sev in ["high", "medium"]:
+            sev_findings = [f for f in findings if f["severity"] == sev]
+            if not sev_findings:
                 continue
-            lines.append(f"### {sev.upper()} ({len(by_severity[sev])})")
-            for f in by_severity[sev]:
+            lines.append(f"### {sev.upper()} ({len(sev_findings)})")
+            for f in sev_findings:
                 loc = f"{f['file']}:{f['line']}" if f.get("line") else f["file"]
                 lines.append(f"- **{f['title']}** (`{loc}`)")
                 lines.append(f"  `{f['detail']}`")
@@ -231,7 +174,7 @@ def format_report(findings: list, diff_stats: str = "") -> str:
                     lines.append(f"  *Recommendation:* {f['recommendation']}")
             lines.append("")
 
-    lines.append(f"\n---\n*Lucius Fox CI — {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*")
+    lines.append(f"\n---\n*Lucius Fox CI (ADR-005 compliant) — {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*")
     return "\n".join(lines)
 
 
@@ -273,7 +216,7 @@ def main():
         if idx + 1 < len(sys.argv):
             base = sys.argv[idx + 1]
 
-    print(f"Lucius CI: reviewing diff against {base}...")
+    print(f"Lucius CI (ADR-005): Batcave path check against {base}...")
 
     diff_text = get_diff(base)
     if not diff_text:
@@ -283,11 +226,9 @@ def main():
     added_lines = parse_diff(diff_text)
     print(f"Parsed {len(added_lines)} added lines from diff.")
 
-    # Run all checks
+    # Run Batcave-specific checks only (security delegated to bandit)
     findings = []
     findings.extend(check_hardcoded_paths(added_lines))
-    findings.extend(check_security(added_lines))
-    findings.extend(check_broad_except(added_lines))
     findings.extend(check_import_hygiene(added_lines))
 
     report = format_report(findings)
@@ -306,7 +247,7 @@ def main():
         print(f"\nBLOCKED: {high_count} high-severity finding(s). Fix before merging.")
         sys.exit(1)
     else:
-        print("\nPASS: No high-severity findings.")
+        print("\nPASS: No Batcave path issues.")
         sys.exit(0)
 
 
