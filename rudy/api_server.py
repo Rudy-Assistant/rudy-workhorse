@@ -29,11 +29,12 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
-LOGS = DESKTOP / "rudy-logs"
+from rudy.paths import RUDY_LOGS, RUDY_COMMANDS  # noqa: E402
+
+LOGS = RUDY_LOGS
 API_CONFIG = LOGS / "api-server-config.json"
 API_LOG = LOGS / "api-requests.json"
-COMMANDS_DIR = DESKTOP / "rudy-commands"
+COMMANDS_DIR = RUDY_COMMANDS
 
 def _load_config():
     if API_CONFIG.exists():

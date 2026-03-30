@@ -29,6 +29,8 @@ from datetime import datetime
 from pathlib import Path
 from email.mime.text import MIMEText
 
+from rudy.paths import RUDY_LOGS, DESKTOP  # noqa: E402
+
 # ─────────────────────────────────────────────
 # CONFIGURATION (mirrors rudy-listener.py)
 # ─────────────────────────────────────────────
@@ -45,8 +47,7 @@ GMAIL_IMAP_IPS = ["142.250.4.108", "142.250.4.109", "74.125.200.108", "74.125.20
 GMAIL_SMTP_IPS = ["142.250.4.108", "74.125.200.108"]
 
 HOSTS_FILE = r"C:\Windows\System32\drivers\etc\hosts"
-DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
-LOG_DIR = DESKTOP / "rudy-logs"
+LOG_DIR = RUDY_LOGS
 REPORT_FILE = LOG_DIR / f"diagnostic-{datetime.now().strftime('%Y%m%d-%H%M%S')}.txt"
 
 # ─────────────────────────────────────────────

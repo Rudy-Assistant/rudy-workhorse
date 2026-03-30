@@ -28,8 +28,9 @@ import subprocess
 from datetime import datetime
 from pathlib import Path
 
-DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
-LOGS_DIR = DESKTOP / "rudy-logs"
+from rudy.paths import RUDY_LOGS  # noqa: E402
+
+LOGS_DIR = RUDY_LOGS
 DOSSIER_DIR = LOGS_DIR / "intruder-dossiers"
 DOSSIER_DIR.mkdir(parents=True, exist_ok=True)
 

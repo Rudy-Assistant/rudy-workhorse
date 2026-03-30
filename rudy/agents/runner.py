@@ -24,8 +24,9 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
-LOGS_DIR = DESKTOP / "rudy-logs"
+from rudy.paths import RUDY_LOGS, DESKTOP  # noqa: E402
+
+LOGS_DIR = RUDY_LOGS
 sys.path.insert(0, str(DESKTOP))
 
 # Agent registry — maps names to (module, class, default_mode)

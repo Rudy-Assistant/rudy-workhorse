@@ -42,9 +42,10 @@ from pathlib import Path
 from typing import Tuple, List
 
 # --- Paths ---
-DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
-LOGS_DIR = DESKTOP / "rudy-logs"
-SESSIONS_DIR = DESKTOP / "data" / "sessions"
+from rudy.paths import RUDY_LOGS, RUDY_DATA  # noqa: E402
+
+LOGS_DIR = RUDY_LOGS
+SESSIONS_DIR = RUDY_DATA / "sessions"
 SIM_STATE_FILE = LOGS_DIR / "human-sim-state.json"
 SIM_LOG_FILE = LOGS_DIR / "human-sim-log.json"
 BOT_DETECTION_LOG = LOGS_DIR / "bot-detection-log.json"

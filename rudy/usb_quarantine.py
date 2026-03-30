@@ -54,10 +54,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List
 
-DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
-LOGS_DIR = DESKTOP / "rudy-logs"
+from rudy.paths import RUDY_LOGS, RUDY_DATA  # noqa: E402
+
+LOGS_DIR = RUDY_LOGS
 QUARANTINE_DIR = LOGS_DIR / "usb-quarantine"
-DATA_DIR = DESKTOP / "rudy-data"
+DATA_DIR = RUDY_DATA
 WHITELIST_FILE = DATA_DIR / "usb-whitelist.json"
 QUARANTINE_STATE = QUARANTINE_DIR / "quarantine-state.json"
 KILL_SWITCH_FILE = DATA_DIR / "SECURITY-DISABLED"

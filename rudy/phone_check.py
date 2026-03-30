@@ -35,9 +35,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Tuple
 
-DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
-LOGS = DESKTOP / "rudy-logs"
-PHONE_CHECK_DIR = DESKTOP / "rudy-data" / "phone-check"
+from rudy.paths import RUDY_LOGS, RUDY_DATA  # noqa: E402
+
+LOGS = RUDY_LOGS
+PHONE_CHECK_DIR = RUDY_DATA / "phone-check"
 IOC_DIR = PHONE_CHECK_DIR / "iocs"
 REPORTS_DIR = PHONE_CHECK_DIR / "reports"
 

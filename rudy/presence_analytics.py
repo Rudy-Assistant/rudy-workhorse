@@ -25,8 +25,9 @@ from datetime import datetime
 from pathlib import Path
 from itertools import combinations
 
-DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
-LOGS_DIR = DESKTOP / "rudy-logs"
+from rudy.paths import RUDY_LOGS  # noqa: E402
+
+LOGS_DIR = RUDY_LOGS
 LOGS_DIR.mkdir(exist_ok=True)
 
 # Input files (written by presence.py)

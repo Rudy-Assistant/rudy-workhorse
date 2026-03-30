@@ -30,9 +30,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import List
 
-DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
-LOGS = DESKTOP / "rudy-logs"
-OFFLINE_DIR = DESKTOP / "rudy-data" / "offline"
+from rudy.paths import RUDY_LOGS, RUDY_DATA  # noqa: E402
+
+LOGS = RUDY_LOGS
+OFFLINE_DIR = RUDY_DATA / "offline"
 QUEUE_FILE = OFFLINE_DIR / "action-queue.json"
 STATE_FILE = OFFLINE_DIR / "offline-state.json"
 DECISION_LOG = OFFLINE_DIR / "decisions.json"

@@ -22,9 +22,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import List
 
-DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
-LOGS = DESKTOP / "rudy-logs"
-KB_DIR = DESKTOP / "rudy-data" / "knowledge-base"
+from rudy.paths import RUDY_LOGS, RUDY_DATA, DESKTOP  # noqa: E402
+
+LOGS = RUDY_LOGS
+KB_DIR = RUDY_DATA / "knowledge-base"
 INDEX_STATE = KB_DIR / "index-state.json"
 
 # Collections and their source directories

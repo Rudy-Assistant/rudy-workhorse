@@ -35,9 +35,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional, Dict, List
 
-DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
-LOGS_DIR = DESKTOP / "rudy-logs"
-DATA_DIR = DESKTOP / "rudy-data" / "findmy"
+from rudy.paths import RUDY_LOGS, RUDY_DATA  # noqa: E402
+
+LOGS_DIR = RUDY_LOGS
+DATA_DIR = RUDY_DATA / "findmy"
 HISTORY_DIR = DATA_DIR / "history"
 GEOFENCES_FILE = DATA_DIR / "geofences.json"
 CONFIG_FILE = DATA_DIR / "findmy-config.json"

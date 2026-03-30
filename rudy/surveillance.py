@@ -31,9 +31,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional, Dict, List
 
-DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
-LOGS_DIR = DESKTOP / "rudy-logs"
-DATA_DIR = DESKTOP / "rudy-data" / "surveillance"
+from rudy.paths import RUDY_LOGS, RUDY_DATA  # noqa: E402
+
+LOGS_DIR = RUDY_LOGS
+DATA_DIR = RUDY_DATA / "surveillance"
 SNAPSHOTS_DIR = DATA_DIR / "snapshots"
 RECORDINGS_DIR = DATA_DIR / "recordings"
 CONFIG_FILE = DATA_DIR / "surveillance-config.json"

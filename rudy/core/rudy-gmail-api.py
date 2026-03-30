@@ -29,6 +29,8 @@ from datetime import datetime
 from pathlib import Path
 from email.mime.text import MIMEText
 
+from rudy.paths import RUDY_LOGS, DESKTOP, ROBIN_CONFIG  # noqa: E402
+
 # ─────────────────────────────────────────────
 # CONFIGURATION
 # ─────────────────────────────────────────────
@@ -36,10 +38,9 @@ from email.mime.text import MIMEText
 RUDY_EMAIL = "rudy.ciminoassist@gmail.com"
 POLL_INTERVAL = 15  # seconds
 
-DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
-LOG_DIR = DESKTOP / "rudy-logs"
+LOG_DIR = RUDY_LOGS
 LOG_DIR.mkdir(exist_ok=True)
-CREDS_DIR = DESKTOP / "rudy-config"
+CREDS_DIR = ROBIN_CONFIG.parent
 CREDS_DIR.mkdir(exist_ok=True)
 
 TOKEN_FILE = CREDS_DIR / "token.json"

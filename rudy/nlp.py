@@ -20,7 +20,7 @@ from collections import Counter
 from pathlib import Path
 from typing import List, Tuple
 
-DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
+from rudy.paths import DESKTOP  # noqa: E402
 
 class SentimentAnalyzer:
     """Analyze sentiment of text."""

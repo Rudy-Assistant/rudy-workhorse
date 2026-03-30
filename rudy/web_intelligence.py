@@ -23,9 +23,10 @@ from pathlib import Path
 from typing import Optional, List
 from urllib.parse import urlparse, urljoin
 
-DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
-LOGS = DESKTOP / "rudy-logs"
-WATCH_DIR = DESKTOP / "rudy-data" / "web-watch"
+from rudy.paths import RUDY_LOGS, RUDY_DATA  # noqa: E402
+
+LOGS = RUDY_LOGS
+WATCH_DIR = RUDY_DATA / "web-watch"
 WATCH_STATE = WATCH_DIR / "watch-state.json"
 
 def _load_json(path, default=None):

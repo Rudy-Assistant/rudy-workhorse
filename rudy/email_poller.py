@@ -39,8 +39,9 @@ from email.mime.text import MIMEText
 # CONFIGURATION
 # ------------------------------------
 
-DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
-LOG_DIR = DESKTOP / "rudy-logs"
+from rudy.paths import RUDY_LOGS, DESKTOP  # noqa: E402
+
+LOG_DIR = RUDY_LOGS
 LOG_DIR.mkdir(exist_ok=True)
 STATE_FILE = LOG_DIR / "email-poller-state.json"
 
