@@ -15,12 +15,17 @@ Protocol:
     rudy-data/coordination/alfred-status.json  -- Alfred's last-known state
 
 Message Types:
-  - "request"     : Robin asks Alfred for guidance or a cloud task
-  - "report"      : Robin reports completed work or findings
-  - "health"      : Periodic health check / status update
-  - "escalation"  : Something Robin can't handle alone
-  - "task"        : Alfred assigns work to Robin
-  - "ack"         : Acknowledgment of received message
+  - "request"       : Robin asks Alfred for guidance or a cloud task
+  - "report"        : Robin reports completed work or findings
+  - "health"        : Periodic health check / status update
+  - "escalation"    : Something Robin can't handle alone
+  - "task"          : Alfred assigns work to Robin
+  - "ack"           : Acknowledgment of received message
+  - "task_ack"      : Robin acknowledges a delegated task (v2)
+  - "task_complete" : Robin reports a specific task done with results (v2)
+  - "finding"       : Robin reports a quality/security finding (v2)
+  - "session_start" : Alfred announces session start with ID (v2)
+  - "session_end"   : Alfred announces session end with summary (v2)
 
 Usage (Robin side):
     from robin_alfred_protocol import RobinMailbox
@@ -185,6 +190,57 @@ class RobinMailbox:
             "severity": severity,
         }, priority="high")
 
+    def acknowledge_task(self, task_msg_id: str, eta_minutes: int = 0) -> str:
+        """Acknowledge receipt of a delegated task from Alfred.
+
+        Robin should call this immediately upon receiving a task message,
+        so Alfred knows the task was received and Robin is working on it.
+
+        Args:
+            task_msg_id: The message ID of the task being acknowledged
+            eta_minutes: Estimated time to completion (0 = unknown)
+        """
+        return self.send_to_alfred("task_ack", {
+            "task_id": task_msg_id,
+            "acknowledged_at": datetime.now().isoformat(),
+            "eta_minutes": eta_minutes,
+            "status": "in_progress",
+        }, priority="normal")
+
+    def report_task_complete(self, task_msg_id: str, result: str,
+                             files_changed: list = None,
+                             success: bool = True) -> str:
+        """Report completion of a delegated task.
+
+        Args:
+            task_msg_id: The original task message ID
+            result: Human-readable summary of what was done
+            files_changed: List of files modified
+            success: Whether the task completed successfully
+        """
+        return self.send_to_alfred("task_complete", {
+            "task_id": task_msg_id,
+            "completed_at": datetime.now().isoformat(),
+            "success": success,
+            "result": result,
+            "files_changed": files_changed or [],
+        }, priority="normal")
+
+    def report_finding(self, title: str, severity: str, detail: str,
+                       source: str = "robin") -> str:
+        """Report a quality or security finding to Alfred.
+
+        Robin should report findings discovered during nightwatch or
+        autonomous operations so Alfred can track and act on them.
+        """
+        return self.send_to_alfred("finding", {
+            "title": title,
+            "severity": severity,
+            "detail": detail,
+            "source": source,
+            "discovered_at": datetime.now().isoformat(),
+        }, priority="high" if severity == "high" else "normal")
+
     def send_health(self):
         """Send a periodic health update to Alfred."""
         try:
@@ -208,17 +264,30 @@ class AlfredMailbox:
     """
     Alfred's side of the coordination protocol.
     Used by Alfred (Claude) when reading Robin's messages and responding.
+
+    v2 additions:
+      - Session awareness: tracks session_id and start_time
+      - Session lifecycle messages (session_start, session_end)
+      - Finding reporting for quality gate integration
     """
 
-    def __init__(self):
+    def __init__(self, session_id: str = "", session_number: int = 0):
         self.status_file = COORD_DIR / "alfred-status.json"
+        self.session_id = session_id or f"cowork-{int(time.time())}"
+        self.session_number = session_number
+        self.session_start = datetime.now()
 
-    def update_status(self, state: str, session_id: str = "", details: str = ""):
-        """Update Alfred's status file."""
+    def update_status(self, state: str, details: str = ""):
+        """Update Alfred's status file with session context."""
         status = {
             "state": state,
             "updated_at": datetime.now().isoformat(),
-            "session_id": session_id,
+            "session_id": self.session_id,
+            "session_number": self.session_number,
+            "session_start": self.session_start.isoformat(),
+            "uptime_minutes": round(
+                (datetime.now() - self.session_start).total_seconds() / 60, 1
+            ),
             "details": details,
         }
         with open(self.status_file, "w") as f:
@@ -281,6 +350,57 @@ class AlfredMailbox:
             "note": note,
         }, in_reply_to=original_msg_id)
 
+    def announce_session_start(self, priorities: list = None) -> str:
+        """Announce session start so Robin knows Alfred is online.
+
+        Args:
+            priorities: List of session priority strings (e.g. ["P0: CI", "P1: Protocol"])
+        """
+        self.update_status("online", f"Session {self.session_number} started")
+        return self.respond_to_robin("session_start", {
+            "session_id": self.session_id,
+            "session_number": self.session_number,
+            "started_at": self.session_start.isoformat(),
+            "priorities": priorities or [],
+        })
+
+    def announce_session_end(self, summary: str, prs_merged: list = None,
+                             next_priorities: list = None) -> str:
+        """Announce session end with summary for Robin's awareness.
+
+        Args:
+            summary: Human-readable session summary
+            prs_merged: List of PR numbers merged this session
+            next_priorities: Priorities for next session
+        """
+        self.update_status("offline", f"Session {self.session_number} ended")
+        return self.respond_to_robin("session_end", {
+            "session_id": self.session_id,
+            "session_number": self.session_number,
+            "ended_at": datetime.now().isoformat(),
+            "duration_minutes": round(
+                (datetime.now() - self.session_start).total_seconds() / 60, 1
+            ),
+            "summary": summary,
+            "prs_merged": prs_merged or [],
+            "next_priorities": next_priorities or [],
+        })
+
+    def report_finding(self, title: str, severity: str, detail: str,
+                       source: str = "lucius") -> str:
+        """Report a quality/security finding for Robin to track.
+
+        Used when Alfred discovers issues that Robin should monitor or
+        include in nightwatch reports.
+        """
+        return self.respond_to_robin("finding", {
+            "title": title,
+            "severity": severity,
+            "detail": detail,
+            "source": source,
+            "session_id": self.session_id,
+        })
+
     def mark_read(self, msg_id: str):
         """Mark a message as read and archive it."""
         for f in ALFRED_INBOX.glob(f"{msg_id}*.json"):
@@ -307,23 +427,50 @@ class AlfredMailbox:
 
 # Quick test
 if __name__ == "__main__":
-    print("Testing Robin-Alfred Protocol...")
+    print("Testing Robin-Alfred Protocol v2...")
     robin = RobinMailbox()
     print(f"Robin status: {robin.status_file}")
     print(f"Alfred inbox: {ALFRED_INBOX}")
     print(f"Robin inbox: {ROBIN_INBOX}")
 
-    # Send a test message
+    # Test basic message
     msg_id = robin.send_to_alfred("health", {"test": True})
-    print(f"Sent test message: {msg_id}")
+    print(f"Sent test health: {msg_id}")
 
-    # Check Alfred's view
-    alfred = AlfredMailbox()
+    # Test Alfred session awareness
+    alfred = AlfredMailbox(session_id="test-session", session_number=15)
+    print(f"Alfred session: {alfred.session_id} (#{alfred.session_number})")
+
+    # Test session lifecycle
+    alfred.announce_session_start(priorities=["P0: CI integration", "P1: Protocol v2"])
+    print("Session start announced")
+
+    # Test task delegation + ack flow
+    task_id = alfred.assign_task("Run hygiene check", "Execute lucius:hygiene_check")
+    print(f"Task assigned: {task_id}")
+
+    robin_msgs = robin.check_inbox()
+    for msg in robin_msgs:
+        if msg["type"] == "task":
+            ack_id = robin.acknowledge_task(msg["id"], eta_minutes=5)
+            print(f"Task acknowledged: {ack_id}")
+            # Simulate completion
+            done_id = robin.report_task_complete(msg["id"], "Hygiene check passed: 0 findings")
+            print(f"Task complete: {done_id}")
+        robin.mark_read(msg["id"])
+
+    # Test finding reporting
+    finding_id = robin.report_finding("Stale log files", "low", "3 log files > 30 days old")
+    print(f"Finding reported: {finding_id}")
+
+    # Alfred reads everything
     msgs = alfred.check_inbox()
     print(f"Alfred sees {len(msgs)} message(s)")
-
     for msg in msgs:
-        print(f"  [{msg['type']}] {msg['payload']}")
-        alfred.mark_read(msg['id'])
+        print(f"  [{msg['type']}] {msg['payload'].get('subject', msg['payload'].get('task_id', msg['payload'].get('title', '?')))}")
+        alfred.mark_read(msg["id"])
 
-    print("Protocol test complete.")
+    alfred.announce_session_end("Test session complete", prs_merged=[28], next_priorities=["Continue testing"])
+    print("Session end announced")
+
+    print("Protocol v2 test complete.")
