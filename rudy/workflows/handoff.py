@@ -4,8 +4,10 @@ Automated Handoff Protocol — Continuity loop between Alfred sessions.
 Closes the gap: Alfred → handoff file → Robin → new session → new Alfred.
 
 Flow:
-    1. Alfred drafts a handoff .md to rudy-data/handoffs/ as context grows
-    2. Robin scans handoffs/ on activation from passive mode
+    1. Alfred drafts a handoff .md — written to vault/Handoffs/ (canonical),
+       vault/Sessions/, vault/Briefings/Alfred-Session-Log.md, and
+       rudy-data/handoffs/ (legacy) via HandoffWriter.write()
+    2. Robin scans vault/Handoffs/ and rudy-data/handoffs/ on activation
     3. If Alfred is not active, Robin can bootstrap a new Cowork session
        using the latest handoff as the initial prompt
 
@@ -36,7 +38,7 @@ import re
 from datetime import datetime
 from pathlib import Path
 
-from rudy.paths import BATCAVE_VAULT, HANDOFFS_DIR, REPO_ROOT
+from rudy.paths import BATCAVE_VAULT, HANDOFFS_DIR, REPO_ROOT, VAULT_HANDOFFS
 
 
 class HandoffWriter:
@@ -257,18 +259,34 @@ class HandoffWriter:
         return "\n".join(lines)
 
     def write(self) -> Path:
-        """Write handoff to HANDOFFS_DIR and session record to BatcaveVault.
+        """Write handoff to all destinations — rudy-data, vault/Handoffs, vault/Sessions.
 
-        Writes three things:
-            1. rudy-data/handoffs/session-NN-handoff.md — Robin's handoff brief
-            2. rudy-data/handoffs/session-NN-handoff.json — Robin's JSON sidecar
-            3. vault/Sessions/Session-NN.md — BatcaveVault session record (if vault exists)
+        Writes to five locations (four in vault):
+            1. rudy-data/handoffs/session-NN-handoff.md — legacy Robin handoff brief
+            2. rudy-data/handoffs/session-NN-handoff.json — legacy JSON sidecar
+            3. vault/Handoffs/Session-NN-Handoff.md — CANONICAL handoff in Obsidian
+            4. vault/Handoffs/Session-NN-Handoff.json — CANONICAL JSON sidecar
+            5. vault/Sessions/Session-NN.md — session record for institutional memory
+            6. vault/Briefings/Alfred-Session-Log.md — appended session log entry
 
-        Returns the handoff file path.
+        Returns the vault handoff file path (canonical), falling back to
+        rudy-data path if vault is unavailable.
         """
+        if self.context_estimate == "unknown":
+            raise ValueError(
+                "Context window estimate is required. Call set_context_estimate() "
+                "before write(). This is a HARD REQUIREMENT — Robin uses it to "
+                "decide whether to start a new session."
+            )
+
         content = self.generate_markdown()
-        filename = f"session-{self.session_number:02d}-handoff.md"
-        filepath = HANDOFFS_DIR / filename
+        filename_md = f"session-{self.session_number:02d}-handoff.md"
+        filename_json = f"session-{self.session_number:02d}-handoff.json"
+        vault_filename_md = f"Session-{self.session_number}-Handoff.md"
+        vault_filename_json = f"Session-{self.session_number}-Handoff.json"
+
+        # 1. Legacy: rudy-data/handoffs/
+        filepath = HANDOFFS_DIR / filename_md
         filepath.write_text(content, encoding="utf-8")
 
         # JSON sidecar for Robin's programmatic access
@@ -283,33 +301,68 @@ class HandoffWriter:
             "next_priorities": self.next_priorities,
             "handoff_file": str(filepath),
         }
-        sidecar_path = HANDOFFS_DIR / f"session-{self.session_number:02d}-handoff.json"
-        sidecar_path.write_text(
-            json.dumps(sidecar, indent=2, default=str), encoding="utf-8"
-        )
+        sidecar_json = json.dumps(sidecar, indent=2, default=str)
+        sidecar_path = HANDOFFS_DIR / filename_json
+        sidecar_path.write_text(sidecar_json, encoding="utf-8")
 
-        # Write to BatcaveVault if it exists (vault is gitignored, per-Oracle)
+        # 2. CANONICAL: vault/Handoffs/ (the most-used folder in Obsidian)
+        canonical_path = filepath  # fallback if vault unavailable
+        if VAULT_HANDOFFS.exists():
+            vault_handoff_md = VAULT_HANDOFFS / vault_filename_md
+            vault_handoff_md.write_text(content, encoding="utf-8")
+            vault_handoff_json = VAULT_HANDOFFS / vault_filename_json
+            # Update sidecar to point to vault path
+            sidecar["handoff_file"] = str(vault_handoff_md)
+            vault_handoff_json.write_text(
+                json.dumps(sidecar, indent=2, default=str), encoding="utf-8"
+            )
+            canonical_path = vault_handoff_md
+
+        # 3. vault/Sessions/ — institutional memory record
         vault_sessions = BATCAVE_VAULT / "Sessions"
         if vault_sessions.exists():
             vault_record = self.generate_vault_session_record()
             vault_path = vault_sessions / f"Session-{self.session_number}.md"
             vault_path.write_text(vault_record, encoding="utf-8")
 
-            # Append to Alfred Session Log
-            session_log = BATCAVE_VAULT / "Briefings" / "Alfred-Session-Log.md"
-            if session_log.exists():
-                entry = self.generate_session_log_entry()
-                with open(session_log, "a", encoding="utf-8") as f:
-                    f.write(entry + "\n")
+        # 4. vault/Briefings/Alfred-Session-Log.md — running log
+        session_log = BATCAVE_VAULT / "Briefings" / "Alfred-Session-Log.md"
+        if session_log.exists():
+            entry = self.generate_session_log_entry()
+            with open(session_log, "a", encoding="utf-8") as f:
+                f.write(entry + "\n")
 
-        return filepath
+        return canonical_path
 
 
 class HandoffScanner:
-    """Robin scans for handoff briefs to determine if a new session is needed."""
+    """Robin scans for handoff briefs to determine if a new session is needed.
+
+    Checks vault/Handoffs/ first (canonical), then rudy-data/handoffs/ (legacy).
+    """
 
     def __init__(self):
-        self.handoffs_dir = HANDOFFS_DIR
+        self.vault_handoffs = VAULT_HANDOFFS
+        self.legacy_handoffs = HANDOFFS_DIR
+
+    def _find_json_sidecars(self) -> list[Path]:
+        """Find all JSON sidecars across both locations, newest first."""
+        sidecars = []
+        # Vault (canonical) — uses PascalCase naming
+        if self.vault_handoffs.exists():
+            sidecars.extend(self.vault_handoffs.glob("Session-*-Handoff.json"))
+        # Legacy — uses lowercase naming
+        sidecars.extend(self.legacy_handoffs.glob("session-*-handoff.json"))
+        # Sort by modification time, newest first
+        return sorted(sidecars, key=lambda p: p.stat().st_mtime, reverse=True)
+
+    def _find_md_files(self) -> list[Path]:
+        """Find all handoff markdown files across both locations, newest first."""
+        md_files = []
+        if self.vault_handoffs.exists():
+            md_files.extend(self.vault_handoffs.glob("Session-*-Handoff.md"))
+        md_files.extend(self.legacy_handoffs.glob("session-*-handoff.md"))
+        return sorted(md_files, key=lambda p: p.stat().st_mtime, reverse=True)
 
     def get_latest_handoff(self) -> dict | None:
         """Find the most recent handoff JSON sidecar.
@@ -317,10 +370,7 @@ class HandoffScanner:
         Returns:
             Parsed JSON dict of the latest handoff, or None if no handoffs exist.
         """
-        sidecars = sorted(
-            self.handoffs_dir.glob("session-*-handoff.json"),
-            reverse=True,
-        )
+        sidecars = self._find_json_sidecars()
         if not sidecars:
             return None
 
@@ -335,10 +385,7 @@ class HandoffScanner:
         Returns:
             Content of the latest handoff .md, or None.
         """
-        md_files = sorted(
-            self.handoffs_dir.glob("session-*-handoff.md"),
-            reverse=True,
-        )
+        md_files = self._find_md_files()
         if not md_files:
             return None
 
@@ -349,10 +396,7 @@ class HandoffScanner:
 
     def get_all_handoffs(self) -> list[dict]:
         """Get all handoff sidecars, newest first."""
-        sidecars = sorted(
-            self.handoffs_dir.glob("session-*-handoff.json"),
-            reverse=True,
-        )
+        sidecars = self._find_json_sidecars()
         results = []
         for path in sidecars:
             try:
