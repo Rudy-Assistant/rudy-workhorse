@@ -9,9 +9,11 @@
 # Tier assignments are configurable here. Batman can promote or demote
 # MCPs without a code change.
 #
-# Timeout overrides (per-check, in seconds) will be set in Phase 1C
-# after real-world baselines from Phase 1B are collected.
-# Until then, all checks use the default 30s timeout.
+# Phase 1C timeout values derived from Oracle baselines (2026-03-30):
+#   Process checks (CIM cmdline query): ~900ms typical, 1700ms worst case
+#   HTTP checks (GitHub API, SMTP): ~100-950ms typical
+#   Config checks (.claude.json read): <10ms
+#   Default: 30s (unchanged for safety margin)
 
 mcps:
   # CRITICAL — session cannot proceed without these
@@ -31,9 +33,17 @@ mcps:
   chrome: OPTIONAL
 
 # Per-check timeout overrides (seconds).
-# Leave empty until Phase 1C measurement.
-# Example:
-#   timeouts:
-#     github: 10
-#     notion: 15
-timeouts: {}
+# Phase 1C: Set from Oracle smoke test baselines (2026-03-30).
+# Process checks (CIM query) are the slowest at ~900ms typical.
+# 3x headroom over observed worst case for each check type.
+timeouts:
+  desktop-commander: 5    # process check via CIM (~900ms typical, 1700ms worst)
+  windows-mcp: 3          # process check via tasklist (~400ms typical)
+  github: 5               # process check + optional HTTP (~950ms typical)
+  gmail: 3                # TCP socket to smtp.zoho.com (~100ms typical)
+  google-calendar: 2      # .claude.json read (<10ms typical)
+  notion: 2               # .claude.json read (<10ms typical)
+  chrome: 2               # .claude.json read (<10ms typical)
+  brave-search: 2         # .claude.json read (<10ms typical)
+  huggingface: 2          # .claude.json read (<10ms typical)
+  context7: 5             # process check via CIM (~900ms typical)
