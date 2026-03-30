@@ -6,7 +6,6 @@ on:
     paths: ['rudy/**', 'scripts/**']
   pull_request:
     branches: [main]
-    paths: ['rudy/**', 'scripts/**']
 
 jobs:
   lint:
