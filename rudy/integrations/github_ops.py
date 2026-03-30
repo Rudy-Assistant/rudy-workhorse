@@ -19,8 +19,9 @@ from typing import Optional
 
 logger = logging.getLogger("rudy.github")
 
-DESKTOP = r"C:\Users\C\Desktop"
-REPO = "rudy-ciminoassist/rudy-workhorse"
+from rudy.paths import DESKTOP, REPO_ROOT
+
+REPO = "Rudy-Assistant/rudy-workhorse"
 
 class GitHubOps:
     """GitHub operations wrapper for Rudy agents."""

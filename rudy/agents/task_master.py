@@ -132,8 +132,6 @@ if __name__ == "__main__":
     def _run_financial_briefing(self):
         """Generate financial snapshot for morning briefing."""
         try:
-            from pathlib import Path
-            sys.path.insert(0, str(Path(__file__).parent.parent.parent))
             from rudy.financial import FinancialIntelligence
             fi = FinancialIntelligence()
             snapshot = fi.watchlist.get_dashboard()

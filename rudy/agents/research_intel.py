@@ -19,7 +19,7 @@ import subprocess
 import urllib.request
 import urllib.error
 from datetime import datetime
-from . import AgentBase, DESKTOP, LOGS_DIR
+from . import AgentBase, DESKTOP, LOGS_DIR, PYTHON_EXE
 
 class ResearchIntel(AgentBase):
     name = "research_intel"
@@ -58,7 +58,7 @@ class ResearchIntel(AgentBase):
             feed_script = DESKTOP / "workhorse-research-feed.py"
 
         if feed_script.exists():
-            python = r"C:\Users\C\AppData\Local\Programs\Python\Python312\python.exe"
+            python = PYTHON_EXE
             ok, out = self._run_cmd(f'"{python}" "{feed_script}"', timeout=120)
             if ok:
                 self.action("Generated daily research digest")

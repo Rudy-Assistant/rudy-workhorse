@@ -67,7 +67,7 @@ class SecureConfig:
     """
     Loads secrets from a local config file that NEVER leaves Oracle.
 
-    Config file: ~/Desktop/rudy-data/robin-secrets.json
+    Config file: RUDY_DATA / "robin-secrets.json" (resolved at runtime via rudy.paths)
     This file is .gitignored and lives only on Oracle's disk.
     Robin reads it. Alfred never sees the contents.
 

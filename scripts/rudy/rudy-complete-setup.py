@@ -18,9 +18,13 @@ import imaplib, smtplib, json, sys, os
 from pathlib import Path
 from email.mime.text import MIMEText
 
+# Bootstrap rudy.paths
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
+from rudy.paths import RUDY_LOGS  # noqa: E402
+
 EMAIL = "rudy.ciminoassist@gmail.com"
 APP_PW = "bviuyjdptufrtnys"
-SECRET = Path(r"C:\Users\C\Desktop\rudy-logs\rudy-totp-secret.json")
+SECRET = RUDY_LOGS / "rudy-totp-secret.json"
 
 print("=" * 50)
 print("  Rudy Complete Setup")

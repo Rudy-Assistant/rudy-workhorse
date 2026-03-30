@@ -207,17 +207,9 @@ def start_robin() -> dict:
     """
     log.info("Starting Robin...")
 
-    # Find Python
-    python_exe = sys.executable
-    if not python_exe or "python" not in python_exe.lower():
-        # Fallback: search common locations
-        for candidate in [
-            r"C:\Python312\python.exe",
-            r"C:\Users\ccimi\AppData\Local\Programs\Python\Python312\python.exe",
-        ]:
-            if os.path.isfile(candidate):
-                python_exe = candidate
-                break
+    # Find Python — canonical detection from rudy.paths
+    from rudy.paths import PYTHON_EXE
+    python_exe = PYTHON_EXE
 
     try:
         if sys.platform == "win32":

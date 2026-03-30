@@ -1,12 +1,18 @@
 """
 Rudy Stealth Browser - reusable module for bot-resistant Playwright automation.
 """
+import sys
 import time, json, random, re
 from pathlib import Path
+
+# Bootstrap rudy.paths
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
+from rudy.paths import RUDY_DATA  # noqa: E402
+
 from playwright.sync_api import sync_playwright
 from playwright_stealth import stealth
 
-SESSION_DIR = Path(r"C:\Users\C\Desktop\rudy-sessions")
+SESSION_DIR = RUDY_DATA / "browser-sessions"
 SESSION_DIR.mkdir(exist_ok=True)
 
 VIEWPORTS = [

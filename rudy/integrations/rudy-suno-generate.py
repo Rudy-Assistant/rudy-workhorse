@@ -6,13 +6,14 @@ Edit the PROMPT and options below, then the command runner will execute it
 and write results to rudy-suno-generate.py.result
 
 Example usage via command runner:
-    Cowork writes this file to C:\\Users\\C\\Desktop\\rudy-commands\\suno-generate.py
+    Cowork writes this file to <RUDY_COMMANDS>/suno-generate.py
     Command runner executes it
     Result appears in suno-generate.py.result
 """
 import sys
 import json
-sys.path.insert(0, r"C:\Users\C\Desktop")
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 # ---- EDIT THESE ----
 PROMPT = "A cheerful birthday song for a 5 year old"

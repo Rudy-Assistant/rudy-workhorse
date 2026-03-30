@@ -9,7 +9,9 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 from playwright_stealth import stealth
 
-SESSION_DIR = Path(r"C:\Users\C\Desktop\rudy-sessions")
+from rudy.paths import RUDY_DATA
+
+SESSION_DIR = RUDY_DATA / "browser-sessions"
 SESSION_DIR.mkdir(exist_ok=True)
 
 VIEWPORTS = [
