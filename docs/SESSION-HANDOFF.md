@@ -1,6 +1,6 @@
 # Batcave Session Handoff — Session 15
 
-**Updated:** 2026-03-30 (Session 14)
+**Updated:** 2026-03-30 (Session 14, final)
 **Use this:** Paste into a new Cowork session to bootstrap Alfred.
 
 ---
@@ -71,15 +71,27 @@ Your co-agents:
 - Tailscale address: 100.83.49.9 (last seen 2+ days)
 - When Hub comes online: run `scripts/robin-go.ps1` to bootstrap Robin
 
-## Session 14 Accomplishments
+## Session 14 Accomplishments (5 PRs merged: #22–#26)
 
-1. **PR #22 merged** — Batch 3 path migration: eliminated all 26 hardcoded path findings from Lucius audit.
+1. **PR #22** — Batch 3 path migration: eliminated all 26 hardcoded path findings from Lucius audit.
    - `rudy/paths.py`: Added `find_exe()` utility, `PYTHON_EXE` and `GIT_EXE` auto-detected constants.
-   - 8 Python modules migrated: `robin_liveness.py`, `robin_chat_gui.py`, `robin_main.py`, `system_master.py`, `research_intel.py`, `github_ops.py`, `rudy-suno.py`, `rudy-suno-generate.py`, `rudy-stealth-browser.py`, `rudy-complete-setup.py`.
-   - 8 scripts migrated: All `scripts/workhorse/` and `scripts/rudy/` invokers now bootstrap via `Path(__file__)` → `rudy.paths`.
+   - 8 Python modules + 8 scripts migrated to `rudy.paths` imports.
    - Import hygiene: `batcave_memory.py` uses `rudy.paths.RUDY_DATA`, `task_master.py` removes redundant `sys.path` hack.
    - `rudy/agents/__init__.py`: Now exports `DESKTOP`, `REPO_ROOT`, `PYTHON_EXE` for all agents.
-   - CI (lint + smoke-test) passed clean.
+2. **PR #24** — Lucius-gated PR review workflow (`rudy/workflows/pr_review.py`).
+   - `review_pr_branch(branch, base)`: Diffs, runs Lucius `_review_diff()`, returns structured verdict.
+   - `review_diff_text()`: Direct API. `format_review_report()`: Markdown formatter.
+   - CLI: `python -m rudy.workflows.pr_review <branch> [base]`
+   - New package: `rudy/workflows/` for composable operational workflows.
+   - Also fixed straggler hardcoded path in `research_intel.py:162` (different indent level, missed by Batch 3).
+3. **PR #25** — Hygiene cleanup: zero Lucius findings across codebase.
+   - `notion_client.py`: Replaced `USERPROFILE/Desktop/rudy-data` with `rudy.paths.RUDY_DATA`.
+   - Lucius import hygiene scanner: Exempts `sys.path.insert` + `Path(__file__)` bootstrap patterns.
+   - `rudy/paths.py`: Auto-scaffolds `vault/Home.md` on fresh clones.
+4. **PR #26** — Finding Capture Protocol added to CLAUDE.md (HARD RULE).
+   - Fix or track, never dismiss. No rationalizations ("pre-existing", "structural", "out of scope").
+   - Context window evaluation at recaps and handoffs.
+5. **PR #23** — Session handoff updated (mid-session).
 
 ## Session 13 Accomplishments
 
@@ -97,16 +109,17 @@ Your co-agents:
 
 ## Session 15 Sprint Priorities
 
-### P0: Lucius Integration Into Workflow
-- Add `lucius:review` as a pre-merge step (either GitHub Action or Alfred workflow)
-- Run `lucius:skills-check` at session start per ADR-004
+### P0: Lucius Remaining Integration
+- `review_pr_branch()` exists in `rudy/workflows/pr_review.py` — now wire as GitHub Action (run Lucius on PR diffs in CI, post review comment)
+- Run `lucius:hygiene_check` at session start — should return zero findings
+- Create `lucius-registry.md` in BatcaveVault (initial artifact inventory via `lucius:locate`)
 - Integrate Sentinel observations → Lucius toolkit triggers
-- Create `lucius-registry.md` in BatcaveVault (initial artifact inventory)
 
 ### P1: Robin Alfred Protocol Improvements
 - Add session awareness to alfred_protocol (session ID, start time)
 - Structured message types beyond basic request/report/health
 - Robin should acknowledge delegated tasks and report completion
+- Check `robin-inbox/` for responses to Session 13 delegated tasks (still unchecked)
 
 ### P2: Hub Activation
 When AceMagic comes online:
@@ -115,15 +128,23 @@ When AceMagic comes online:
 - Run `scripts/robin-go.ps1` to bootstrap (now fully portable)
 - Liveness watchdog will auto-restart Robin every 5 min
 
+### P3: Codebase Quality Baseline
+- Lucius `hygiene_check` currently at zero findings — maintain this as a CI gate
+- Consider adding `lucius:hygiene_check` as a required CI check alongside lint + smoke-test
+- `scripts/agents/` still have pre-existing E401 (multi-import) warnings — clean up when touching
+
 ## Key Technical Details
 
-- **Canonical paths:** ALL paths come from `rudy/paths.py`. Import from there, never hardcode.
+- **Canonical paths:** ALL paths come from `rudy/paths.py`. Import from there, never hardcode. Lucius enforces zero tolerance.
+- **Executable detection:** `rudy.paths.PYTHON_EXE` and `rudy.paths.GIT_EXE` auto-detect via `find_exe()`. Never hardcode Python/Git paths.
+- **PR review workflow:** `from rudy.workflows.pr_review import review_pr_branch` — call before merging. Returns verdict (approve/request_changes) with findings.
 - **Ruff linter:** `ruff check rudy/ --select E,F,W --ignore E501,E402,F401`
 - **Git in sandbox:** Configure `user.email "rudy.ciminoassistant@zohomail.com"` and `user.name "Alfred (Batcave)"`
 - **CI workflow:** lint.yml runs on all PRs, push to main filtered to rudy/** and scripts/**
 - **Desktop Commander quirks:** `read_file` = metadata only, git not in PATH, PowerShell output capture unreliable. Use Python subprocess + file write pattern.
 - **Notion:** Deprecated in favor of BatcaveVault (Obsidian). All content migrated Session 11.
 - **Lucius CLI:** `python -m rudy.agents.lucius_fox [full_audit|hygiene_check|branch_governance|review_files|locate|dependency_check]`
+- **Finding Capture Protocol:** Fix or track every finding. No silent dismissals. See CLAUDE.md.
 
 ## Chris's Rules
 
@@ -134,4 +155,4 @@ When AceMagic comes online:
 - When told "be productive until I return" — that means WORK CONTINUOUSLY. Activate Robin, seed the task queue, and keep going.
 
 ---
-*Generated by Alfred, Session 14, 2026-03-30*
+*Generated by Alfred, Session 14 (final), 2026-03-30*
