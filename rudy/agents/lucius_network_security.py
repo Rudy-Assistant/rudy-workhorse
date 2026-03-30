@@ -1,3 +1,13 @@
+# ╔══════════════════════════════════════════════════════════╗
+# ║  DEPRECATION NOTICE (2026-03-29)                        ║
+# ║  Per ADR-SENTINEL-CONSOLIDATION:                        ║
+# ║  This module's passive recon capabilities (port scan,   ║
+# ║  firewall check, DNS check) will be migrated into       ║
+# ║  agents/sentinel.py (Phase 2).                          ║
+# ║  This file remains functional until migration complete.  ║
+# ║  Canonical security scanning: agents/sentinel.py        ║
+# ╚══════════════════════════════════════════════════════════╝
+
 #!/usr/bin/env python3
 
 """

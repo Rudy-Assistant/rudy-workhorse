@@ -1,3 +1,13 @@
+# ╔══════════════════════════════════════════════════════════╗
+# ║  DEPRECATION NOTICE (2026-03-29)                        ║
+# ║  Per ADR-SENTINEL-CONSOLIDATION:                        ║
+# ║  This module's unique capabilities (file integrity,     ║
+# ║  event log monitoring, process anomaly detection) will  ║
+# ║  be migrated into agents/sentinel.py (Phase 2).         ║
+# ║  This file remains functional until migration complete.  ║
+# ║  Canonical security scanning: agents/sentinel.py        ║
+# ╚══════════════════════════════════════════════════════════╝
+
 """
 SecurityAgent — Defensive Intelligence & Threat Detection.
 The Workhorse's immune system. Runs every 30 minutes via scheduled task.
