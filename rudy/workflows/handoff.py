@@ -36,7 +36,7 @@ import re
 from datetime import datetime
 from pathlib import Path
 
-from rudy.paths import HANDOFFS_DIR, REPO_ROOT
+from rudy.paths import BATCAVE_VAULT, HANDOFFS_DIR, REPO_ROOT
 
 
 class HandoffWriter:
@@ -171,14 +171,107 @@ class HandoffWriter:
 
         return "\n".join(lines)
 
+    def generate_vault_session_record(self) -> str:
+        """Generate a session record formatted for BatcaveVault/Sessions/.
+
+        This is the institutional memory — structured for Obsidian, linked to
+        other vault pages. Different from the handoff markdown which is
+        Robin-oriented with bootstrap instructions.
+        """
+        lines = [
+            f"# Session {self.session_number} — "
+            f"{self.started_at.strftime('%Y-%m-%d')}",
+            "",
+            f"**Alfred via Cowork** | Context consumed: {self.context_estimate}",
+            "",
+            "---",
+            "",
+        ]
+
+        # Summary
+        if self.accomplishments:
+            lines.append("## Accomplishments")
+            lines.append("")
+            for a in self.accomplishments:
+                lines.append(f"- {a}")
+            lines.append("")
+
+        # PRs
+        if self.merged_prs or self.open_prs:
+            lines.append("## PR Status")
+            lines.append("")
+            if self.merged_prs:
+                lines.append(
+                    f"**Merged:** {', '.join(f'#{n}' for n in self.merged_prs)}"
+                )
+            for pr in self.open_prs:
+                lines.append(
+                    f"**PR #{pr['number']}** ({pr['status']}): {pr['title']}"
+                )
+            lines.append("")
+
+        # Findings
+        if self.findings:
+            lines.append("## Tracked Findings")
+            lines.append("")
+            for i, f in enumerate(self.findings, 1):
+                lines.append(f"{i}. {f}")
+            lines.append("")
+
+        # Priorities
+        if self.next_priorities:
+            lines.append("## Next Session Priorities")
+            lines.append("")
+            for i, p in enumerate(self.next_priorities, 1):
+                lines.append(f"{i}. {p}")
+            lines.append("")
+
+        lines.extend([
+            "---",
+            f"*Alfred, Session {self.session_number}, "
+            f"{datetime.now().strftime('%Y-%m-%d')}*",
+        ])
+
+        return "\n".join(lines)
+
+    def generate_session_log_entry(self) -> str:
+        """Generate a concise entry for vault/Briefings/Alfred-Session-Log.md."""
+        lines = [
+            "",
+            "---",
+            "",
+            f"## Session {self.session_number} — "
+            f"{self.started_at.strftime('%Y-%m-%d')} (Alfred via Cowork)",
+            "",
+            f"**Context:** {self.context_estimate}",
+            "",
+            "### Accomplished",
+        ]
+        for a in self.accomplishments:
+            lines.append(f"- {a}")
+        if self.findings:
+            lines.append("")
+            lines.append("### Tracked Findings")
+            for f in self.findings:
+                lines.append(f"- {f}")
+        return "\n".join(lines)
+
     def write(self) -> Path:
-        """Write the handoff file to HANDOFFS_DIR. Returns the file path."""
+        """Write handoff to HANDOFFS_DIR and session record to BatcaveVault.
+
+        Writes three things:
+            1. rudy-data/handoffs/session-NN-handoff.md — Robin's handoff brief
+            2. rudy-data/handoffs/session-NN-handoff.json — Robin's JSON sidecar
+            3. vault/Sessions/Session-NN.md — BatcaveVault session record (if vault exists)
+
+        Returns the handoff file path.
+        """
         content = self.generate_markdown()
         filename = f"session-{self.session_number:02d}-handoff.md"
         filepath = HANDOFFS_DIR / filename
         filepath.write_text(content, encoding="utf-8")
 
-        # Also write a JSON sidecar for Robin's programmatic access
+        # JSON sidecar for Robin's programmatic access
         sidecar = {
             "session_number": self.session_number,
             "generated_at": datetime.now().isoformat(),
@@ -194,6 +287,20 @@ class HandoffWriter:
         sidecar_path.write_text(
             json.dumps(sidecar, indent=2, default=str), encoding="utf-8"
         )
+
+        # Write to BatcaveVault if it exists (vault is gitignored, per-Oracle)
+        vault_sessions = BATCAVE_VAULT / "Sessions"
+        if vault_sessions.exists():
+            vault_record = self.generate_vault_session_record()
+            vault_path = vault_sessions / f"Session-{self.session_number}.md"
+            vault_path.write_text(vault_record, encoding="utf-8")
+
+            # Append to Alfred Session Log
+            session_log = BATCAVE_VAULT / "Briefings" / "Alfred-Session-Log.md"
+            if session_log.exists():
+                entry = self.generate_session_log_entry()
+                with open(session_log, "a", encoding="utf-8") as f:
+                    f.write(entry + "\n")
 
         return filepath
 
