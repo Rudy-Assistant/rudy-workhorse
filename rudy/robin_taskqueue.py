@@ -35,6 +35,8 @@ Lucius Gate: LG-005 — No new dependencies. Stdlib only. APPROVED, Lite Review.
 """
 
 import json
+import os
+import re
 import logging
 import subprocess
 import sys
@@ -45,6 +47,27 @@ from pathlib import Path
 from typing import Optional
 
 logger = logging.getLogger("robin.taskqueue")
+
+
+# ---------------------------------------------------------------------------
+# Input Sanitization (F2: prevent injection via task metadata)
+# ---------------------------------------------------------------------------
+
+_SAFE_CHARS = re.compile(r'[^a-zA-Z0-9 _\-\./:\\\n\(\)\[\],\'\"]')
+_SAFE_URL_CHARS = re.compile(r'[^a-zA-Z0-9 _\-\./:\\\n\(\)\[\],\'\"?=&#%+@~]')
+
+def _sanitize_metadata_string(value: str, max_length: int = 500, url_mode: bool = False) -> str:
+    """
+    Sanitize a metadata string before it reaches subprocess.
+    Allowlist approach: only permit safe characters.
+    Args:
+        url_mode: If True, also permit URL-safe chars (?=&#%+@~).
+    """
+    if not isinstance(value, str):
+        return str(value)[:max_length]
+    pattern = _SAFE_URL_CHARS if url_mode else _SAFE_CHARS
+    cleaned = pattern.sub('', value)
+    return cleaned[:max_length]
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -187,6 +210,53 @@ def block_task(task_id: str, reason: str):
     queue = [t for t in queue if t["status"] == "pending"]
     save_queue(queue)
 
+
+# ---------------------------------------------------------------------------
+# Mutual Exclusion (F6: prevent concurrent watchdog/sentinel execution)
+# ---------------------------------------------------------------------------
+
+LOCK_FILE = QUEUE_DIR / ".taskqueue.lock"
+LOCK_MAX_AGE_SECONDS = 600  # 10 minutes
+
+def _acquire_lock() -> bool:
+    """
+    Acquire the task queue lock. Returns True if lock acquired.
+    Uses PID-based stale lock detection (Risk R5 mitigation).
+    """
+    _ensure_dirs()
+    if LOCK_FILE.exists():
+        try:
+            lock_data = json.loads(LOCK_FILE.read_text(encoding="utf-8"))
+            lock_pid = lock_data.get("pid", -1)
+            lock_time = lock_data.get("timestamp", 0)
+            # Check if lock holder is still alive
+            try:
+                os.kill(lock_pid, 0)  # Signal 0 = check existence
+                # Process alive — check age
+                age = time.time() - lock_time
+                if age < LOCK_MAX_AGE_SECONDS:
+                    logger.warning(f"Lock held by PID {lock_pid} (age {int(age)}s). Skipping.")
+                    return False
+                else:
+                    logger.warning(f"Stale lock (age {int(age)}s). Stealing from PID {lock_pid}.")
+            except OSError:
+                logger.info(f"Lock holder PID {lock_pid} is dead. Stealing lock.")
+        except (json.JSONDecodeError, OSError, KeyError):
+            logger.info("Corrupt lock file. Overwriting.")
+
+    # Write our lock
+    lock_data = {"pid": os.getpid(), "timestamp": time.time()}
+    LOCK_FILE.write_text(json.dumps(lock_data), encoding="utf-8")
+    return True
+
+def _release_lock():
+    """Release the task queue lock."""
+    try:
+        if LOCK_FILE.exists():
+            LOCK_FILE.unlink()
+    except OSError:
+        pass
+
 # ---------------------------------------------------------------------------
 # Task Executors
 # ---------------------------------------------------------------------------
@@ -240,7 +310,7 @@ def execute_task(task: dict) -> tuple[bool, str]:
         )
 
     elif task_type == "browse":
-        url = task.get("metadata", {}).get("url", "https://example.com")
+        url = _sanitize_metadata_string(task.get("metadata", {}).get("url", "https://example.com"), max_length=2000, url_mode=True)
         code = (
             f"import sys; sys.path.insert(0, r'{RUDY_ROOT}'); "
             f"from rudy.tools.browser_tool import browse; "
@@ -256,11 +326,29 @@ def execute_task(task: dict) -> tuple[bool, str]:
         if action == "status":
             return _execute_command([GIT_EXE, "status", "--short"])
         elif action == "commit_and_push":
-            msg = task.get("metadata", {}).get("message", "Robin automated commit")
-            success1, out1 = _execute_command([GIT_EXE, "add", "-A"])
+            msg = _sanitize_metadata_string(task.get("metadata", {}).get("message", "Robin automated commit"))
+            # F1: Explicit file list instead of blind git add -A
+            safe_paths = [
+                "rudy-data/robin-taskqueue/",
+                "rudy-data/environment-profile.json",
+                "rudy-data/lucius-reviews/",
+                "rudy-data/alfred-inbox/",
+                "rudy-data/robin-inbox/",
+                "rudy-data/batcave-memory/",
+            ]
+            staged_files = []
+            for sp in safe_paths:
+                full = RUDY_ROOT / sp
+                if full.exists():
+                    success_add, out_add = _execute_command([GIT_EXE, "add", str(full)])
+                    if success_add:
+                        staged_files.append(sp)
+            logger.info(f"Staged {len(staged_files)} paths: {staged_files}")
+            if not staged_files:
+                return False, "No files to stage"
             success2, out2 = _execute_command([GIT_EXE, "commit", "-m", msg])
             success3, out3 = _execute_command([GIT_EXE, "push", "origin", "alfred/robin-logging-nightwatch"])
-            return all([success1, success2, success3]), f"{out1}\n{out2}\n{out3}"
+            return all([success2, success3]), f"Staged: {staged_files}\n{out2}\n{out3}"
         return False, f"Unknown git action: {action}"
 
     elif task_type == "code_quality":
@@ -295,33 +383,39 @@ def process_next_task() -> Optional[dict]:
 
     Returns the completed task dict, or None if queue is empty.
     """
-    task = get_next_task()
-    if not task:
-        logger.info("Task queue empty. Nothing to do.")
+    if not _acquire_lock():
+        logger.warning("Could not acquire lock. Another instance is running.")
         return None
+    try:
+        task = get_next_task()
+        if not task:
+            logger.info("Task queue empty. Nothing to do.")
+            return None
 
-    # Mark as in-progress
-    task["started"] = datetime.now().isoformat()
-    task["status"] = "in_progress"
+        # Mark as in-progress
+        task["started"] = datetime.now().isoformat()
+        task["status"] = "in_progress"
 
-    # Execute
-    success, result = execute_task(task)
+        # Execute
+        success, result = execute_task(task)
 
-    # Record result
-    if success:
-        complete_task(task["id"], result, success=True)
-        logger.info(f"Task completed: {task['title']}")
-    else:
-        # Check if it's a transient error (retry) or permanent (block)
-        if "TIMEOUT" in result or "connection" in result.lower():
-            block_task(task["id"], f"Transient error: {result[:500]}")
-            logger.warning(f"Task blocked (transient): {task['title']}")
+        # Record result
+        if success:
+            complete_task(task["id"], result, success=True)
+            logger.info(f"Task completed: {task['title']}")
         else:
-            complete_task(task["id"], result, success=False)
-            logger.warning(f"Task failed: {task['title']}: {result[:200]}")
+            # Check if it's a transient error (retry) or permanent (block)
+            if "TIMEOUT" in result or "connection" in result.lower():
+                block_task(task["id"], f"Transient error: {result[:500]}")
+                logger.warning(f"Task blocked (transient): {task['title']}")
+            else:
+                complete_task(task["id"], result, success=False)
+                logger.warning(f"Task failed: {task['title']}: {result[:200]}")
 
-    task["result"] = result
-    return task
+        task["result"] = result
+        return task
+    finally:
+        _release_lock()
 
 def process_all(max_tasks: int = 10, max_minutes: int = 30):
     """
@@ -350,16 +444,48 @@ def process_all(max_tasks: int = 10, max_minutes: int = 30):
     logger.info(f"Processed {processed} tasks in {int(time.time()-start)}s")
     return processed
 
+
+# ---------------------------------------------------------------------------
+# Seed Cooldown (F7: prevent infinite re-seed loop)
+# ---------------------------------------------------------------------------
+
+SEED_TIMESTAMP_FILE = QUEUE_DIR / ".last_seed"
+SEED_COOLDOWN_HOURS = 4  # Minimum hours between auto-reseeds
+
+def _can_reseed() -> bool:
+    """Check if enough time has passed since last seed."""
+    if not SEED_TIMESTAMP_FILE.exists():
+        return True
+    try:
+        ts = float(SEED_TIMESTAMP_FILE.read_text(encoding="utf-8").strip())
+        hours_since = (time.time() - ts) / 3600
+        if hours_since < SEED_COOLDOWN_HOURS:
+            logger.info(f"Seed cooldown: {hours_since:.1f}h since last seed (need {SEED_COOLDOWN_HOURS}h)")
+            return False
+        return True
+    except (ValueError, OSError):
+        return True
+
+def _mark_seeded():
+    """Record that we just seeded the queue."""
+    _ensure_dirs()
+    SEED_TIMESTAMP_FILE.write_text(str(time.time()), encoding="utf-8")
+
 # ---------------------------------------------------------------------------
 # Queue Seeding (Alfred pre-loads tasks before Batman leaves)
 # ---------------------------------------------------------------------------
 
-def seed_standard_nightwatch():
+def seed_standard_nightwatch(force: bool = False):
     """
     Seed the queue with standard nightwatch tasks.
 
     Called by Alfred when Batman declares absence.
+    Args:
+        force: If True, bypass cooldown check.
     """
+    if not force and not _can_reseed():
+        logger.info("Skipping seed: cooldown active")
+        return 0
     tasks = [
         make_task("profile", "Refresh environment profile",
                   "Run environment profiler and update hardware profile",
@@ -397,6 +523,7 @@ def seed_standard_nightwatch():
     for task in tasks:
         add_task(task)
 
+    _mark_seeded()
     logger.info(f"Seeded {len(tasks)} standard nightwatch tasks")
     return len(tasks)
 
@@ -443,9 +570,9 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         cmd = sys.argv[1]
         if cmd == "seed":
-            seed_standard_nightwatch()
+            seed_standard_nightwatch(force=True)  # Manual seed bypasses cooldown
         elif cmd == "seed-deep":
-            seed_standard_nightwatch()
+            seed_standard_nightwatch(force=True)  # Manual seed bypasses cooldown
             seed_deep_work()
         elif cmd == "next":
             result = process_next_task()
