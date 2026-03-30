@@ -418,7 +418,7 @@ class NightShiftRunner:
         # Try agent mode (MCP-powered) first, fall back to chat-only
         try:
             from rudy.robin_mcp_client import MCPServerRegistry
-            from rudy.robin_agent import RobinAgent
+            from rudy.robin_agent_loader import RobinAgent
 
             secrets = SecureConfig.load()
             registry = MCPServerRegistry(secrets)
@@ -788,7 +788,7 @@ def _run_nightwatch() -> None:
 
             try:
                 from rudy.robin_mcp_client import MCPServerRegistry
-                from rudy.robin_agent import RobinAgent
+                from rudy.robin_agent_loader import RobinAgent
 
                 secrets = SecureConfig.load()
                 registry = MCPServerRegistry(secrets)
@@ -812,7 +812,7 @@ def _run_nightwatch() -> None:
 
                 def _make_agent():
                     from rudy.robin_mcp_client import MCPServerRegistry
-                    from rudy.robin_agent import RobinAgent
+                    from rudy.robin_agent_loader import RobinAgent
                     secrets = SecureConfig.load()
                     registry = MCPServerRegistry(secrets)
                     registry.connect_all()
@@ -890,7 +890,7 @@ def main() -> None:
         log.info("Agent mode: %s", task)
         try:
             from rudy.robin_mcp_client import MCPServerRegistry
-            from rudy.robin_agent import RobinAgent
+            from rudy.robin_agent_loader import RobinAgent
             secrets = SecureConfig.load()
             registry = MCPServerRegistry(secrets)
             # Connect to available servers
