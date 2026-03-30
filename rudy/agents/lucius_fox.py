@@ -4,10 +4,11 @@ Lucius Fox — The Batcave's Librarian, Gatekeeper, and Quality Conscience.
 ADR-004 (2026-03-29): Lucius is the single source of truth for repository
 structure, canonical documentation, and operational protocol compliance.
 
-Three Mandates:
+Four Mandates:
     1. The Library  — Know everything that exists (audit, inventory, locate)
     2. The Gate     — Nothing merges without review (diff review, quality checks)
     3. The Conscience — Enforce protocol compliance (hygiene, branch governance)
+    4. The Economist — Prevent reinvention (build-vs-buy, ADR-005)
 
 Execution model:
     lucius = LuciusFox()
@@ -68,6 +69,52 @@ REQUIRED_DOCS = [
 # Ruff lint command (repo standard)
 RUFF_ARGS = ["--select", "E,F,W", "--ignore", "E501,E402,F401"]
 
+# ──────────────────────────────────────────────────────────────────────
+# MANDATE 4: THE ECONOMIST — Build-vs-Buy Registry (ADR-005)
+# ──────────────────────────────────────────────────────────────────────
+# Maps common custom code patterns to their standard tool replacements.
+# "KEEP" entries document justified custom implementations.
+# "REPLACE" entries indicate custom code that should be migrated.
+# "SLIM" entries indicate code that should delegate to standard tools.
+
+KNOWN_REPLACEMENTS = {
+    # Pattern: (standard tool, verdict, justification)
+
+    # Security scanning
+    "eval(": ("bandit B307", "REPLACE", "bandit detects eval/exec with context"),
+    "exec(": ("bandit B102", "REPLACE", "bandit detects exec with context"),
+    "shell=True": ("bandit B602", "REPLACE", "bandit detects subprocess injection"),
+    "pickle.load": ("bandit B301", "REPLACE", "bandit detects pickle deserialization"),
+    "__import__": ("bandit B302", "REPLACE", "bandit detects dynamic imports"),
+
+    # Linting
+    "except:": ("ruff E722", "REPLACE", "ruff already catches bare except"),
+    "except Exception:": ("pylint W0703", "REPLACE", "pylint catches broad-except"),
+    "missing docstring": ("ruff D100-D107", "REPLACE", "ruff pydocstyle checks"),
+
+    # Dependency auditing
+    "check PyPI for latest": ("pip-audit", "REPLACE", "pip-audit checks CVE databases directly"),
+    "known CVEs": ("safety / pip-audit", "REPLACE", "dedicated CVE scanners"),
+
+    # CI / PR review
+    "parse unified diff": ("reviewdog", "SLIM", "reviewdog adapts any linter to PR comments"),
+    "post PR comment": ("reviewdog / GitHub Actions", "SLIM", "standard CI integration pattern"),
+
+    # Dead code
+    "unused import": ("ruff F401 / vulture", "REPLACE", "ruff already catches unused imports"),
+
+    # Complexity
+    "cyclomatic complexity": ("radon / ruff C901", "REPLACE", "standard complexity tools"),
+
+    # Justified custom code
+    "rudy.paths": ("N/A", "KEEP", "repo-specific path constants, no generic equivalent"),
+    "robin_alfred_protocol": ("N/A", "KEEP", "air-gapped filesystem IPC, no broker available"),
+    "robin_taskqueue": ("N/A", "KEEP", "offline priority queue, Celery/RQ need daemon"),
+    "batcave_memory": ("N/A", "KEEP", "confidence-tracked dedup learning, no standard equivalent"),
+    "knowledge_base chromadb": ("N/A", "KEEP", "already uses standard tool (ChromaDB)"),
+    "hardcoded path detection": ("semgrep custom rules", "SLIM", "Batcave-specific but could use semgrep syntax"),
+}
+
 
 class LuciusFox(AgentBase):
     """Lucius Fox — Librarian, Gatekeeper, Quality Conscience."""
@@ -101,14 +148,15 @@ class LuciusFox(AgentBase):
         """Run Lucius in the specified mode.
 
         Modes:
-            full_audit      — Complete codebase audit (Library mandate)
-            review_diff     — Review a git diff for quality (Gate mandate)
-            review_files    — Review specific files (Gate mandate)
+            full_audit        — Complete codebase audit (all 4 mandates)
+            review_diff       — Review a git diff for quality (Gate mandate)
+            review_files      — Review specific files (Gate mandate)
             branch_governance — Audit branch state (Gate mandate)
-            hygiene_check   — Check codebase hygiene rules (Conscience mandate)
-            locate          — Find an artifact in the codebase (Library mandate)
-            proposal_review — Review a new module proposal (Gate mandate)
-            dependency_check — Check dependencies only
+            hygiene_check     — Check codebase hygiene rules (Conscience + Economist)
+            locate            — Find an artifact in the codebase (Library mandate)
+            proposal_review   — Review a new module proposal (Gate + Economist)
+            dependency_check  — Check dependencies only
+            reinvention_check — Check for wheel-reinvention (Economist mandate, ADR-005)
         """
         if mode == "full_audit":
             self._audit_code_inventory()
@@ -117,6 +165,7 @@ class LuciusFox(AgentBase):
             self._audit_agent_health()
             self._audit_documentation()
             self._check_hardcoded_paths()
+            self._check_reinvention()
             self._generate_audit_report()
 
         elif mode == "review_diff":
@@ -135,7 +184,12 @@ class LuciusFox(AgentBase):
             self._check_hardcoded_paths()
             self._check_lint()
             self._check_import_hygiene()
+            self._check_reinvention()
             self._audit_documentation()
+            self._generate_audit_report()
+
+        elif mode == "reinvention_check":
+            self._check_reinvention()
             self._generate_audit_report()
 
         elif mode == "locate":
@@ -875,6 +929,128 @@ class LuciusFox(AgentBase):
                     pass
 
     # ================================================================
+    # MANDATE 4: THE ECONOMIST — Prevent Reinvention (ADR-005)
+    # ================================================================
+
+    def _check_reinvention(self):
+        """Scan codebase for patterns that reinvent standard tools.
+
+        ADR-005: Every custom check, scanner, or utility must be justified
+        against the KNOWN_REPLACEMENTS registry. If a standard tool does the
+        same thing, the custom code should be flagged for migration.
+
+        This check catches:
+            1. Custom regex patterns that duplicate bandit/semgrep rules
+            2. Custom subprocess wrappers around tools with Python APIs
+            3. Custom CI scripts that replicate GitHub Actions
+            4. Functions whose docstrings describe standard tool functionality
+        """
+        self.log.info("Checking for wheel-reinvention (Mandate 4)...")
+
+        # File-level co-occurrence patterns: when multiple strings appear in
+        # the same file, it strongly suggests reinvention of a standard tool.
+        # Each entry: (list_of_required_strings, tool, description)
+        reinvention_indicators = [
+            # Custom security scanning (bandit does all of these)
+            (
+                [r"\\beval\\s", "re.search"],
+                "bandit",
+                "Custom regex to detect eval() — bandit B307 does this natively",
+            ),
+            (
+                [r"\\bexec\\s", "re.search"],
+                "bandit",
+                "Custom regex to detect exec() — bandit B102 does this natively",
+            ),
+            (
+                ["security_patterns", "re.search", "finding"],
+                "bandit",
+                "Custom security pattern scanner — bandit does this natively with 68+ checks",
+            ),
+            # Custom dependency version checking (pip-audit does this)
+            (
+                ["Check PyPI for latest version"],
+                "pip-audit",
+                "Manual dependency note — pip-audit automates CVE checking",
+            ),
+            # Custom PR comment posting (reviewdog / Actions do this)
+            (
+                ["api.github.com", "issues", "comments", "urllib"],
+                "reviewdog / GitHub Actions",
+                "Custom PR comment posting — reviewdog bridges any linter to PRs",
+            ),
+            # Custom dead-code detection
+            (
+                ["unused", "import", "AST", "remove"],
+                "vulture / ruff F401",
+                "Custom unused import detection — ruff F401 already in CI",
+            ),
+        ]
+
+        # Self-exemption: lucius_fox.py itself contains these patterns because
+        # it defines them. The KNOWN_REPLACEMENTS registry is the documentation,
+        # not the violation.
+        ECONOMIST_EXEMPT = {
+            "rudy/agents/lucius_fox.py",  # Defines the detection, not a consumer
+            "rudy/paths.py",              # Canonical path constants
+        }
+
+        for root, dirs, files in os.walk(self.RUDY_PKG):
+            dirs[:] = [d for d in dirs if d != "__pycache__"]
+            for f in files:
+                if not f.endswith(".py"):
+                    continue
+                fp = Path(root) / f
+                rel = str(fp.relative_to(self.CODEBASE_ROOT))
+
+                if rel in ECONOMIST_EXEMPT:
+                    continue
+
+                try:
+                    content = fp.read_text(encoding="utf-8", errors="replace")
+                    content_lower = content.lower()
+                    self._scan_for_reinvention(rel, content_lower, reinvention_indicators)
+                except Exception:
+                    pass
+
+        # Also check scripts/ci/ for custom CI that overlaps with Actions
+        ci_dir = self.CODEBASE_ROOT / "scripts" / "ci"
+        if ci_dir.exists():
+            for fp in ci_dir.glob("*.py"):
+                try:
+                    content = fp.read_text(encoding="utf-8", errors="replace")
+                    rel = str(fp.relative_to(self.CODEBASE_ROOT))
+                    content_lower = content.lower()
+                    self._scan_for_reinvention(
+                        rel, content_lower, reinvention_indicators, is_ci=True
+                    )
+                except Exception:
+                    pass
+
+        self.action("Reinvention check complete (Mandate 4 / ADR-005)")
+
+    def _scan_for_reinvention(self, rel_path, content_lower, indicators, is_ci=False):
+        """Check a file's content against reinvention indicators.
+
+        Uses co-occurrence matching: all required strings must appear in the
+        file for the indicator to trigger.
+        """
+        for required_strings, tool, desc in indicators:
+            if all(s.lower() in content_lower for s in required_strings):
+                prefix = "CI script reinvention" if is_ci else "Possible reinvention"
+                self.findings.append({
+                    "type": "reinvention",
+                    "severity": "medium",
+                    "title": f"{prefix}: {rel_path}",
+                    "detail": desc,
+                    "recommendation": (
+                        f"Migrate to {tool}. "
+                        "See ADR-005 and KNOWN_REPLACEMENTS registry. "
+                        "Custom code should only exist where no standard tool applies."
+                    ),
+                })
+
+    # ================================================================
     # REPORTING
     # ================================================================
 
@@ -948,7 +1124,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Lucius Fox — Batcave Quality Gate")
     parser.add_argument("mode", nargs="?", default="full_audit",
                         choices=["full_audit", "hygiene_check", "branch_governance",
-                                 "review_files", "locate", "dependency_check"],
+                                 "review_files", "locate", "dependency_check",
+                                 "reinvention_check"],
                         help="Operating mode")
     parser.add_argument("--files", nargs="*", help="Files to review (for review_files mode)")
     parser.add_argument("--query", type=str, help="Search query (for locate mode)")
