@@ -799,6 +799,24 @@ Rationalizations that are explicitly banned:
 
 **Context window evaluations:** At session recaps and before handoff, include a context window utilization estimate (e.g. "~40% consumed, proceeding" or "~70% consumed, prioritizing remaining items"). This helps determine whether to continue, hand off, or triage.
 
+### Build-vs-Buy Gate (HARD RULE — Session 15, ADR-005)
+
+Before writing ANY new module, CI script, workflow, utility function, or scanner, Alfred MUST:
+
+1. **Research** whether a maintained open-source tool already does this (bandit, semgrep, ruff, pylint, pip-audit, reviewdog, etc.)
+2. **Check** whether an already-imported dependency in the codebase covers this
+3. **Document** the justification if custom code is genuinely necessary (air-gapped requirement, Batcave-specific logic, no standard equivalent)
+
+Custom code is a **liability**, not an asset. Every line we write is a line we must maintain, debug, and keep current. Standard tools get maintained by their communities for free.
+
+Lucius enforces this via Mandate 4 (The Economist) and the `KNOWN_REPLACEMENTS` registry in `lucius_fox.py`. The `reinvention_check` mode (also part of `hygiene_check` and `full_audit`) scans for patterns that indicate wheel-reinvention.
+
+Rationalizations that are explicitly banned:
+- "It's simpler to write our own" → *Simpler today, tech debt forever.*
+- "The standard tool has too many features" → *Use the subset you need.*
+- "It's only 50 lines" → *50 lines times 20 instances = 1000 lines of custom liability.*
+- "We need custom output format" → *Wrap the standard tool, don't reimplement it.*
+
 ### Anti-Patterns (learned the hard way)
 - **Don't ask Chris to handle files** → use allow_cowork_file_delete, request_cowork_directory
 - **Don't hardcode ANY path** → import from `rudy.paths` (REPO_ROOT, RUDY_DATA, RUDY_LOGS, DESKTOP, HOME, PYTHON_EXE, GIT_EXE). Lucius enforces this at zero tolerance.
