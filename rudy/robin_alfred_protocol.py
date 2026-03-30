@@ -45,8 +45,33 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+# --- Input validation (Protocol Salvage fix) ---
+import re as _re
 
-RUDY_DATA = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop" / "rudy-data"
+_SAFE_CHARS = _re.compile(r'[^a-zA-Z0-9 _\-\./:\\\n\(\)\[\],\'\"]')
+MAX_PAYLOAD_SIZE = 50_000  # 50KB max per message
+MAX_MESSAGE_AGE_HOURS = 72  # Messages expire after 3 days
+
+def _sanitize_str(value: str, max_length: int = 1000) -> str:
+    """Sanitize a string value for safe storage."""
+    if not isinstance(value, str):
+        return str(value)[:max_length]
+    cleaned = _SAFE_CHARS.sub('', value)
+    return cleaned[:max_length]
+
+def _validate_payload(payload: dict) -> dict:
+    """Validate and sanitize message payload."""
+    if not isinstance(payload, dict):
+        raise ValueError("Payload must be a dict")
+    raw = json.dumps(payload)
+    if len(raw) > MAX_PAYLOAD_SIZE:
+        raise ValueError(f"Payload too large: {len(raw)} > {MAX_PAYLOAD_SIZE}")
+    return payload
+
+
+# Resolve paths relative to repo root (same pattern as robin_taskqueue.py)
+REPO_ROOT = Path(__file__).resolve().parent.parent
+RUDY_DATA = REPO_ROOT / "rudy-data"
 COORD_DIR = RUDY_DATA / "coordination"
 ALFRED_INBOX = RUDY_DATA / "alfred-inbox"
 ROBIN_INBOX = RUDY_DATA / "robin-inbox"
@@ -89,6 +114,10 @@ class RobinMailbox:
         Send a message to Alfred's inbox.
         Returns the message ID.
         """
+        # Validate inputs (Protocol Salvage fix)
+        msg_type = _sanitize_str(msg_type, max_length=50)
+        priority = _sanitize_str(priority, max_length=20)
+        payload = _validate_payload(payload)
         msg_id = f"{int(time.time())}-{msg_type}"
         message = {
             "id": msg_id,
@@ -113,6 +142,15 @@ class RobinMailbox:
                 with open(f) as fh:
                     msg = json.load(fh)
                 if msg.get("status") == "unread":
+                    # TTL check — skip expired messages (Protocol Salvage fix)
+                    msg_ts = msg.get("timestamp", "")
+                    if msg_ts:
+                        try:
+                            age = (datetime.now() - datetime.fromisoformat(msg_ts)).total_seconds()
+                            if age > MAX_MESSAGE_AGE_HOURS * 3600:
+                                continue  # Message expired
+                        except (ValueError, TypeError):
+                            pass
                     messages.append(msg)
             except (json.JSONDecodeError, OSError):
                 continue
@@ -213,6 +251,15 @@ class AlfredMailbox:
                 with open(f) as fh:
                     msg = json.load(fh)
                 if msg.get("status") == "unread":
+                    # TTL check — skip expired messages (Protocol Salvage fix)
+                    msg_ts = msg.get("timestamp", "")
+                    if msg_ts:
+                        try:
+                            age = (datetime.now() - datetime.fromisoformat(msg_ts)).total_seconds()
+                            if age > MAX_MESSAGE_AGE_HOURS * 3600:
+                                continue  # Message expired
+                        except (ValueError, TypeError):
+                            pass
                     messages.append(msg)
             except (json.JSONDecodeError, OSError):
                 continue
@@ -220,6 +267,9 @@ class AlfredMailbox:
 
     def respond_to_robin(self, msg_type: str, payload: dict, in_reply_to: str = "") -> str:
         """Send a response to Robin's inbox."""
+        # Validate inputs (Protocol Salvage fix)
+        msg_type = _sanitize_str(msg_type, max_length=50)
+        payload = _validate_payload(payload)
         msg_id = f"{int(time.time())}-{msg_type}"
         message = {
             "id": msg_id,

@@ -32,9 +32,9 @@ from pathlib import Path
 
 log = logging.getLogger("batcave_memory")
 
-HOME = Path(os.environ.get("USERPROFILE", os.path.expanduser("~")))
-DESKTOP = HOME / "Desktop"
-RUDY_DATA = DESKTOP / "rudy-data"
+# Resolve paths relative to repo root (Protocol Salvage fix)
+REPO_ROOT = Path(__file__).resolve().parent.parent
+RUDY_DATA = REPO_ROOT / "rudy-data"
 MEMORY_DIR = RUDY_DATA / "batcave-memory"
 LEARNINGS_FILE = MEMORY_DIR / "learnings.json"
 BATCAVE_MD = MEMORY_DIR / "BATCAVE.md"
@@ -82,6 +82,13 @@ class BatcaveMemory:
                      source="unknown", confidence="observed",
                      tags=None, session=None):
         """Add a new learning to the shared memory."""
+        # Input validation (Protocol Salvage fix)
+        if not isinstance(title, str) or len(title) > 500:
+            raise ValueError("title must be a string <= 500 chars")
+        if not isinstance(detail, str) or len(detail) > 5000:
+            raise ValueError("detail must be a string <= 5000 chars")
+        if tags and len(tags) > 20:
+            raise ValueError("max 20 tags per learning")
         if category not in self.CATEGORIES:
             log.warning("Unknown category: %s", category)
 
