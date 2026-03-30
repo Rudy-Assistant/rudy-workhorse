@@ -27,7 +27,6 @@ Lucius Gate: Part of LG-002 (Playwright integration), APPROVED.
 """
 
 import logging
-from typing import Optional
 
 logger = logging.getLogger("robin.tools.browser_integration")
 
@@ -61,11 +60,9 @@ BROWSER_CHECK_NAMES = {
 
 ALL_BROWSER_TOOLS = BROWSER_TOOL_NAMES | BROWSER_SEARCH_NAMES | BROWSER_CHECK_NAMES
 
-
 def is_browser_tool_call(tool_name: str) -> bool:
     """Check if a tool name matches any browser tool variant."""
     return tool_name in ALL_BROWSER_TOOLS
-
 
 def dispatch_browser_tool(tool_name: str, tool_args: dict) -> str:
     """
@@ -97,7 +94,6 @@ def dispatch_browser_tool(tool_name: str, tool_args: dict) -> str:
 
     logger.info(f"Browser tool dispatch: {tool_name} -> {list(tool_args.keys())}")
     return handle_browser_tool_call(tool_args)
-
 
 # ---------------------------------------------------------------------------
 # Prompt addition for Robin's system prompt

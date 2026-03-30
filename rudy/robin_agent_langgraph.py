@@ -45,7 +45,7 @@ import urllib.error
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Literal, Optional, TypedDict, Annotated
+from typing import Optional, TypedDict, Annotated
 
 from langgraph.graph import StateGraph, END
 
@@ -71,8 +71,6 @@ except ImportError:
     def dispatch_browser_tool(tool_name, tool_args):
         return "Browser tools not available"
 
-
-
 # ---------------------------------------------------------------------------
 # Data classes (preserved from robin_agent.py for compatibility)
 # ---------------------------------------------------------------------------
@@ -89,7 +87,6 @@ class AgentStep:
     tool_result: str = ""
     thinking: str = ""
     duration_ms: int = 0
-
 
 @dataclass
 class AgentResult:
@@ -124,11 +121,9 @@ def _merge_messages(left: list, right: list) -> list:
     """Append new messages to existing list (reducer for Annotated)."""
     return left + right
 
-
 def _merge_steps(left: list, right: list) -> list:
     """Append new steps to existing list."""
     return left + right
-
 
 class RobinState(TypedDict):
     """State flowing through the LangGraph."""
@@ -142,7 +137,6 @@ class RobinState(TypedDict):
     last_tool_name: str
     last_tool_args: dict
     error: str
-
 
 # ---------------------------------------------------------------------------
 # Tool-call parsing (preserved from robin_agent.py, all 5 patterns)
@@ -159,7 +153,6 @@ TOOL_CALL_PATTERNS = [
 BARE_JSON_PATTERN = re.compile(
     r'\{\s*"tool"\s*:\s*"[^"]+"\s*,\s*"args"\s*:\s*\{.*?\}\s*\}', re.DOTALL
 )
-
 
 def _normalize_tool_json(raw: str) -> Optional[dict]:
     """Parse tool call JSON, handling DeepSeek quirks."""
@@ -214,7 +207,6 @@ def parse_tool_call(text: str) -> Optional[dict]:
 
     return None
 
-
 def extract_thinking(text: str) -> tuple[str, str]:
     """Separate <think>...</think> from the rest of the response."""
     think_pattern = re.compile(r"<think>(.*?)</think>", re.DOTALL)
@@ -222,7 +214,6 @@ def extract_thinking(text: str) -> tuple[str, str]:
     clean = think_pattern.sub("", text).strip()
     thinking = "\n".join(thinking_parts)
     return clean, thinking
-
 
 # ---------------------------------------------------------------------------
 # Tool routing pre-filter (framework-level Shell vs Snapshot fix)
@@ -243,7 +234,6 @@ SNAPSHOT_LEGITIMATE = [
     "screenshot", "screen", "display", "window", "ui ", "gui ",
     "visual", "what do you see", "look at", "monitor",
 ]
-
 
 def should_override_to_shell(tool_name: str, tool_args: dict) -> Optional[str]:
     """
@@ -319,7 +309,6 @@ META_PATTERNS = [
     re.compile(r"i'(?:ll|m going to) (?:use|call|run)", re.I),
 ]
 
-
 def _needs_nudge(text: str) -> bool:
     """Detect if LLM is describing actions instead of performing them."""
     # If there's a tool call, no nudge needed
@@ -330,7 +319,6 @@ def _needs_nudge(text: str) -> bool:
         if pattern.search(text):
             return True
     return False
-
 
 # ---------------------------------------------------------------------------
 # Ollama LLM caller (preserved from robin_agent.py)
@@ -378,7 +366,6 @@ def call_ollama(
 # ---------------------------------------------------------------------------
 
 MAX_TOOL_RESULT_LENGTH = 4000
-
 
 def reason_node(state: RobinState) -> dict:
     """
@@ -617,7 +604,6 @@ def nudge_node(state: RobinState) -> dict:
         "steps": [step],
     }
 
-
 # ---------------------------------------------------------------------------
 # Conditional edge router
 # ---------------------------------------------------------------------------
@@ -634,7 +620,6 @@ def route_after_reason(state: RobinState) -> str:
         return END
     else:  # final_answer
         return END
-
 
 # ---------------------------------------------------------------------------
 # Graph builder
@@ -792,7 +777,6 @@ class RobinAgentV2:
 # Convenience: backward-compatible alias
 # ---------------------------------------------------------------------------
 RobinAgent = RobinAgentV2
-
 
 # ---------------------------------------------------------------------------
 # CLI test harness

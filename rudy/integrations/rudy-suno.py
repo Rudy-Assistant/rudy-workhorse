@@ -34,9 +34,9 @@ Output directory:   C:\\Users\\C\\Desktop\\rudy-logs\\suno-output\\
 
 import argparse
 import json
-import os
+
 import sys
-import time
+
 import requests
 from pathlib import Path
 from datetime import datetime
@@ -59,7 +59,6 @@ DEFAULT_CONFIG = {
     "setup_complete": False
 }
 
-
 def load_config():
     """Load or create config file."""
     if CONFIG_FILE.exists():
@@ -69,11 +68,9 @@ def load_config():
         CONFIG_FILE.write_text(json.dumps(DEFAULT_CONFIG, indent=2), encoding="utf-8")
         return DEFAULT_CONFIG.copy()
 
-
 def save_config(config):
     """Save config to disk."""
     CONFIG_FILE.write_text(json.dumps(config, indent=2), encoding="utf-8")
-
 
 class SunoClient:
     """Suno AI music generation client with cookie or API key auth."""
@@ -187,7 +184,6 @@ class SunoClient:
                 pass
         return songs
 
-
 def setup_wizard():
     """Interactive setup for Suno credentials."""
     config = load_config()
@@ -243,7 +239,6 @@ def setup_wizard():
         print("  Invalid choice.")
 
     return config
-
 
 def main():
     parser = argparse.ArgumentParser(description="Rudy Suno — AI Music Generation")
@@ -337,7 +332,6 @@ def main():
 
     else:
         parser.print_help()
-
 
 if __name__ == "__main__":
     main()

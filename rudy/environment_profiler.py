@@ -43,7 +43,7 @@ import urllib.request
 import urllib.error
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Optional
 
 logger = logging.getLogger("batcave.environment_profiler")
 
@@ -58,7 +58,6 @@ OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
 GPU_VRAM_THRESHOLD_14B = 8000   # MB - need ~8GB VRAM for 14b models (8188MB on RTX 4060)
 RAM_THRESHOLD_14B = 16384       # MB - need 16GB+ RAM for 14b (CPU inference)
 RAM_THRESHOLD_7B = 8192         # MB - need 8GB+ for 7b
-
 
 # ---------------------------------------------------------------------------
 # CPU Profiling
@@ -89,7 +88,6 @@ def profile_cpu() -> dict:
 
     return info
 
-
 # ---------------------------------------------------------------------------
 # Memory Profiling
 # ---------------------------------------------------------------------------
@@ -109,7 +107,6 @@ def profile_memory() -> dict:
     except ImportError:
         # Fallback without psutil
         return {"error": "psutil not available", "note": "pip install psutil"}
-
 
 # ---------------------------------------------------------------------------
 # GPU Profiling
@@ -169,7 +166,6 @@ def profile_gpu() -> dict:
 
     return gpu_info
 
-
 # ---------------------------------------------------------------------------
 # Disk Profiling
 # ---------------------------------------------------------------------------
@@ -206,7 +202,6 @@ def profile_disk() -> dict:
 
     return drives
 
-
 # ---------------------------------------------------------------------------
 # Ollama Profiling
 # ---------------------------------------------------------------------------
@@ -236,7 +231,6 @@ def profile_ollama() -> dict:
         pass
 
     return ollama_info
-
 
 # ---------------------------------------------------------------------------
 # Tools Detection
@@ -280,7 +274,6 @@ def profile_tools() -> dict:
     tools["python_packages"] = python_packages
     return tools
 
-
 # ---------------------------------------------------------------------------
 # Network Profiling
 # ---------------------------------------------------------------------------
@@ -305,7 +298,6 @@ def profile_network() -> dict:
             pass
 
     return net_info
-
 
 # ---------------------------------------------------------------------------
 # Model Recommendation Engine
@@ -381,7 +373,6 @@ def recommend_model(profile: dict) -> dict:
 
     return recommendation
 
-
 # ---------------------------------------------------------------------------
 # Main Profiler
 # ---------------------------------------------------------------------------
@@ -410,7 +401,6 @@ def run_profile() -> dict:
 
     return profile
 
-
 def save_profile(profile: dict, path: Optional[Path] = None) -> Path:
     """Save profile to JSON file."""
     output = path or PROFILE_OUTPUT
@@ -418,7 +408,6 @@ def save_profile(profile: dict, path: Optional[Path] = None) -> Path:
     output.write_text(json.dumps(profile, indent=2, default=str), encoding="utf-8")
     logger.info(f"Environment profile saved to {output}")
     return output
-
 
 # ---------------------------------------------------------------------------
 # CLI

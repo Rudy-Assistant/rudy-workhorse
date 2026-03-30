@@ -35,7 +35,6 @@ import time
 from base64 import b64decode, b64encode
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional
 
 # Optional: keyring for secure token storage
 try:
@@ -65,7 +64,6 @@ POLL_INTERVAL = 300  # 5 minutes
 HOME = Path(os.environ.get("USERPROFILE", os.path.expanduser("~")))
 BRIDGE_LOG = HOME / "Desktop" / "rudy-logs" / "robin-bridge.log"
 
-
 def _get_github_token() -> str:
     """Retrieve GitHub PAT from keyring or environment."""
     # Try keyring first (secure storage)
@@ -87,7 +85,6 @@ def _get_github_token() -> str:
                 return line.split("=", 1)[1].strip().strip('"').strip("'")
 
     raise RuntimeError("No GitHub token found. Set via keyring, GITHUB_TOKEN env var, or rudy-data/.env")
-
 
 # ---------------------------------------------------------------------------
 # GitHub API Client (minimal, no dependencies beyond stdlib)
@@ -145,7 +142,6 @@ class GitHubAPI:
             "sha": sha,
         })
 
-
 # ---------------------------------------------------------------------------
 # Task Parser
 # ---------------------------------------------------------------------------
@@ -169,7 +165,6 @@ def parse_task(content: str) -> dict:
             frontmatter[key.strip()] = value.strip()
 
     return {"frontmatter": frontmatter, "body": body, "raw": content}
-
 
 def update_frontmatter(content: str, updates: dict[str, str]) -> str:
     """Update frontmatter fields in a task file."""
@@ -200,7 +195,6 @@ def update_frontmatter(content: str, updates: dict[str, str]) -> str:
             new_lines.append(f"{key}: {value}")
 
     return "---\n" + "\n".join(new_lines) + "\n---\n" + body
-
 
 # ---------------------------------------------------------------------------
 # Robin Bridge
@@ -418,7 +412,6 @@ class RobinBridge:
         except Exception as e:
             return {"error": str(e)}
 
-
 # ---------------------------------------------------------------------------
 # Entry Point
 # ---------------------------------------------------------------------------
@@ -459,7 +452,6 @@ def main() -> None:
     # Default: single poll
     result = bridge.poll_and_execute()
     print(json.dumps(result, indent=2))
-
 
 if __name__ == "__main__":
     main()

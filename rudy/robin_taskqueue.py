@@ -40,7 +40,7 @@ import subprocess
 import sys
 import time
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
@@ -57,7 +57,6 @@ BLOCKED_DIR = QUEUE_DIR / "blocked"
 RUDY_ROOT = Path(__file__).resolve().parent.parent
 GIT_EXE = r"C:\Program Files\Git\cmd\git.exe"
 PYTHON = r"C:\Python312\python.exe"
-
 
 # ---------------------------------------------------------------------------
 # Task Schema
@@ -94,7 +93,6 @@ def make_task(
         "error": None,
     }
 
-
 # ---------------------------------------------------------------------------
 # Queue Management
 # ---------------------------------------------------------------------------
@@ -104,7 +102,6 @@ def _ensure_dirs():
     QUEUE_DIR.mkdir(parents=True, exist_ok=True)
     COMPLETED_DIR.mkdir(parents=True, exist_ok=True)
     BLOCKED_DIR.mkdir(parents=True, exist_ok=True)
-
 
 def load_queue() -> list[dict]:
     """Load the active task queue."""
@@ -116,7 +113,6 @@ def load_queue() -> list[dict]:
             return []
     return []
 
-
 def save_queue(tasks: list[dict]):
     """Save the active task queue."""
     _ensure_dirs()
@@ -124,7 +120,6 @@ def save_queue(tasks: list[dict]):
         json.dumps(tasks, indent=2, default=str),
         encoding="utf-8"
     )
-
 
 def add_task(task: dict):
     """Add a task to the queue."""
@@ -134,7 +129,6 @@ def add_task(task: dict):
     queue.sort(key=lambda t: t.get("priority", 50))
     save_queue(queue)
     logger.info(f"Task added: [{task['type']}] {task['title']} (priority {task['priority']})")
-
 
 def get_next_task() -> Optional[dict]:
     """Get the highest-priority unblocked pending task."""
@@ -150,7 +144,6 @@ def get_next_task() -> Optional[dict]:
             return task
 
     return None
-
 
 def complete_task(task_id: str, result: str, success: bool = True):
     """Mark a task as completed and archive it."""
@@ -171,7 +164,6 @@ def complete_task(task_id: str, result: str, success: bool = True):
     queue = [t for t in queue if t["status"] == "pending"]
     save_queue(queue)
 
-
 def block_task(task_id: str, reason: str):
     """Move a task to blocked status."""
     queue = load_queue()
@@ -187,7 +179,6 @@ def block_task(task_id: str, reason: str):
 
     queue = [t for t in queue if t["status"] == "pending"]
     save_queue(queue)
-
 
 # ---------------------------------------------------------------------------
 # Task Executors
@@ -207,11 +198,9 @@ def _execute_command(cmd: list, timeout: int = 120) -> tuple[bool, str]:
     except Exception as e:
         return False, str(e)
 
-
 def _execute_python(code: str, timeout: int = 120) -> tuple[bool, str]:
     """Run Python code and return (success, output)."""
     return _execute_command([PYTHON, "-c", code], timeout)
-
 
 def execute_task(task: dict) -> tuple[bool, str]:
     """
@@ -289,7 +278,6 @@ def execute_task(task: dict) -> tuple[bool, str]:
     else:
         return False, f"Unknown task type: {task_type}"
 
-
 # ---------------------------------------------------------------------------
 # Main Loop (called by NightShift or directly)
 # ---------------------------------------------------------------------------
@@ -328,7 +316,6 @@ def process_next_task() -> Optional[dict]:
     task["result"] = result
     return task
 
-
 def process_all(max_tasks: int = 10, max_minutes: int = 30):
     """
     Process tasks until queue empty, max reached, or time limit hit.
@@ -355,7 +342,6 @@ def process_all(max_tasks: int = 10, max_minutes: int = 30):
 
     logger.info(f"Processed {processed} tasks in {int(time.time()-start)}s")
     return processed
-
 
 # ---------------------------------------------------------------------------
 # Queue Seeding (Alfred pre-loads tasks before Batman leaves)
@@ -407,7 +393,6 @@ def seed_standard_nightwatch():
     logger.info(f"Seeded {len(tasks)} standard nightwatch tasks")
     return len(tasks)
 
-
 def seed_deep_work():
     """
     Seed extended deep-work tasks for longer Batman absences.
@@ -440,7 +425,6 @@ def seed_deep_work():
 
     logger.info(f"Seeded {len(tasks)} deep work tasks")
     return len(tasks)
-
 
 # ---------------------------------------------------------------------------
 # CLI

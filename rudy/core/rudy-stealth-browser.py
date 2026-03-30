@@ -2,7 +2,7 @@
 Rudy Stealth Browser - reusable module for bot-resistant Playwright automation.
 """
 import time
-import json
+
 import random
 import re
 from pathlib import Path
@@ -25,7 +25,6 @@ USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
 ]
 
-
 def create_stealth_page(pw, session_name=None, headless=True):
     browser = pw.chromium.launch(
         headless=headless,
@@ -44,20 +43,16 @@ def create_stealth_page(pw, session_name=None, headless=True):
     page.set_default_timeout(20000)
     return page, context, browser
 
-
 def save_session(context, session_name):
     sf = SESSION_DIR / f"{session_name}.json"
     context.storage_state(path=str(sf))
     return sf
 
-
 def session_exists(name):
     return (SESSION_DIR / f"{name}.json").exists()
 
-
 def human_delay(lo=500, hi=2000):
     time.sleep(random.uniform(lo / 1000, hi / 1000))
-
 
 def safe_click(page, sel, timeout=5000):
     human_delay(300, 800)
@@ -68,14 +63,12 @@ def safe_click(page, sel, timeout=5000):
     except Exception:
         return False
 
-
 def check_captcha(page):
     for sel in ['iframe[src*="recaptcha"]', 'iframe[src*="hcaptcha"]',
                 'div[class*="captcha"]', '[data-sitekey]']:
         if page.query_selector(sel):
             return True
     return False
-
 
 def solve_captcha(page, api_key):
     from twocaptcha import TwoCaptcha
@@ -96,7 +89,6 @@ def solve_captcha(page, api_key):
     page.evaluate(f'document.getElementById("g-recaptcha-response").innerHTML = \"{result["code"]}\"')
     return result["code"]
 
-
 def google_sign_in(page, email, password):
     page.goto("https://accounts.google.com/ServiceLogin?flowName=GlifWebSignIn&flowEntry=ServiceLogin")
     human_delay(1500, 3000)
@@ -110,13 +102,11 @@ def google_sign_in(page, email, password):
     human_delay(3000, 5000)
     return page
 
-
 def is_2fa(page):
     if "challenge" in page.url:
         return True
     text = page.inner_text("body")[:500].lower()
     return "verification" in text or "2-step" in text
-
 
 def enter_totp(page, secret):
     import pyotp
@@ -134,7 +124,6 @@ def enter_totp(page, secret):
         human_delay(3000, 5000)
         return True
     return False
-
 
 def enter_sms(page, code):
     digits = re.sub(r'\\D', '', str(code))

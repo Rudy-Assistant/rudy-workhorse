@@ -24,11 +24,11 @@ All processing is LOCAL — no cloud API needed, full privacy.
 import json
 import os
 import shutil
-import subprocess
+
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, List, Dict
+from typing import List
 
 DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
 VOICE_DIR = DESKTOP / "rudy-data" / "voice-clone"
@@ -37,12 +37,10 @@ OUTPUT_DIR = VOICE_DIR / "output"
 TEMP_DIR = VOICE_DIR / "temp"
 LOGS = DESKTOP / "rudy-logs"
 
-
 def _save_json(path: Path, data):
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w") as f:
         json.dump(data, f, indent=2, default=str)
-
 
 def _load_json(path: Path, default=None):
     if path.exists():
@@ -52,7 +50,6 @@ def _load_json(path: Path, default=None):
         except Exception:
             pass
     return default if default is not None else {}
-
 
 class AudioPreprocessor:
     """Clean and prepare audio samples for voice cloning."""
@@ -199,7 +196,6 @@ class AudioPreprocessor:
         except Exception as e:
             return [{"error": str(e)[:200]}]
 
-
 class PocketTTSEngine:
     """Voice cloning via Pocket TTS (Kyutai Labs, 2026).
 
@@ -258,7 +254,6 @@ class PocketTTSEngine:
         except Exception as e:
             return {"success": False, "error": str(e)[:300], "engine": "pocket_tts"}
 
-
 class CoquiTTSEngine:
     """Voice cloning via Coqui TTS (XTTS v2) — RETIRED.
 
@@ -301,7 +296,6 @@ class CoquiTTSEngine:
         except Exception as e:
             return {"success": False, "error": str(e)[:300], "engine": "coqui_xtts_v2"}
 
-
 class OpenVoiceEngine:
     """Voice cloning via OpenVoice — zero-shot cross-lingual."""
 
@@ -340,7 +334,6 @@ class OpenVoiceEngine:
         except Exception as e:
             return {"success": False, "error": str(e)[:300], "engine": "openvoice"}
 
-
 class BarkEngine:
     """Voice generation via Bark (Suno) — neural text-to-speech."""
 
@@ -371,7 +364,6 @@ class BarkEngine:
         except Exception as e:
             return {"success": False, "error": str(e)[:300], "engine": "bark"}
 
-
 class FallbackTTSEngine:
     """Fallback TTS — no cloning, but always works."""
 
@@ -394,7 +386,6 @@ class FallbackTTSEngine:
             return {"success": True, "output": output_path, "engine": "pyttsx3"}
         except Exception as e:
             return {"success": False, "error": str(e)[:200], "engine": "fallback"}
-
 
 class VoiceCloner:
     """
@@ -664,7 +655,6 @@ class VoiceCloner:
             "profiles": self.list_profiles(),
             "profile_count": len(self.profiles),
         }
-
 
 if __name__ == "__main__":
     print("Voice Clone Studio")

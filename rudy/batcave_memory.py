@@ -26,10 +26,9 @@ Usage:
 import json
 import logging
 import os
-import re
+
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 log = logging.getLogger("batcave_memory")
 
@@ -43,7 +42,6 @@ SESSION_DIR = MEMORY_DIR / "session-logs"
 
 for d in [MEMORY_DIR, SESSION_DIR]:
     d.mkdir(parents=True, exist_ok=True)
-
 
 class BatcaveMemory:
     """

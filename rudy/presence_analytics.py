@@ -17,11 +17,11 @@ Data flow:
   presence-log.json (raw events) → analytics engine → presence-analytics.json
 """
 import json
-import math
+
 import os
-import re
-from collections import defaultdict, Counter
-from datetime import datetime, timedelta
+
+from collections import Counter
+from datetime import datetime
 from pathlib import Path
 from itertools import combinations
 
@@ -95,7 +95,6 @@ DEVICE_TYPE_HINTS = {
     "ASUSTek": "computer",
 }
 
-
 def is_mac_randomized(mac: str) -> bool:
     """
     Check if a MAC is locally-administered (randomized).
@@ -104,7 +103,6 @@ def is_mac_randomized(mac: str) -> bool:
     """
     first_byte = int(mac.replace("-", ":").split(":")[0], 16)
     return bool(first_byte & 0x02)
-
 
 def lookup_oui(mac: str) -> dict:
     """Look up manufacturer from MAC OUI (first 3 octets)."""
@@ -127,7 +125,6 @@ def lookup_oui(mac: str) -> dict:
         "note": f"Globally unique MAC — {mfg}" if mfg != "Unknown" else "Unknown manufacturer",
     }
 
-
 # --- Scan Snapshot System ---
 # Each presence scan gets recorded as a snapshot for time-series analysis
 
@@ -140,7 +137,6 @@ class ScanSnapshot:
         self.hour = datetime.fromisoformat(timestamp).hour
         self.day = datetime.fromisoformat(timestamp).strftime("%A")
         self.date = datetime.fromisoformat(timestamp).strftime("%Y-%m-%d")
-
 
 # --- Co-Occurrence Analysis ---
 
@@ -189,7 +185,6 @@ def compute_cooccurrence(snapshots: list) -> dict:
         }
 
     return scores
-
 
 # --- Device Classification ---
 
@@ -271,7 +266,6 @@ class DeviceClassifier:
             "total_scans": self.total_scans,
         }
 
-
 # --- Person Clustering ---
 
 def cluster_devices_into_persons(cooccurrence: dict, classifications: dict,
@@ -340,7 +334,6 @@ def cluster_devices_into_persons(cooccurrence: dict, classifications: dict,
 
     return result
 
-
 # --- Activity Pattern Analysis ---
 
 def analyze_activity_patterns(routines: dict, mac: str) -> dict:
@@ -396,7 +389,6 @@ def analyze_activity_patterns(routines: dict, mac: str) -> dict:
         "is_daytime_only": all(h in range(6, 23) for h in active_hours) if active_hours else False,
     }
 
-
 def _find_longest_quiet_stretch(quiet_hours: list) -> tuple:
     """Find the longest consecutive stretch of quiet hours (wrapping around midnight)."""
     if not quiet_hours:
@@ -425,7 +417,6 @@ def _find_longest_quiet_stretch(quiet_hours: list) -> tuple:
         best_start = curr_start
 
     return (best_start % 24, (best_start + best_len) % 24)
-
 
 # --- Household Profile ---
 
@@ -479,7 +470,6 @@ def build_household_profile(clusters: list, classifications: dict,
 
     return profile
 
-
 def _confidence_note(classifications: dict) -> str:
     """Generate a human-readable confidence assessment."""
     total = len(classifications)
@@ -511,7 +501,6 @@ def _confidence_note(classifications: dict) -> str:
             "High confidence in device classifications and person clusters. "
             "Routine deviations are now detectable."
         )
-
 
 def _try_match_clusters(clusters: list, residents: list,
                           classifications: dict) -> list:
@@ -567,7 +556,6 @@ def _try_match_clusters(clusters: list, residents: list,
             unmatched_clusters.remove(ci)
 
     return assignments
-
 
 # --- Main Analysis Engine ---
 
@@ -965,7 +953,6 @@ class PresenceAnalytics:
 
         print("\n" + "=" * 60)
 
-
 # --- Convenience Functions ---
 
 def run_analysis(household_context: dict = None):
@@ -976,7 +963,6 @@ def run_analysis(household_context: dict = None):
     engine.run(household_context)
     engine.print_report()
     return engine
-
 
 def seed_and_analyze():
     """Seed with the Cimino family farm context and run analysis."""
@@ -1016,7 +1002,6 @@ def seed_and_analyze():
         ],
     }
     return run_analysis(context)
-
 
 if __name__ == "__main__":
     seed_and_analyze()

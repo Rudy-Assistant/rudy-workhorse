@@ -20,21 +20,19 @@ import os
 import subprocess
 import sys
 import importlib
-import time
+
 from datetime import datetime
 from pathlib import Path
-from typing import List, Dict, Optional
+from typing import List, Optional
 
 DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
 LOGS = DESKTOP / "rudy-logs"
 DATA_DIR = DESKTOP / "rudy-data" / "obsolescence"
 
-
 def _save_json(path: Path, data):
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w") as f:
         json.dump(data, f, indent=2, default=str)
-
 
 def _load_json(path: Path, default=None):
     if path.exists():
@@ -45,14 +43,12 @@ def _load_json(path: Path, default=None):
             pass
     return default if default is not None else {}
 
-
 def _run(cmd: str, timeout: int = 60):
     try:
         r = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=timeout)
         return r.stdout.strip(), r.stderr.strip(), r.returncode
     except Exception as e:
         return "", str(e), -1
-
 
 # ── Tool Landscape Database ─────────────────────────────────
 # Maps capability domains to current best-of-breed tools.
@@ -147,7 +143,6 @@ RUDY_MODULES = [
     "rudy.admin",
 ]
 
-
 class PackageAuditor:
     """Check installed packages for updates."""
 
@@ -175,7 +170,6 @@ class PackageAuditor:
                 if line.startswith("Version:"):
                     return line.split(":", 1)[1].strip()
         return None
-
 
 class ModuleHealthChecker:
     """Verify all Rudy modules can import and their dependencies work."""
@@ -213,7 +207,6 @@ class ModuleHealthChecker:
         results["summary"] = {"ok": ok, "total": total, "health_pct": round(ok / total * 100, 1) if total else 0}
 
         return results
-
 
 class LandscapeScanner:
     """
@@ -280,7 +273,6 @@ class LandscapeScanner:
 
         return recommendations
 
-
 class UsageTracker:
     """Track which capabilities are actually being used."""
 
@@ -321,7 +313,6 @@ class UsageTracker:
             "tracked_modules": len(self.stats.get("modules", {})),
             "stats": self.stats,
         }
-
 
 class ObsolescenceMonitor:
     """
@@ -523,7 +514,6 @@ class ObsolescenceMonitor:
             return {"outdated": self.check_packages()}
         else:
             return self.full_audit()
-
 
 if __name__ == "__main__":
     print("Obsolescence Monitor — Capability Audit")

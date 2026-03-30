@@ -13,14 +13,13 @@ Dependency Health Check (4-layer zealous inquisitor):
   Layer 4: System health — Windows updates, drivers, core tool versions,
            disk health. Extends audit beyond Python to the full machine.
 """
-import os
+
 import json
 import subprocess
 import urllib.request
 import urllib.error
-from datetime import datetime, timedelta
+from datetime import datetime
 from . import AgentBase, DESKTOP, LOGS_DIR
-
 
 class ResearchIntel(AgentBase):
     name = "research_intel"
@@ -889,7 +888,6 @@ class ResearchIntel(AgentBase):
         except Exception as e:
             self.warn(f"NLP analysis failed: {e}")
             return {"error": str(e)[:100]}
-
 
 if __name__ == "__main__":
     import sys

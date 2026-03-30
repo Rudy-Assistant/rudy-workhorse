@@ -1,8 +1,8 @@
 """
 Robin Human Adapter - Adapts human_simulation.py engines for Windows-MCP tools.
 """
-import json, math, random, string, time
-from typing import List, Dict, Any, Tuple
+import random, string
+from typing import Dict, Any
 from dataclasses import dataclass
 
 class TimingEngineBase:

@@ -28,7 +28,7 @@ import json
 import logging
 import os
 import subprocess
-import sys
+
 import threading
 import time
 from dataclasses import dataclass, field
@@ -71,7 +71,6 @@ class MCPTool:
             f"  Parameters: none"
         )
 
-
 @dataclass
 class MCPToolResult:
     """Result from calling an MCP tool."""
@@ -79,7 +78,6 @@ class MCPToolResult:
     content: Any = None
     error: Optional[str] = None
     is_error: bool = False
-
 
 # ---------------------------------------------------------------------------
 # MCP Server Connection
@@ -363,7 +361,6 @@ class MCPServerConnection:
                     "message": "Method not supported by Robin client",
                 },
             })
-
 
 # ---------------------------------------------------------------------------
 # MCP Server Registry

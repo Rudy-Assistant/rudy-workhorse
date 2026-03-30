@@ -25,7 +25,7 @@ import logging
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Optional
 
 try:
     import keyring
@@ -55,7 +55,6 @@ PAGES = {
     "health_log": "3327d3f7-e736-8109-bf96-f79796545a73",
 }
 
-
 def _get_notion_token() -> str:
     """Retrieve Notion integration token from keyring or environment."""
     if HAS_KEYRING:
@@ -78,7 +77,6 @@ def _get_notion_token() -> str:
         "No Notion token found. Create integration at notion.so/my-integrations, "
         "then: keyring.set_password('notion', 'robin', '<token>')"
     )
-
 
 class NotionAPI:
     """Minimal Notion API client."""
@@ -127,7 +125,6 @@ class NotionAPI:
     def append_blocks(self, page_id: str, blocks: list[dict]) -> dict:
         """Append blocks to a page."""
         return self._request("PATCH", f"/blocks/{page_id}/children", {"children": blocks})
-
 
 class NotionClient:
     """High-level Notion operations for Robin."""
@@ -260,7 +257,6 @@ class NotionClient:
                 lines.append(text)
         return "\n".join(lines)
 
-
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
@@ -289,7 +285,6 @@ def main() -> None:
         print("Usage:")
         print("  --read-directives  Read Bat Family Directives")
         print("  --test             Write test entry to health log")
-
 
 if __name__ == "__main__":
     main()

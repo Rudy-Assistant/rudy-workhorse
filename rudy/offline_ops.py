@@ -24,11 +24,11 @@ Design:
 import json
 import os
 import socket
-import subprocess
+
 import time
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
-from typing import Optional, List, Dict
+from typing import List
 
 DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
 LOGS = DESKTOP / "rudy-logs"
@@ -36,7 +36,6 @@ OFFLINE_DIR = DESKTOP / "rudy-data" / "offline"
 QUEUE_FILE = OFFLINE_DIR / "action-queue.json"
 STATE_FILE = OFFLINE_DIR / "offline-state.json"
 DECISION_LOG = OFFLINE_DIR / "decisions.json"
-
 
 def _load_json(path, default=None):
     if Path(path).exists():
@@ -47,12 +46,10 @@ def _load_json(path, default=None):
             pass
     return default if default is not None else {}
 
-
 def _save_json(path, data):
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w") as f:
         json.dump(data, f, indent=2, default=str)
-
 
 class ConnectivityChecker:
     """Check internet connectivity via multiple methods."""
@@ -118,7 +115,6 @@ class ConnectivityChecker:
             "dns_resolution": resolution,
             "timestamp": datetime.now().isoformat(),
         }
-
 
 class ActionQueue:
     """
@@ -217,7 +213,6 @@ class ActionQueue:
             "total_replayed": len(self.queue["replayed"]),
         }
 
-
 class DecisionLogger:
     """Log all AI-assisted decisions made during offline operation."""
 
@@ -239,7 +234,6 @@ class DecisionLogger:
 
     def get_recent(self, n: int = 20) -> List[dict]:
         return self.decisions["log"][-n:]
-
 
 class OfflineController:
     """
@@ -412,17 +406,14 @@ class OfflineController:
             "recent_decisions": self.logger.get_recent(5),
         }
 
-
 # Convenience function for other modules
 def is_online() -> bool:
     """Quick check: are we online?"""
     return ConnectivityChecker().check_dns()
 
-
 def get_controller() -> OfflineController:
     """Get the singleton offline controller."""
     return OfflineController()
-
 
 if __name__ == "__main__":
     print("Offline Operations Controller")

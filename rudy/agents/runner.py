@@ -20,7 +20,7 @@ Called by:
 import json
 import os
 import sys
-import time
+
 from datetime import datetime
 from pathlib import Path
 
@@ -48,7 +48,6 @@ AGENT_ALIASES = {
     "intel": "research_intel",
 }
 
-
 def load_agent(agent_name: str):
     """Dynamically import and instantiate an agent."""
     import importlib
@@ -59,7 +58,6 @@ def load_agent(agent_name: str):
     module = importlib.import_module(module_path)
     agent_class = getattr(module, class_name)
     return agent_class()
-
 
 def run_agent(agent_name: str, mode: str = None) -> dict:
     """Run a single agent and return its status dict."""
@@ -77,7 +75,6 @@ def run_agent(agent_name: str, mode: str = None) -> dict:
     agent = load_agent(agent_name)
     agent.execute(mode=mode)
     return agent.status
-
 
 def run_all(mode: str = "full") -> dict:
     """Run all agents sequentially, return summary."""
@@ -111,7 +108,6 @@ def run_all(mode: str = "full") -> dict:
 
     return aggregate
 
-
 def health_summary() -> dict:
     """Read all agent status files and produce a health summary without running anything."""
     results = {}
@@ -138,7 +134,6 @@ def health_summary() -> dict:
         "agents": results,
         "all_healthy": all(r.get("status") == "healthy" for r in results.values()),
     }
-
 
 def main():
     import argparse
@@ -184,7 +179,6 @@ def main():
         print(f"Summary: {status.get('summary', 'N/A')}")
         if status.get("critical_alerts"):
             print(f"ALERTS: {status['critical_alerts']}")
-
 
 if __name__ == "__main__":
     main()

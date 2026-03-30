@@ -34,14 +34,13 @@ Session Guardian (ADR-001, 2026-03-27):
   triggers handoff: saves state to disk, generates continuation prompt.
 """
 import json
-import os
+
 import subprocess
 import time
 import hashlib
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 from . import AgentBase, DESKTOP, LOGS_DIR
-
 
 class Sentinel(AgentBase):
     name = "sentinel"
@@ -157,7 +156,6 @@ class Sentinel(AgentBase):
         state["run_count"] = state.get("run_count", 0) + 1
         with open(self.STATE_FILE, "w", encoding="utf-8") as f:
             json.dump(state, f, indent=2, default=str)
-
 
     # === LIVE EVENT AWARENESS ===
 
@@ -990,7 +988,6 @@ class Sentinel(AgentBase):
             return
 
         # Clean up any stale lock files
-
 
 # ============================================================
 # SentinelObserver - Merged from rudy/robin_sentinel.py

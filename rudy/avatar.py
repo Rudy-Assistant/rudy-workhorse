@@ -22,10 +22,10 @@ import json
 import os
 import shutil
 import subprocess
-import time
+
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, List, Dict
+from typing import List
 
 DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
 AVATAR_DIR = DESKTOP / "rudy-data" / "avatar"
@@ -34,12 +34,10 @@ OUTPUT_DIR = AVATAR_DIR / "output"
 TEMP_DIR = AVATAR_DIR / "temp"
 LOGS = DESKTOP / "rudy-logs"
 
-
 def _save_json(path: Path, data):
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w") as f:
         json.dump(data, f, indent=2, default=str)
-
 
 def _run(cmd: str, timeout: int = 300):
     try:
@@ -49,7 +47,6 @@ def _run(cmd: str, timeout: int = 300):
         return "", "Timeout", -1
     except Exception as e:
         return "", str(e), -1
-
 
 class SadTalkerEngine:
     """
@@ -131,7 +128,6 @@ class SadTalkerEngine:
         except Exception as e:
             return {"success": False, "error": str(e)[:300], "engine": "sadtalker"}
 
-
 class Wav2LipEngine:
     """
     Wav2Lip — accurate lip-sync in videos.
@@ -167,7 +163,6 @@ class Wav2LipEngine:
             return {"success": False, "error": stderr[:300], "engine": "wav2lip"}
         except Exception as e:
             return {"success": False, "error": str(e)[:300], "engine": "wav2lip"}
-
 
 class FaceSwapEngine:
     """
@@ -266,7 +261,6 @@ class FaceSwapEngine:
         except Exception as e:
             return {"success": False, "error": str(e)[:300], "engine": "roop"}
 
-
 class MoviePyCompositor:
     """
     Fallback video compositing using MoviePy.
@@ -358,7 +352,6 @@ class MoviePyCompositor:
 
         except Exception as e:
             return {"success": False, "error": str(e)[:300], "engine": "moviepy_slideshow"}
-
 
 class AvatarStudio:
     """
@@ -549,7 +542,6 @@ NOTE: All engines run on CPU. Quality is good but generation
 is slow (1-5 min per video). For faster/better results, use
 Replicate or HuggingFace API connectors.
 """
-
 
 if __name__ == "__main__":
     print("Digital Avatar Studio")

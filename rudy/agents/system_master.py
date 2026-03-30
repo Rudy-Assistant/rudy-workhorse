@@ -6,11 +6,10 @@ Auto-recovers failed components and alerts on persistent issues.
 v1.1: Upgraded with psutil for richer system metrics (CPU%, RAM, uptime, boot time).
 """
 import subprocess
-import os
-import json
+
 import shutil
-import time
-from datetime import datetime, timedelta
+
+from datetime import datetime
 from . import AgentBase, DESKTOP, LOGS_DIR
 
 try:
@@ -24,7 +23,6 @@ try:
     HAS_TABULATE = True
 except ImportError:
     HAS_TABULATE = False
-
 
 class SystemMaster(AgentBase):
     name = "system_master"
@@ -138,7 +136,6 @@ class SystemMaster(AgentBase):
                 f'powershell -Command "Start-Process \'{self.PYTHON}\' -ArgumentList \'{DESKTOP}\\rudy-listener.py\' -WindowStyle Hidden"'
             )
             self.action(f"Attempted restart of {name}")
-
 
     def _check_network_travel(self):
         """Check for network changes (travel mode activation)."""
@@ -260,7 +257,6 @@ class SystemMaster(AgentBase):
             self.log.info("  Tailscale: OK")
         else:
             self.warn("Tailscale IP unreachable")
-
 
 if __name__ == "__main__":
     import sys

@@ -26,7 +26,7 @@ import hashlib
 from collections import defaultdict
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional, List, Dict, Tuple
+from typing import Optional, List, Tuple
 
 DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
 LOGS = DESKTOP / "rudy-logs"
@@ -44,12 +44,10 @@ VIDEO_EXTENSIONS = {
     ".mp4", ".mov", ".avi", ".mkv", ".m4v", ".3gp", ".wmv",
 }
 
-
 def _save_json(path: Path, data):
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w") as f:
         json.dump(data, f, indent=2, default=str)
-
 
 def _load_json(path: Path, default=None):
     if path.exists():
@@ -59,7 +57,6 @@ def _load_json(path: Path, default=None):
         except Exception:
             pass
     return default if default is not None else {}
-
 
 class EXIFExtractor:
     """Extract EXIF metadata from images."""
@@ -230,7 +227,6 @@ class EXIFExtractor:
 
         return results
 
-
 class GeoLocator:
     """Reverse geocode GPS coordinates to addresses."""
 
@@ -277,7 +273,6 @@ class GeoLocator:
             results.append(self.reverse_geocode(lat, lon))
             time.sleep(1.1)  # Nominatim requires 1 req/sec
         return results
-
 
 class PhotoOrganizer:
     """Organize photos by date, location, or event."""
@@ -386,7 +381,6 @@ class PhotoOrganizer:
             "filenames": [p["filename"] for p in photos],
         }
 
-
 class DuplicateDetector:
     """Find duplicate photos using perceptual hashing."""
 
@@ -470,7 +464,6 @@ class DuplicateDetector:
                         })
 
         return duplicates
-
 
 class TimelineGenerator:
     """Generate timelines from photo collections."""
@@ -652,7 +645,6 @@ class TimelineGenerator:
 </html>"""
         return html
 
-
 class PhotoIntel:
     """
     Unified photo intelligence interface.
@@ -759,7 +751,6 @@ class PhotoIntel:
             status["capabilities"].append("md5_duplicate_detection")
 
         return status
-
 
 if __name__ == "__main__":
     print("Photo Intelligence Module")

@@ -40,7 +40,6 @@ import platform
 import socket
 import subprocess
 import time
-from typing import Any
 
 logger = logging.getLogger("lucius.network_security")
 
@@ -100,7 +99,6 @@ ALWAYS_FLAG = {
     27017: "MongoDB (often left unauthenticated)",
     6379: "Redis (often no auth by default)",
 }
-
 
 # ---------------------------------------------------------------------------
 # Scan Functions
@@ -191,7 +189,6 @@ def _scan_open_ports(timeout: float = 1.0) -> list[dict]:
 
     return findings
 
-
 def _enumerate_listening_services() -> list[dict]:
     """
     Use netstat to enumerate all listening TCP/UDP services.
@@ -271,7 +268,6 @@ def _enumerate_listening_services() -> list[dict]:
 
     return findings
 
-
 def _check_firewall_status() -> list[dict]:
     """Check Windows Firewall status for all profiles."""
     findings = []
@@ -335,7 +331,6 @@ def _check_firewall_status() -> list[dict]:
 
     return findings
 
-
 def _check_active_connections() -> list[dict]:
     """Review established TCP connections for suspicious activity."""
     findings = []
@@ -385,7 +380,6 @@ def _check_active_connections() -> list[dict]:
 
     return findings
 
-
 def _check_network_interfaces() -> list[dict]:
     """Enumerate network interfaces and IP addresses."""
     findings = []
@@ -417,7 +411,6 @@ def _check_network_interfaces() -> list[dict]:
         })
 
     return findings
-
 
 # ---------------------------------------------------------------------------
 # Main Entry Point
@@ -490,7 +483,6 @@ def audit_network_security() -> list[dict]:
     })
 
     return all_findings
-
 
 # ---------------------------------------------------------------------------
 # CLI

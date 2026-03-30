@@ -18,11 +18,10 @@ Design principles:
 """
 import hashlib
 import json
-import os
-import socket
+
 import subprocess
-import time
-from datetime import datetime, timedelta
+
+from datetime import datetime
 from pathlib import Path
 from collections import Counter
 from . import AgentBase, DESKTOP, LOGS_DIR
@@ -45,7 +44,6 @@ try:
     HAS_WELLNESS = True
 except ImportError:
     HAS_WELLNESS = False
-
 
 class SecurityAgent(AgentBase):
     name = "security_agent"
@@ -422,7 +420,6 @@ class SecurityAgent(AgentBase):
             self.log.info(f"  Presence scan error: {e}")
 
     # === WELLNESS MONITORING ===
-
 
     def _check_network_defense(self):
         """Run comprehensive network defense checks."""

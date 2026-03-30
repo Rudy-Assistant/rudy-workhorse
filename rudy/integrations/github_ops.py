@@ -12,7 +12,7 @@ All operations go through the `gh` CLI or git commands.
 """
 import subprocess
 import json
-import os
+
 import logging
 from datetime import datetime
 from typing import Optional
@@ -21,7 +21,6 @@ logger = logging.getLogger("rudy.github")
 
 DESKTOP = r"C:\Users\C\Desktop"
 REPO = "rudy-ciminoassist/rudy-workhorse"
-
 
 class GitHubOps:
     """GitHub operations wrapper for Rudy agents."""
@@ -251,7 +250,6 @@ class GitHubOps:
             f"**Agent**: Sentinel\n"
         )
         return self.create_issue(title, body, labels=labels)
-
 
 # Singleton for easy import
 _instance = None

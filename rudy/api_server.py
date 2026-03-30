@@ -22,21 +22,18 @@ Security:
   - Request logging
 """
 
-import hashlib
 import json
 import os
 import secrets
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
 LOGS = DESKTOP / "rudy-logs"
 API_CONFIG = LOGS / "api-server-config.json"
 API_LOG = LOGS / "api-requests.json"
 COMMANDS_DIR = DESKTOP / "rudy-commands"
-
 
 def _load_config():
     if API_CONFIG.exists():
@@ -60,9 +57,7 @@ def _load_config():
         json.dump(config, f, indent=2)
     return config
 
-
 CONFIG = _load_config()
-
 
 def create_app():
     """Create the FastAPI application."""
@@ -257,7 +252,6 @@ def create_app():
 
     return app
 
-
 def run_server():
     """Start the API server."""
     try:
@@ -274,7 +268,6 @@ def run_server():
 
     uvicorn.run(app, host=CONFIG["host"], port=CONFIG["port"],
                 log_level="info")
-
 
 if __name__ == "__main__":
     run_server()

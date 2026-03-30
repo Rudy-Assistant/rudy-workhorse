@@ -18,10 +18,10 @@ import os
 import re
 import socket
 import subprocess
-import time
+
 import hashlib
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 
 DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
@@ -70,7 +70,6 @@ def _detect_current_gateway():
     return "192.168.7.1", "192.168.7"
 
 GATEWAY_IP, SUBNET = _detect_current_gateway()
-
 
 class NetworkDefense:
     """
@@ -682,14 +681,12 @@ class NetworkDefense:
         lines.append("\n" + "=" * 55)
         return "\n".join(lines)
 
-
 def run_defense_check():
     """Run a complete network defense check."""
     defense = NetworkDefense()
     result = defense.run_all_checks()
     print(f"\n{defense.get_defense_report()}")
     return result
-
 
 if __name__ == "__main__":
     run_defense_check()

@@ -30,10 +30,10 @@ Required:
 import json
 import math
 import os
-import time
-from datetime import datetime, timedelta
+
+from datetime import datetime
 from pathlib import Path
-from typing import Optional, Dict, List, Tuple
+from typing import Optional, Dict, List
 
 DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
 LOGS_DIR = DESKTOP / "rudy-logs"
@@ -46,14 +46,12 @@ STATE_FILE = DATA_DIR / "findmy-state.json"
 for _d in [DATA_DIR, HISTORY_DIR]:
     _d.mkdir(parents=True, exist_ok=True)
 
-
 # ── Helpers ───────────────────────────────────────────────────
 
 def _save_json(path: Path, data):
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, default=str)
-
 
 def _load_json(path: Path, default=None):
     if path.exists():
@@ -62,7 +60,6 @@ def _load_json(path: Path, default=None):
         except Exception:
             pass
     return default if default is not None else {}
-
 
 def haversine_km(lat1, lon1, lat2, lon2) -> float:
     """Distance between two lat/lng points in kilometers."""
@@ -73,7 +70,6 @@ def haversine_km(lat1, lon1, lat2, lon2) -> float:
          math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) *
          math.sin(dlon / 2) ** 2)
     return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-
 
 # ── iCloud Auth Backend ──────────────────────────────────────
 
@@ -178,7 +174,6 @@ class ICloudAuth:
     @property
     def api(self):
         return self._api
-
 
 # ── Location Fetcher ─────────────────────────────────────────
 
@@ -576,7 +571,6 @@ class FindMyFriends:
         """List all geofences."""
         return _load_json(GEOFENCES_FILE, {"fences": []}).get("fences", [])
 
-
 # ── Convenience Functions ────────────────────────────────────
 
 def setup(apple_id: str, password: str) -> bool:
@@ -607,7 +601,6 @@ def setup(apple_id: str, password: str) -> bool:
         _save_json(CONFIG_FILE, config)
         return False
 
-
 def poll() -> Dict:
     """Run a polling cycle: authenticate, fetch locations, analyze."""
     config = _load_json(CONFIG_FILE, {})
@@ -637,7 +630,6 @@ def poll() -> Dict:
     fmf = FindMyFriends(auth)
     return fmf.poll_and_analyze()
 
-
 def verify_2fa(code: str) -> bool:
     """Submit a 2FA code to complete authentication."""
     config = _load_json(CONFIG_FILE, {})
@@ -659,7 +651,6 @@ def verify_2fa(code: str) -> bool:
 
     return auth.verify_2fa(code)
 
-
 # ── Pre-configured Geofences ────────────────────────────────
 
 def setup_default_geofences():
@@ -676,7 +667,6 @@ def setup_default_geofences():
 
     # Chris can add more via:
     #   python -m rudy.find_my fence add "Work" 37.xxx -121.xxx 1.0
-
 
 # ── CLI ──────────────────────────────────────────────────────
 

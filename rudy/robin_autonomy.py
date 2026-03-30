@@ -33,7 +33,6 @@ import os
 import time as _time
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional
 
 try:
     from rudy.robin_sentinel import SentinelObserver
@@ -61,7 +60,6 @@ INITIATIVE_JOURNAL = RUDY_DATA / "robin-initiative-journal.json"
 
 for d in [COORD_DIR, ALFRED_INBOX, ROBIN_INBOX, ARCHIVE_DIR, RUDY_LOGS]:
     d.mkdir(parents=True, exist_ok=True)
-
 
 # ---------------------------------------------------------------------------
 # Directive Tracker
@@ -174,7 +172,6 @@ class DirectiveTracker:
         log.info("New directive created: %s (%.1fh budget)", directive, hours)
         return d
 
-
 # ---------------------------------------------------------------------------
 # Alfred Coordinator
 # ---------------------------------------------------------------------------
@@ -253,7 +250,6 @@ class AlfredCoordinator:
             "summary": summary, "next_steps": next_steps,
             "checkpoint_pct": pct,
         }, priority="high")
-
 
 # ---------------------------------------------------------------------------
 # Initiative Engine
@@ -399,7 +395,6 @@ class InitiativeEngine:
                 entry["result"] = result
                 break
         self._save_journal()
-
 
 # ---------------------------------------------------------------------------
 # Autonomy Engine - The main decision-maker
@@ -577,7 +572,6 @@ class AutonomyEngine:
                 return json.load(f).get("ollama_model", "qwen2.5:7b")
         except Exception:
             return "qwen2.5:7b"
-
 
 # ---------------------------------------------------------------------------
 # Entry point for direct testing

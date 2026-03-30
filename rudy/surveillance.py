@@ -29,7 +29,7 @@ import subprocess
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Dict, List, Tuple
+from typing import Optional, Dict, List
 
 DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
 LOGS_DIR = DESKTOP / "rudy-logs"
@@ -41,12 +41,10 @@ CONFIG_FILE = DATA_DIR / "surveillance-config.json"
 for _d in [DATA_DIR, SNAPSHOTS_DIR, RECORDINGS_DIR]:
     _d.mkdir(parents=True, exist_ok=True)
 
-
 def _save_json(path, data):
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, default=str)
-
 
 def _load_json(path, default=None):
     if path.exists():
@@ -55,7 +53,6 @@ def _load_json(path, default=None):
         except Exception:
             pass
     return default if default is not None else {}
-
 
 # ── Camera Discovery ─────────────────────────────────────────
 
@@ -164,7 +161,6 @@ class CameraDiscovery:
         except Exception as e:
             return {"success": False, "error": str(e)[:200]}
 
-
 # ── Motion Detection ─────────────────────────────────────────
 
 class MotionDetector:
@@ -239,7 +235,6 @@ class MotionDetector:
             "bounding_boxes": boxes[:10],
         }
 
-
 # ── Person Detection ─────────────────────────────────────────
 
 class PersonDetector:
@@ -290,7 +285,6 @@ class PersonDetector:
             "count": len(people),
             "bounding_boxes": people,
         }
-
 
 # ── Surveillance Controller ──────────────────────────────────
 
@@ -546,23 +540,19 @@ class SurveillanceController:
 
         return {"cleaned": cleaned, "freed_mb": round(freed / 1024 / 1024, 1)}
 
-
 # ── Entry Points ─────────────────────────────────────────────
 
 def discover() -> List[Dict]:
     """Discover cameras."""
     return SurveillanceController().discover()
 
-
 def snapshot(source=0, reason="manual") -> Optional[str]:
     """Take a snapshot."""
     return SurveillanceController().snapshot(source, reason)
 
-
 def monitor(source=0, duration=60) -> Dict:
     """Run a monitoring cycle."""
     return SurveillanceController().monitor_cycle(source, duration)
-
 
 if __name__ == "__main__":
     import sys

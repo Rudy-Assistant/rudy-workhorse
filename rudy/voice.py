@@ -9,18 +9,16 @@ Capabilities:
   - Voice alerts: Generate spoken alerts for family safety
 """
 
-import json
 import os
 import subprocess
 import time
-from datetime import datetime
+
 from pathlib import Path
-from typing import Optional, List
+from typing import List
 
 DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
 AUDIO_DIR = DESKTOP / "rudy-data" / "audio"
 AUDIO_DIR.mkdir(parents=True, exist_ok=True)
-
 
 class TextToSpeech:
     """Generate spoken audio from text."""
@@ -68,7 +66,6 @@ class TextToSpeech:
                 return self.speak_online(text, output_path)
             except Exception:
                 return self.speak_offline(text, output_path)
-
 
 class SpeechToText:
     """Transcribe audio to text using OpenAI Whisper (local)."""
@@ -126,7 +123,6 @@ class SpeechToText:
         m, s = divmod(int(seconds), 60)
         h, m = divmod(m, 60)
         return f"{h:02d}:{m:02d}:{s:02d}" if h else f"{m:02d}:{s:02d}"
-
 
 class AudioProcessor:
     """Audio file processing utilities."""
@@ -213,7 +209,6 @@ class AudioProcessor:
             subprocess.run(cmd, capture_output=True, text=True, timeout=300)
             return output_path
 
-
 class VoiceModule:
     """Unified voice/audio interface."""
 
@@ -236,7 +231,6 @@ class VoiceModule:
             os.rename(path, str(alert_path))
             return str(alert_path)
         return path
-
 
 if __name__ == "__main__":
     print("Voice & Audio Module")

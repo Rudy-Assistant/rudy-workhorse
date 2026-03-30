@@ -12,14 +12,13 @@ Capabilities:
 
 import json
 import os
-from datetime import datetime
+
 from pathlib import Path
-from typing import Optional, List, Dict
+from typing import List
 
 DESKTOP = Path(os.environ.get("USERPROFILE", os.path.expanduser("~"))) / "Desktop"
 OCR_DIR = DESKTOP / "rudy-data" / "ocr-output"
 OCR_DIR.mkdir(parents=True, exist_ok=True)
-
 
 class ImageOCR:
     """OCR for images using EasyOCR."""
@@ -71,7 +70,6 @@ class ImageOCR:
     def read_batch(self, image_paths: List[str]) -> List[dict]:
         """OCR multiple images."""
         return [self.read_image(p) for p in image_paths]
-
 
 class PDFExtractor:
     """Extract text and tables from PDFs."""
@@ -136,7 +134,6 @@ class PDFExtractor:
             return tables
         except ImportError:
             return [{"error": "pdfplumber not installed"}]
-
 
 class DocumentParser:
     """Parse various document formats."""
@@ -253,7 +250,6 @@ class DocumentParser:
                 results.append(self.parse(str(path)))
         return results
 
-
 class DocumentIntelligence:
     """Unified document intelligence interface."""
 
@@ -275,7 +271,6 @@ class DocumentIntelligence:
     def read_all(self, directory: str) -> List[dict]:
         """Read all documents in a directory."""
         return self.parser.batch_parse(directory)
-
 
 if __name__ == "__main__":
     di = DocumentIntelligence()

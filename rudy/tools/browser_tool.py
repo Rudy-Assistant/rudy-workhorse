@@ -27,7 +27,6 @@ Dependencies:
     - Chromium browser binary -- installed via playwright install chromium
 """
 
-import asyncio
 import json
 import logging
 import time
@@ -37,7 +36,6 @@ from typing import Optional
 from urllib.parse import quote_plus
 
 logger = logging.getLogger("robin.tools.browser")
-
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -51,7 +49,6 @@ DEFAULT_TIMEOUT_MS = 30000
 
 # Screenshot save location
 SCREENSHOT_DIR = Path(r"C:\Users\ccimi\Desktop\rudy-logs\screenshots")
-
 
 # ---------------------------------------------------------------------------
 # Result dataclass
@@ -95,7 +92,6 @@ class BrowseResult:
 
         parts.append(f"\n(Loaded in {self.duration_ms}ms)")
         return "\n".join(parts)
-
 
 # ---------------------------------------------------------------------------
 # Core browser functions (synchronous wrappers for Robin's sync agent loop)
@@ -225,7 +221,6 @@ def browse(
             duration_ms=duration,
         )
 
-
 def search_web(query: str, max_results: int = 5) -> BrowseResult:
     """
     Simple web search via DuckDuckGo HTML (no API key needed).
@@ -248,7 +243,6 @@ def search_web(query: str, max_results: int = 5) -> BrowseResult:
 
     return result
 
-
 # ---------------------------------------------------------------------------
 # Multi-page monitoring (for dashboard/status page checks)
 # ---------------------------------------------------------------------------
@@ -269,7 +263,6 @@ def check_urls(urls: list[str], timeout_ms: int = 15000) -> list[BrowseResult]:
         result = browse(url, timeout_ms=timeout_ms)
         results.append(result)
     return results
-
 
 # ---------------------------------------------------------------------------
 # Tool interface for Robin's LangGraph (matches MCP tool dispatch pattern)
@@ -320,13 +313,11 @@ def handle_browser_tool_call(args: dict) -> str:
 
     return "Browser tool error: provide 'url', 'search', or 'check_urls' in args"
 
-
 # ---------------------------------------------------------------------------
 # CLI test harness
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    import sys
 
     logging.basicConfig(level=logging.INFO)
 

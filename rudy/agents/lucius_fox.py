@@ -32,14 +32,10 @@ ADR-002: Lucius Fox Agent (2026-03-29)
 """
 import json
 import os
-import hashlib
-import subprocess
-import importlib
-import time
-from datetime import datetime, timedelta
+
+from datetime import datetime
 from pathlib import Path
 from . import AgentBase, DESKTOP, LOGS_DIR
-
 
 class LuciusFox(AgentBase):
     name = "lucius-fox"
