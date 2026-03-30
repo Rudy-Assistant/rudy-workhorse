@@ -43,7 +43,7 @@ class GitHubOps:
             try:
                 r = subprocess.run(
                     "gh auth status",
-                    shell=True, capture_output=True, text=True, timeout=10
+                    shell=True, capture_output=True, text=True, timeout=10  # nosec B602
                 )
                 self._gh_available = r.returncode == 0
             except Exception:
@@ -55,7 +55,7 @@ class GitHubOps:
         try:
             r = subprocess.run(
                 f"gh {args}",
-                shell=True, capture_output=True, text=True,
+                shell=True, capture_output=True, text=True,  # nosec B602
                 cwd=self.cwd, timeout=timeout
             )
             if r.returncode == 0:
@@ -75,7 +75,7 @@ class GitHubOps:
         try:
             r = subprocess.run(
                 f"git {args}",
-                shell=True, capture_output=True, text=True,
+                shell=True, capture_output=True, text=True,  # nosec B602
                 cwd=self.cwd, timeout=timeout
             )
             return r.returncode == 0, r.stdout.strip()

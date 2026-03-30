@@ -35,6 +35,8 @@ CLI:
 
 import json
 import re
+
+log = logging.getLogger("rudy.handoff")
 from datetime import datetime
 from pathlib import Path
 
