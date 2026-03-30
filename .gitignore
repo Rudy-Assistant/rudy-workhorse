@@ -96,3 +96,15 @@ Tor Browser/
 *.dll
 *.xpi
 *.ja
+
+# Robin runtime data (task queue, mailbox, watchdog)
+rudy-data/robin-taskqueue/*.json
+rudy-data/robin-taskqueue/.taskqueue.lock
+rudy-data/robin-taskqueue/.last_seed
+rudy-data/robin-taskqueue/completed/
+rudy-data/robin-taskqueue/blocked/
+rudy-data/robin-watchdog.log
+rudy-data/alfred-inbox/
+rudy-data/robin-inbox/
+rudy-data/coordination/robin-status.json
+rudy-data/environment-profile.json
