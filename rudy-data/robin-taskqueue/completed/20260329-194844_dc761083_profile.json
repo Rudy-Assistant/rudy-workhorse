@@ -1,0 +1,18 @@
+{
+  "id": "dc761083",
+  "type": "profile",
+  "title": "Refresh environment profile",
+  "description": "Run environment profiler and update hardware profile",
+  "priority": 10,
+  "estimated_minutes": 2,
+  "status": "completed",
+  "command": null,
+  "python_code": null,
+  "depends_on": [],
+  "metadata": {},
+  "created": "2026-03-29T19:48:34.094685",
+  "started": null,
+  "completed": "2026-03-29T19:48:44.174826",
+  "result": "============================================================\nBatcave Environment Profiler v1.0\n============================================================\n\nCPU: 13th Gen Intel(R) Core(TM) i9-13900H\n     20 cores\nRAM: 16077MB total, 3172MB available (80.3% used)\nGPU: NVIDIA GeForce RTX 4060 Laptop GPU (8188MB VRAM, dedicated)\n\nOllama: RUNNING\n  - qwen2.5:7b (4466MB, 7.6B)\n  - deepseek-r1:8b (4983MB, 8.2B)\n\nDisk:\n  C: 138.2GB free / 952.7GB total (85.5% used)\n\nModel Recommendation:\n  Tier: high\n  Model: qwen2.5:7b\n  Reason: Discrete GPU with 8188MB VRAM supports 14b inference (recommended model not installed, using qwen2.5:7b)\n  Alternatives: deepseek-r1:14b, qwen2.5:7b\n\nProfile generated in 4704ms\nSaved to: C:\\Users\\ccimi\\Desktop\\rudy-workhorse\\rudy-data\\environment-profile.json\n\n============================================================\nCould not find platform independent libraries <prefix>\nINFO:batcave.environment_profiler:Environment profile saved to C:\\Users\\ccimi\\Desktop\\rudy-workhorse\\rudy-data\\environment-profile.json\n",
+  "error": null
+}

@@ -51,11 +51,11 @@ logger = logging.getLogger("batcave.environment_profiler")
 # Configuration
 # ---------------------------------------------------------------------------
 
-PROFILE_OUTPUT = Path(r"C:\Users\ccimi\Desktop\rudy-data\environment-profile.json")
+PROFILE_OUTPUT = Path(__file__).resolve().parent.parent / "rudy-data" / "environment-profile.json"
 OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
 
 # Model selection thresholds
-GPU_VRAM_THRESHOLD_14B = 8192   # MB - need 8GB+ VRAM for 14b models
+GPU_VRAM_THRESHOLD_14B = 8000   # MB - need ~8GB VRAM for 14b models (8188MB on RTX 4060)
 RAM_THRESHOLD_14B = 16384       # MB - need 16GB+ RAM for 14b (CPU inference)
 RAM_THRESHOLD_7B = 8192         # MB - need 8GB+ for 7b
 
@@ -352,7 +352,7 @@ def recommend_model(profile: dict) -> dict:
     elif ram_mb >= RAM_THRESHOLD_7B:
         recommendation["hardware_tier"] = "standard"
         recommendation["primary_model"] = "qwen2.5:7b"
-        recommendation["reason"] = f"{ram_mb}MB RAM with {'shared iGPU' if is_igpu else 'limited GPU'} - 7b optimal"
+        recommendation["reason"] = f"{ram_mb}MB RAM with {'shared iGPU' if is_igpu else 'GPU'} - 7b optimal (RAM constrained)"
         recommendation["alternatives"] = ["deepseek-r1:8b"]
 
     # Tier 4: Underpowered
