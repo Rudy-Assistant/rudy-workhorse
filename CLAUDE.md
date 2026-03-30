@@ -817,12 +817,24 @@ Rationalizations that are explicitly banned:
 - "It's only 50 lines" → *50 lines times 20 instances = 1000 lines of custom liability.*
 - "We need custom output format" → *Wrap the standard tool, don't reimplement it.*
 
+### Vault-First Institutional Memory (HARD RULE — Session 16)
+
+All session records, findings, and institutional knowledge MUST be written to the **BatcaveVault** (Obsidian vault at `<repo>/vault/`). This is the single source of truth.
+
+1. **HandoffWriter** handles this automatically — `writer.write()` writes to both `rudy-data/handoffs/` (Robin's operational copy) AND `vault/Sessions/Session-NN.md` + appends to `vault/Briefings/Alfred-Session-Log.md`.
+2. **ADRs** go to `vault/Architecture/` (in addition to `docs/` for the repo copy).
+3. **Protocol updates** go to `vault/Protocols/`.
+4. **Session records** go to `vault/Sessions/`.
+5. **Never scatter records** across `mnt/outputs/`, `rudy-data/`, or other ad-hoc locations without also writing to the vault.
+
+The vault replaced Notion (migrated Session 11). Obsidian is an improvement over Notion — local-first, Markdown-native, git-friendly. Treat it as such.
+
 ### Anti-Patterns (learned the hard way)
 - **Don't ask Chris to handle files** → use allow_cowork_file_delete, request_cowork_directory
 - **Don't hardcode ANY path** → import from `rudy.paths` (REPO_ROOT, RUDY_DATA, RUDY_LOGS, DESKTOP, HOME, PYTHON_EXE, GIT_EXE). Lucius enforces this at zero tolerance.
 - **Don't write new scan scripts** → use existing modules (PhoneCheck, NetworkDefense, etc.)
 - **Don't leave "items for Chris"** → use every tool available to self-serve
-- **Don't forget Notion** → log improvements, track tools, persist sprint state
+- **Don't forget BatcaveVault** → all session records, findings, and institutional knowledge go to `vault/`. HandoffWriter.write() handles session records automatically. Never use Notion (deprecated Session 11).
 - **Don't forget Chrome** → can automate web tasks when CLI tools aren't enough
 - **Don't build custom when best-in-class exists** → search GitHub/PyPI/MCP registry first
 - **Don't forget your skills** → 30+ skills across Engineering, Operations, Productivity, Legal, Plugin Management. Invoke them — they contain condensed best practices superior to ad-hoc approaches.
