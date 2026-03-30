@@ -159,7 +159,7 @@ class ResearchIntel(AgentBase):
         evidence = {}  # Collected web evidence per package
 
         # === Layer 1: Import verification ===
-        python = r"C:\Users\C\AppData\Local\Programs\Python\Python312\python.exe"
+        python = PYTHON_EXE
         CRITICAL_IMPORTS = [
             ("rudy.voice_clone", "Voice cloning module"),
             ("rudy.local_ai", "Local AI engine"),
