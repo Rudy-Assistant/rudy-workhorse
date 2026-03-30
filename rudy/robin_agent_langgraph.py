@@ -51,6 +51,27 @@ from langgraph.graph import StateGraph, END
 
 logger = logging.getLogger("robin.agent.langgraph")
 
+# Browser tool integration (Playwright-direct, Session 7)
+try:
+    from rudy.tools.browser_integration import (
+        is_browser_tool_call,
+        dispatch_browser_tool,
+        BROWSER_TOOLS_PROMPT,
+    )
+    BROWSER_TOOLS_AVAILABLE = True
+    logger.info("Browser tools loaded (Playwright-direct)")
+except ImportError:
+    BROWSER_TOOLS_AVAILABLE = False
+    BROWSER_TOOLS_PROMPT = ""
+    logger.warning("Browser tools not available (playwright not installed)")
+
+    def is_browser_tool_call(tool_name):
+        return False
+
+    def dispatch_browser_tool(tool_name, tool_args):
+        return "Browser tools not available"
+
+
 
 # ---------------------------------------------------------------------------
 # Data classes (preserved from robin_agent.py for compatibility)
@@ -258,6 +279,9 @@ You execute tasks by calling tools via MCP servers. You think step-by-step, then
 AVAILABLE TOOLS:
 {tools_prompt}
 
+- To BROWSE WEB PAGES, CHECK DASHBOARDS, or SEARCH THE WEB:
+  -> Use robin.Browse, robin.SearchWeb, or robin.CheckURLs
+  -> These use a headless browser (Playwright) - works even when screen is locked
 TOOL SELECTION GUIDE (CRITICAL — FOLLOW EXACTLY):
 - To READ FILES, LIST DIRECTORIES, RUN SCRIPTS, or EXECUTE COMMANDS:
   → Use windows-mcp.Shell with PowerShell commands
@@ -493,6 +517,31 @@ def execute_tool_node(state: RobinState) -> dict:
                     f"TOOL ROUTER: Rewrote args from Snapshot format to Shell. "
                     f"Original: {original_name}, New: {tool_name}"
                 )
+
+    # --- Browser tool dispatch (Playwright-direct, no MCP needed) ---
+    if BROWSER_TOOLS_AVAILABLE and is_browser_tool_call(tool_name):
+        try:
+            result_text = dispatch_browser_tool(tool_name, tool_args)
+            duration = int((time.time() - start_time) * 1000)
+            step = AgentStep(
+                step_num=step_num,
+                timestamp=datetime.now().isoformat(),
+                action="tool_result",
+                content=result_text[:500],
+                tool_name=tool_name,
+                tool_args=tool_args,
+                tool_result=result_text,
+                duration_ms=duration,
+            )
+            result_msg = {"role": "user", "content": f"Tool result ({tool_name}):\n{result_text}"}
+            return {
+                "messages": [result_msg],
+                "steps": [step],
+                "tool_call_count": state["tool_call_count"] + 1,
+            }
+        except Exception as e:
+            logger.error(f"Browser tool failed: {e}")
+            # Fall through to MCP dispatch as fallback
 
     # --- Dispatch via registry ---
     registry = state.get("_registry")
