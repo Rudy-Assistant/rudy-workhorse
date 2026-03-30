@@ -155,9 +155,12 @@ def _run_git(args: str, timeout: int = 30) -> tuple[bool, str]:
     """Run a git command in the repo root."""
     try:
         cmd = f'"{GIT_EXE}" {args}' if " " in GIT_EXE else f"{GIT_EXE} {args}"
+        # SAFETY: shell=True is intentional — cmd is constructed from trusted
+        # constants (GIT_EXE from rudy.paths, args from internal callers only).
+        # No user input reaches this function.
         r = subprocess.run(
             cmd,
-            shell=True, capture_output=True, text=True,
+            shell=True, capture_output=True, text=True,  # noqa: S602 — trusted input only
             cwd=str(REPO_ROOT), timeout=timeout
         )
         return r.returncode == 0, r.stdout
