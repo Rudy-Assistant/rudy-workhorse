@@ -779,9 +779,10 @@ Before building ANY custom solution, you MUST:
 **4. Compose, don't rewrite** — wrap existing tools with thin adapters, don't reimplement
 
 ### HARD RULES — Session Discipline
-1. **At session start**: Read `rudy-logs/session-briefing.md` if it exists (Sentinel generates this). Contains: machine state, pending work, last session summary, available tools.
+1. **At session start**: Read `CLAUDE.md` first (HARD RULE — Session 22). Then read `rudy-logs/session-briefing.md` if it exists (Sentinel generates this). Contains: machine state, pending work, last session summary, available tools.
 2. **Before writing ANY new Python file**: Check `rudy-logs/capability-manifest.json` for existing solutions. Also check: Cowork skills (30+), MCP connectors (5), rudy/ modules (31+), installed packages (100+), scheduled tasks (24). The Capability Index below is your cheat sheet.
 3. **Before building custom**: Search the MCP registry, check installed pip packages (`pip list` on Workhorse), and review the Cowork Capability Index. If you're writing >50 lines of Python for something that sounds generic, you almost certainly missed an existing tool.
+4. **All handoff drafts MUST include explicit instruction to consult CLAUDE.md** (HARD RULE — Session 22). Every bootstrap prompt, continuation prompt, and handoff brief must tell the next session to read CLAUDE.md before doing any work. This applies to: HandoffWriter output, manual handoffs, context-window handoffs, and any session-start instructions.
 
 ### Finding Capture Protocol (HARD RULE — Session 14)
 
