@@ -34,6 +34,7 @@ CLI:
 """
 
 import json
+import logging
 import re
 
 log = logging.getLogger("rudy.handoff")
