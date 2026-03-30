@@ -30,6 +30,7 @@ Usage:
 import json
 import logging
 import os
+import subprocess
 import time as _time
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -46,7 +47,9 @@ log = logging.getLogger("robin_autonomy")
 # Paths
 # ---------------------------------------------------------------------------
 
-from rudy.paths import REPO_ROOT, RUDY_DATA, RUDY_LOGS  # noqa: E402
+from rudy.paths import (  # noqa: E402
+    GIT_EXE, HANDOFFS_DIR, LUCIUS_AUDITS, REPO_ROOT, RUDY_DATA, RUDY_LOGS,
+)
 
 COORD_DIR = RUDY_DATA / "coordination"
 ALFRED_INBOX = RUDY_DATA / "alfred-inbox"
@@ -250,6 +253,281 @@ class AlfredCoordinator:
         }, priority="high")
 
 # ---------------------------------------------------------------------------
+# Situational Awareness — Robin looks around before deciding what to do
+# ---------------------------------------------------------------------------
+
+class SituationalAwareness:
+    """
+    Gathers state from multiple Batcave sources so Robin can infer priorities
+    without depending on any single signal (like a handoff file).
+
+    Robin should be able to wake up with zero instructions and figure out
+    what matters by reading the room — git log, Lucius findings, system
+    health, coordination state, open PRs, stale files.
+    """
+
+    def gather(self) -> dict:
+        """Collect all available signals into a single state dict."""
+        state = {
+            "gathered_at": datetime.now().isoformat(),
+            "signals": {},
+        }
+        # Each gatherer is wrapped in try/except — partial state is fine.
+        # A missing signal is itself a signal (e.g. "no handoff" = new setup).
+        for name, fn in [
+            ("git_recent", self._git_recent_activity),
+            ("alfred_status", self._alfred_session_state),
+            ("handoff", self._latest_handoff),
+            ("lucius_findings", self._lucius_latest),
+            ("open_prs", self._open_pull_requests),
+            ("robin_health", self._robin_system_health),
+            ("coordination", self._coordination_state),
+        ]:
+            try:
+                state["signals"][name] = fn()
+            except Exception as e:
+                state["signals"][name] = {"error": str(e)}
+                log.debug("[SitAware] %s failed: %s", name, e)
+        return state
+
+    def summarize(self) -> str:
+        """Human-readable summary for Ollama to reason over."""
+        state = self.gather()
+        signals = state["signals"]
+        lines = ["=== BATCAVE SITUATIONAL AWARENESS ===", ""]
+
+        # Git activity
+        git = signals.get("git_recent", {})
+        if git.get("recent_commits"):
+            lines.append("RECENT GIT ACTIVITY:")
+            for c in git["recent_commits"][:5]:
+                lines.append(f"  {c}")
+            lines.append("")
+        if git.get("uncommitted_changes"):
+            lines.append(f"UNCOMMITTED CHANGES: {git['uncommitted_changes']}")
+            lines.append("")
+
+        # Alfred session
+        alfred = signals.get("alfred_status", {})
+        if alfred:
+            lines.append(f"ALFRED STATUS: {alfred.get('state', 'unknown')}")
+            if alfred.get("session_number"):
+                lines.append(f"  Last session: {alfred['session_number']}")
+            if alfred.get("age_hours") is not None:
+                lines.append(f"  Status age: {alfred['age_hours']:.1f} hours")
+            if alfred.get("recommendation"):
+                lines.append(f"  Recommendation: {alfred['recommendation']}")
+            lines.append("")
+
+        # Handoff
+        handoff = signals.get("handoff", {})
+        if handoff.get("has_handoff"):
+            lines.append(f"LATEST HANDOFF: Session {handoff.get('session_number')}")
+            if handoff.get("priorities"):
+                lines.append("  PRIORITIES:")
+                for p in handoff["priorities"]:
+                    lines.append(f"    - {p}")
+            if handoff.get("findings"):
+                lines.append("  OPEN FINDINGS:")
+                for f in handoff["findings"]:
+                    lines.append(f"    - {f}")
+            lines.append("")
+        else:
+            lines.append("NO HANDOFF FILE FOUND — infer priorities from other signals.")
+            lines.append("")
+
+        # Lucius
+        lucius = signals.get("lucius_findings", {})
+        if lucius.get("total_findings"):
+            lines.append(f"LUCIUS AUDIT: {lucius['total_findings']} findings")
+            for f in lucius.get("findings", [])[:5]:
+                lines.append(f"  [{f.get('severity', '?')}] {f.get('title', '?')}")
+            lines.append("")
+
+        # Open PRs
+        prs = signals.get("open_prs", {})
+        if prs.get("count", 0) > 0:
+            lines.append(f"OPEN PULL REQUESTS: {prs['count']}")
+            for pr in prs.get("prs", [])[:5]:
+                lines.append(f"  PR #{pr['number']}: {pr['title']}")
+            lines.append("")
+
+        # System health
+        health = signals.get("robin_health", {})
+        if health.get("degraded"):
+            lines.append("SYSTEM HEALTH: DEGRADED")
+            for item in health.get("degraded_items", []):
+                lines.append(f"  - {item}")
+            lines.append("")
+
+        # Coordination
+        coord = signals.get("coordination", {})
+        if coord.get("unread_alfred_inbox"):
+            lines.append(
+                f"ALFRED INBOX: {coord['unread_alfred_inbox']} unread messages"
+            )
+            lines.append("")
+
+        lines.append("=== END SITUATIONAL AWARENESS ===")
+        return "\n".join(lines)
+
+    # --- Individual signal gatherers ---
+
+    def _git_recent_activity(self) -> dict:
+        """Recent commits and uncommitted changes."""
+        result = {}
+        try:
+            r = subprocess.run(
+                [GIT_EXE, "log", "--oneline", "-10"],
+                capture_output=True, text=True, cwd=str(REPO_ROOT), timeout=10,
+            )
+            if r.returncode == 0:
+                result["recent_commits"] = r.stdout.strip().splitlines()
+        except Exception:
+            pass
+        try:
+            r = subprocess.run(
+                [GIT_EXE, "status", "--porcelain"],
+                capture_output=True, text=True, cwd=str(REPO_ROOT), timeout=10,
+            )
+            if r.returncode == 0 and r.stdout.strip():
+                result["uncommitted_changes"] = len(r.stdout.strip().splitlines())
+        except Exception:
+            pass
+        return result
+
+    def _alfred_session_state(self) -> dict:
+        """Read Alfred's coordination status file."""
+        status_file = COORD_DIR / "alfred-status.json"
+        if not status_file.exists():
+            return {"state": "no_status_file"}
+        try:
+            data = json.loads(status_file.read_text(encoding="utf-8"))
+            result = {
+                "state": data.get("state", "unknown"),
+                "session_number": data.get("session_number"),
+                "recommendation": data.get("recommendation"),
+            }
+            updated = data.get("updated_at")
+            if updated:
+                age = datetime.now() - datetime.fromisoformat(updated)
+                result["age_hours"] = age.total_seconds() / 3600
+            return result
+        except Exception:
+            return {"state": "unreadable"}
+
+    def _latest_handoff(self) -> dict:
+        """Check for the latest handoff brief — but don't require it."""
+        sidecars = sorted(HANDOFFS_DIR.glob("session-*-handoff.json"), reverse=True)
+        if not sidecars:
+            return {"has_handoff": False}
+        try:
+            data = json.loads(sidecars[0].read_text(encoding="utf-8"))
+            return {
+                "has_handoff": True,
+                "session_number": data.get("session_number"),
+                "context_estimate": data.get("context_estimate"),
+                "priorities": data.get("next_priorities", []),
+                "findings": data.get("findings", []),
+                "accomplishments": data.get("accomplishments", []),
+            }
+        except Exception:
+            return {"has_handoff": False, "error": "parse_failed"}
+
+    def _lucius_latest(self) -> dict:
+        """Most recent Lucius audit findings."""
+        audits = sorted(LUCIUS_AUDITS.glob("audit-*.json"), reverse=True)
+        if not audits:
+            return {"total_findings": 0}
+        try:
+            data = json.loads(audits[0].read_text(encoding="utf-8"))
+            return {
+                "total_findings": data.get("summary", {}).get("total_findings", 0),
+                "by_severity": data.get("summary", {}).get("by_severity", {}),
+                "findings": data.get("findings", [])[:10],
+                "audit_file": str(audits[0].name),
+            }
+        except Exception:
+            return {"total_findings": 0, "error": "parse_failed"}
+
+    def _open_pull_requests(self) -> dict:
+        """Check GitHub for open PRs (uses API, tolerates failure)."""
+        try:
+            secrets_file = RUDY_DATA / "robin-secrets.json"
+            if not secrets_file.exists():
+                return {"count": 0, "note": "no secrets file"}
+            secrets = json.loads(secrets_file.read_text(encoding="utf-8"))
+            pat = secrets.get("github_pat", "")
+            if not pat:
+                return {"count": 0, "note": "no PAT"}
+            import urllib.request
+            url = "https://api.github.com/repos/Rudy-Assistant/rudy-workhorse/pulls?state=open&per_page=10"
+            req = urllib.request.Request(url, headers={
+                "Authorization": f"Bearer {pat}",
+                "Accept": "application/vnd.github.v3+json",
+            })
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                prs = json.loads(resp.read())
+            return {
+                "count": len(prs),
+                "prs": [{"number": p["number"], "title": p["title"],
+                          "branch": p["head"]["ref"]} for p in prs],
+            }
+        except Exception as e:
+            return {"count": 0, "error": str(e)}
+
+    def _robin_system_health(self) -> dict:
+        """Read Robin's own health state."""
+        from rudy.paths import ROBIN_STATE
+        if not ROBIN_STATE.exists():
+            return {"degraded": True, "degraded_items": ["No robin-state.json"]}
+        try:
+            data = json.loads(ROBIN_STATE.read_text(encoding="utf-8"))
+            degraded_items = []
+            health = data.get("health", data.get("boot", {}))
+            for phase_name, phase in health.get("phases", {}).items():
+                if not phase.get("healthy", True):
+                    for svc, info in phase.get("services", {}).items():
+                        if not info.get("ok"):
+                            degraded_items.append(
+                                f"{svc}: {info.get('state', info.get('error', 'unhealthy'))}"
+                            )
+                    for check, info in phase.get("checks", {}).items():
+                        if not info.get("ok"):
+                            degraded_items.append(
+                                f"{check}: {info.get('state', info.get('error', 'unhealthy'))}"
+                            )
+            last_check = data.get("last_health_check", "")
+            stale = False
+            if last_check:
+                age = (datetime.now() - datetime.fromisoformat(last_check))
+                stale = age.total_seconds() > 1800  # 30 min
+                if stale:
+                    degraded_items.append(
+                        f"Health check stale ({age.total_seconds()/60:.0f} min old)"
+                    )
+            return {
+                "degraded": bool(degraded_items),
+                "degraded_items": degraded_items,
+                "recommendation": health.get("recommendation", "unknown"),
+                "stale_heartbeat": stale,
+            }
+        except Exception as e:
+            return {"degraded": True, "degraded_items": [f"Parse error: {e}"]}
+
+    def _coordination_state(self) -> dict:
+        """Summary of coordination directory."""
+        result = {}
+        inbox_count = len(list(ALFRED_INBOX.glob("*.json")))
+        if inbox_count:
+            result["unread_alfred_inbox"] = inbox_count
+        robin_inbox_count = len(list(ROBIN_INBOX.glob("*.json")))
+        if robin_inbox_count:
+            result["unread_robin_inbox"] = robin_inbox_count
+        return result
+
+
+# ---------------------------------------------------------------------------
 # Initiative Engine
 # ---------------------------------------------------------------------------
 
@@ -291,10 +569,114 @@ class InitiativeEngine:
                 if j.get("area") == area and j.get("started_at", "") > cutoff]
 
     def choose_initiative(self):
+        """Choose what to work on next.
+
+        Strategy: Gather situational awareness first. If we have enough
+        signal, ask Ollama to reason about priorities (situation-driven).
+        Fall back to the static priority list if Ollama is unavailable
+        or situational awareness gathering fails entirely.
+        """
+        # --- Situation-driven path (preferred) ---
+        try:
+            sit = SituationalAwareness()
+            summary = sit.summarize()
+            # If we got meaningful signal, use Ollama to reason
+            if len(summary) > 200:  # More than just the header
+                initiative = self._choose_from_situation(summary)
+                if initiative:
+                    self.journal.append(initiative)
+                    self._save_journal()
+                    return initiative
+        except Exception as e:
+            log.warning("[Initiative] Situational awareness failed: %s", e)
+
+        # --- Static fallback (original logic) ---
+        return self._choose_from_static_priorities()
+
+    def _choose_from_situation(self, situation_summary: str) -> dict | None:
+        """Ask Ollama to reason about what matters most right now."""
+        recent_areas = {}
+        for entry in self.journal[-20:]:
+            area = entry.get("area", "")
+            started = entry.get("started_at", "")
+            if area and started:
+                recent_areas[area] = started
+
+        recent_str = "\n".join(
+            f"  - {a}: last worked {t}" for a, t in recent_areas.items()
+        ) if recent_areas else "  (none)"
+
+        prompt = f"""{situation_summary}
+
+RECENT ROBIN INITIATIVES (avoid repeating within 4 hours):
+{recent_str}
+
+You are Robin, the Batcave's local AI deputy. Batman may be away.
+Based on the situational awareness above, decide the SINGLE most
+valuable thing to work on right now.
+
+RULES:
+- If there are handoff priorities, weight them heavily but don't
+  follow them blindly if system state shows something more urgent.
+- If there is NO handoff, infer priorities from git activity,
+  Lucius findings, system health, and open PRs.
+- Avoid repeating work you did recently (check the initiative list above).
+- Prefer concrete, actionable items over vague improvements.
+- If nothing urgent, do a system health check.
+
+Respond in EXACTLY this JSON format (no other text):
+{{"area": "<category>", "action": "<specific_action>", "rationale": "<one sentence why>", "description": "<what you will do>"}}
+
+Valid areas: reliability, alfred_coordination, environment_health,
+codebase_quality, capability_expansion, documentation, branch_governance,
+pr_review, finding_fix, health_check"""
+
+        try:
+            import urllib.request
+            model = "qwen2.5:7b"
+            try:
+                secrets_file = RUDY_DATA / "robin-secrets.json"
+                with open(secrets_file) as f:
+                    model = json.load(f).get("ollama_model", model)
+            except Exception:
+                pass
+
+            data = json.dumps({
+                "model": model, "prompt": prompt, "stream": False,
+                "options": {"temperature": 0.3, "num_predict": 256},
+            }).encode()
+            req = urllib.request.Request(
+                "http://localhost:11434/api/generate",
+                data=data, headers={"Content-Type": "application/json"},
+            )
+            with urllib.request.urlopen(req, timeout=90) as resp:
+                result = json.loads(resp.read().decode())
+
+            response_text = result.get("response", "").strip()
+            # Extract JSON from response (Ollama may wrap it in markdown)
+            json_start = response_text.find("{")
+            json_end = response_text.rfind("}") + 1
+            if json_start >= 0 and json_end > json_start:
+                parsed = json.loads(response_text[json_start:json_end])
+                if parsed.get("area") and parsed.get("action"):
+                    parsed["started_at"] = datetime.now().isoformat()
+                    parsed["source"] = "situational_awareness"
+                    log.info(
+                        "[Initiative] Situation-driven: [%s] %s — %s",
+                        parsed["area"], parsed["action"],
+                        parsed.get("rationale", ""),
+                    )
+                    return parsed
+        except Exception as e:
+            log.warning("[Initiative] Ollama reasoning failed: %s", e)
+
+        return None  # Fall through to static priorities
+
+    def _choose_from_static_priorities(self) -> dict:
+        """Original static priority fallback."""
         for priority in self.INITIATIVE_PRIORITIES:
             area = priority["area"]
             recent = self._recent_initiatives(area, hours=4)
-            # Sentinel observation boost (more signals = higher effective priority)
             boost = 0
             if hasattr(self, '_sentinel_ref') and self._sentinel_ref:
                 boost = self._sentinel_ref.get_priority_boost(area)
@@ -306,17 +688,22 @@ class InitiativeEngine:
                 if assessment.get("needs_work"):
                     initiative = {
                         "area": area, "description": priority["description"],
-                        "action": assessment["action"], "rationale": assessment["rationale"],
+                        "action": assessment["action"],
+                        "rationale": assessment["rationale"],
                         "started_at": datetime.now().isoformat(),
+                        "source": "static_fallback",
                     }
                     self.journal.append(initiative)
                     self._save_journal()
                     return initiative
         return {
-            "area": "health_check", "description": "Periodic system health verification",
+            "area": "health_check",
+            "description": "Periodic system health verification",
             "action": "run_health_check",
-            "rationale": "All initiative areas recently addressed; performing routine health check",
+            "rationale": "All initiative areas recently addressed; "
+                         "performing routine health check",
             "started_at": datetime.now().isoformat(),
+            "source": "static_fallback",
         }
 
     def _assess_reliability(self):
@@ -511,30 +898,61 @@ class AutonomyEngine:
         details = plan["details"]
         area = details["area"]
         action = details["action"]
-        rationale = details["rationale"]
-        prompts = {
-            "analyze_recent_errors": "Review Robin's recent error logs in rudy-logs/. Identify the top 3 failure patterns, their root causes, and propose specific fixes. Write findings to rudy-data/error-analysis.json",
-            "validate_python_files": "Run py_compile on all Python files in rudy-workhorse/rudy/. Report any that fail to compile. For each failure, identify the issue.",
-            "ping_alfred": None,
-            "review_unanswered_messages": None,
-            "system_health_check": "Run a system health check: CPU usage, RAM usage, disk free space, Ollama status (curl localhost:11434/api/tags), and report any concerns.",
-            "git_status_and_quality": f"Check git status of {REPO_ROOT}. Report uncommitted changes, current branch, and any files that look problematic.",
-            "research_improvements": "Analyze the current Batcave architecture (robin_main.py, robin_agent.py, robin_presence.py, robin_autonomy.py, robin_alfred_protocol.py). Identify the single highest-impact improvement. Write a brief proposal to rudy-data/improvement-proposal.txt",
-            "update_documentation": "Review rudy-workhorse/rudy/ and write an updated architecture summary to rudy-data/architecture-summary.txt covering the current state of all modules.",
-            "run_health_check": "Run a quick health check: verify Ollama is responding, disk space is adequate, and no Python processes are consuming excessive memory.",
-        }
+        rationale = details.get("rationale", "")
+        description = details.get("description", "")
+
+        # Known quick-actions that don't need an agent
         if action == "ping_alfred":
-            self.alfred.send_to_alfred("health", {"subject": "Robin status update", "model": self._get_model(), "system_time": datetime.now().isoformat(), "mode": "initiative", "rationale": rationale})
+            self.alfred.send_to_alfred("health", {
+                "subject": "Robin status update", "model": self._get_model(),
+                "system_time": datetime.now().isoformat(),
+                "mode": "initiative", "rationale": rationale,
+            })
             self.initiative.record_completion(area, "Sent health ping to Alfred")
             return {"success": True, "summary": "Sent status ping to Alfred"}
         if action == "review_unanswered_messages":
             count = len(list(ALFRED_INBOX.glob("*.json")))
-            self.initiative.record_completion(area, f"Reviewed {count} messages in Alfred inbox")
+            self.initiative.record_completion(
+                area, f"Reviewed {count} messages in Alfred inbox"
+            )
             return {"success": True, "summary": f"Alfred inbox has {count} messages"}
-        prompt = prompts.get(action, f"Execute initiative: {action} - {rationale}")
+
+        # Known action → specific prompt mapping
+        known_prompts = {
+            "analyze_recent_errors": "Review Robin's recent error logs in rudy-logs/. Identify the top 3 failure patterns, their root causes, and propose specific fixes. Write findings to rudy-data/error-analysis.json",
+            "validate_python_files": "Run py_compile on all Python files in rudy-workhorse/rudy/. Report any that fail to compile. For each failure, identify the issue.",
+            "system_health_check": "Run a system health check: CPU usage, RAM usage, disk free space, Ollama status (curl localhost:11434/api/tags), and report any concerns.",
+            "git_status_and_quality": f"Check git status of {REPO_ROOT}. Report uncommitted changes, current branch, and any files that look problematic.",
+            "research_improvements": "Analyze the current Batcave architecture. Identify the single highest-impact improvement. Write a brief proposal to rudy-data/improvement-proposal.txt",
+            "update_documentation": "Review rudy-workhorse/rudy/ and write an updated architecture summary to rudy-data/architecture-summary.txt covering the current state of all modules.",
+            "run_health_check": "Run a quick health check: verify Ollama is responding, disk space is adequate, and no Python processes are consuming excessive memory.",
+        }
+
+        # For situation-driven actions, build a prompt from the action
+        # description and rationale — Robin's Ollama reasoning already
+        # identified what to do, so we just need to execute it.
+        if action in known_prompts:
+            prompt = known_prompts[action]
+        elif details.get("source") == "situational_awareness":
+            prompt = (
+                f"You are Robin, executing a self-directed initiative.\n"
+                f"Area: {area}\n"
+                f"Action: {action}\n"
+                f"Description: {description}\n"
+                f"Rationale: {rationale}\n\n"
+                f"Execute this action. Be concrete and thorough. "
+                f"Report what you accomplished and any findings."
+            )
+        else:
+            prompt = f"Execute initiative: {action} - {rationale}"
+
         result = self._run_agent(prompt, agent_factory)
         if result.get("success") and area != "health_check":
-            self.alfred.report_to_alfred(f"Initiative: {area}", result.get("summary", f"Completed {action}"), {"area": area, "action": action})
+            self.alfred.report_to_alfred(
+                f"Initiative: {area}",
+                result.get("summary", f"Completed {action}"),
+                {"area": area, "action": action, "source": details.get("source")},
+            )
         self.initiative.record_completion(area, result.get("summary", "completed"))
         return result
 
