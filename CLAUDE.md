@@ -889,6 +889,57 @@ The vault replaced Notion (migrated Session 11). Obsidian is an improvement over
 - **All agents** — can use `rudy.integrations.github_ops.get_github()` for issue/PR operations
 - **Command runner scripts** — import `rudy.env_setup.bootstrap()` to ensure tools are on PATH
 
+### Lucius Gate — Session Governance (ADR-004 v2.1)
+
+**Core module:** `rudy/agents/lucius_gate.py` (~597 lines, landed in PR #39)
+**MCP tier config:** `rudy/agents/lucius_mcp_tiers.yml`
+**Integration module:** `rudy/workflows/session_gate.py`
+**Integration tests:** `tests/test_lucius_gate_integration.py` (24 tests)
+
+Lucius Gate is the governance layer that wraps session lifecycle with pre-flight checks, commit guards, and post-session compliance scoring. It uses a circuit-breaker pattern — every check is wrapped by `run_check()` so exceptions become DEGRADED, never crashes.
+
+**Three gate functions:**
+
+| Gate | When It Runs | What It Checks | Integration Point |
+|------|-------------|----------------|-------------------|
+| `session_start_gate()` | Session boot | Repo root, vault access, MCP connectivity (tiered) | `rudy/workflows/session_gate.py` → Sentinel briefing |
+| `pre_commit_check()` | Before any `git push` | Protected branch guard (main/master blocked) | `rudy/integrations/github_ops.py` → `commit_and_push()` |
+| `post_session_gate()` | Before handoff write | Context window %, session number validation | `rudy/workflows/handoff.py` → `HandoffWriter.write()` |
+
+**MCP Tiered Criticality** (`lucius_mcp_tiers.yml`):
+
+| Tier | Behavior When Unavailable | Default MCPs |
+|------|--------------------------|--------------|
+| CRITICAL | Session BLOCKED | desktop-commander |
+| IMPORTANT | Session DEGRADED, skills excluded | github, gmail, google-calendar |
+| OPTIONAL | Warning only | notion, chrome, brave-search |
+
+**To promote/demote an MCP:** Edit `rudy/agents/lucius_mcp_tiers.yml`. Format:
+```yaml
+mcps:
+  desktop-commander: CRITICAL
+  github: IMPORTANT
+  notion: OPTIONAL
+```
+If the YAML is missing or corrupt, hardcoded fallback tiers are used (defined in `lucius_gate.py`).
+
+**Compliance scoring:** `HandoffWriter` sets `compliance_score` based on `post_session_gate()` result:
+- Gate PASS (no degradation) → `compliance_score = 100`
+- Gate DEGRADED or BLOCKED → `compliance_score = 0`
+- Gate crash or import failure → `compliance_score = 0` (graceful degradation)
+
+The compliance score and full gate result are written to the JSON sidecar alongside each handoff.
+
+**Skill exclusion:** When `session_start_gate()` reports degraded MCPs, `get_unavailable_skills()` maps them to affected Cowork skills (e.g., gmail degraded → email-composer and meeting-assistant excluded).
+
+**Import isolation (C3):** All imports from `lucius_gate` are inside function bodies with try/except. If `lucius_gate` is broken or missing, every consumer degrades gracefully — HandoffWriter still writes, GitHubOps still pushes, sessions still start. **Never brick Robin.**
+
+**Troubleshooting:**
+- Gate always DEGRADED for MCPs → MCP stubs in Phase 1A return DEGRADED by design. Real connectivity checks come in Phase 1C.
+- `compliance_score = 0` on every handoff → Check if `lucius_gate` imports successfully: `python -c "from rudy.agents.lucius_gate import post_session_gate; print('OK')"`
+- Gate timing slow → Check `GateMetrics` in gate log files at `rudy-logs/gate-results/`. Per-check timings are in `GateResult.to_dict()["check_timings"]`.
+- Protected branch rejected → By design. All automated pushes must go through feature branches + PRs. Use `git checkout -b alfred/your-feature` first.
+
 ### WSL 2 Tools (Ubuntu 24.04)
 **iOS**: usbmuxd, ideviceinfo, idevice_id, idevicepair, idevicesyslog, ideviceprovision, ideviceinstaller, ifuse
 **Security**: nmap, masscan, tcpdump, tshark, nikto, netcat, whois, dig, traceroute

@@ -1,5 +1,5 @@
 """
-rudy.integrations.github_ops — GitHub Operations for Rudy Agents
+rudy.integrations.github_ops -- GitHub Operations for Rudy Agents
 
 Provides a clean interface for agents to interact with GitHub:
 - Create/close issues (ObsolescenceMonitor, Sentinel, SecurityAgent)
@@ -7,6 +7,11 @@ Provides a clean interface for agents to interact with GitHub:
 - Commit and push changes
 - Query repo status
 - Manage releases
+
+Gate Integration (Phase 1B, ADR-004 v2.1):
+    commit_and_push() calls pre_commit_check() before any push operation.
+    - Protected branch -> push blocked via gate
+    - Gate DEGRADED -> log and allow (never brick Robin)
 
 All operations go through the `gh` CLI or git commands.
 """
@@ -38,7 +43,7 @@ class GitHubOps:
             try:
                 r = subprocess.run(
                     "gh auth status",
-                    shell=True, capture_output=True, text=True, timeout=10
+                    shell=True, capture_output=True, text=True, timeout=10  # nosec B602
                 )
                 self._gh_available = r.returncode == 0
             except Exception:
@@ -50,7 +55,7 @@ class GitHubOps:
         try:
             r = subprocess.run(
                 f"gh {args}",
-                shell=True, capture_output=True, text=True,
+                shell=True, capture_output=True, text=True,  # nosec B602
                 cwd=self.cwd, timeout=timeout
             )
             if r.returncode == 0:
@@ -70,14 +75,14 @@ class GitHubOps:
         try:
             r = subprocess.run(
                 f"git {args}",
-                shell=True, capture_output=True, text=True,
+                shell=True, capture_output=True, text=True,  # nosec B602
                 cwd=self.cwd, timeout=timeout
             )
             return r.returncode == 0, r.stdout.strip()
         except Exception as e:
             return False, str(e)
 
-    # ─── Issues ───
+    # --- Issues ---
 
     def create_issue(
         self,
@@ -88,7 +93,7 @@ class GitHubOps:
     ) -> Optional[str]:
         """Create a GitHub issue. Returns issue URL or None."""
         if not self.gh_available:
-            logger.warning("gh CLI not available — cannot create issue")
+            logger.warning("gh CLI not available -- cannot create issue")
             return None
 
         cmd = f'issue create -R {self.repo} --title "{title}" --body "{body}"'
@@ -123,7 +128,7 @@ class GitHubOps:
                 return []
         return []
 
-    # ─── Pull Requests ───
+    # --- Pull Requests ---
 
     def create_pr(
         self,
@@ -143,20 +148,72 @@ class GitHubOps:
             return out
         return None
 
-    # ─── Git Operations ───
+    # --- Git Operations ---
+
+    def _run_pre_commit_gate(self, branch: str) -> bool:
+        """Run Lucius pre-commit gate before push.
+
+        ADR-004 v2.1 Phase 1B: Gate integration into git workflow.
+        Import is inside function body per C3 import isolation.
+
+        Returns:
+            True if push should proceed, False if blocked.
+            On gate crash or DEGRADED, returns True (never brick Robin).
+        """
+        try:
+            from rudy.agents.lucius_gate import pre_commit_check
+        except ImportError as e:
+            logger.warning(f"lucius_gate import failed; skipping pre-commit gate: {e}")
+            return True  # Degrade gracefully -- never brick Robin
+
+        try:
+            result = pre_commit_check(branch=branch)
+
+            if result.passed and not result.degraded:
+                logger.info(f"Pre-commit gate PASSED for branch '{branch}'")
+                return True
+            elif result.degraded:
+                logger.warning(
+                    f"Pre-commit gate DEGRADED for branch '{branch}': "
+                    f"{result.summary()}. Allowing push (never brick Robin)."
+                )
+                return True
+            else:
+                logger.error(
+                    f"Pre-commit gate BLOCKED push to '{branch}': "
+                    f"{result.summary()}"
+                )
+                return False
+        except Exception as e:
+            logger.error(f"Pre-commit gate crashed: {e}. Allowing push (never brick Robin).")
+            return True
 
     def commit_and_push(self, message: str, files: Optional[list[str]] = None, branch: str = "") -> bool:
         """Stage files, commit, and push to origin.
 
+        Gate Integration (Phase 1B, ADR-004 v2.1):
+            Calls pre_commit_check() before any push operation.
+            - Protected branch -> push blocked via gate
+            - Gate DEGRADED -> log and allow (never brick Robin)
+            - Gate crash -> log and allow (never brick Robin)
+
         Args:
-            branch: Target branch to push to.  If empty, pushes the current
-                    branch.  Pushing to 'main' or 'master' is BLOCKED for
-                    Robin — all automated pushes must go through a PR.
+            branch: Target branch to push to. If empty, pushes the current
+                    branch. Pushing to 'main' or 'master' is BLOCKED by the
+                    Lucius gate -- all automated pushes must go through a PR.
         """
-        # ── Branch protection ──
-        PROTECTED = {"main", "master"}
-        if branch in PROTECTED:
-            logger.error(f"BLOCKED: automated push to protected branch '{branch}' — use a PR instead")
+        # --- Phase 1B: Determine effective branch for gate check ---
+        effective_branch = branch
+        if not effective_branch:
+            _, current = self._run_git("branch --show-current")
+            effective_branch = (current or "").strip()
+
+        # --- Phase 1B: Run pre-commit gate ---
+        if not self._run_pre_commit_gate(effective_branch):
+            logger.error(
+                f"BLOCKED: Lucius gate rejected push to '{effective_branch}'. "
+                "Use a feature branch and PR instead."
+            )
             return False
 
         if files:
@@ -173,12 +230,6 @@ class GitHubOps:
         if branch:
             push_target = f"push origin HEAD:{branch}"
         else:
-            # Push current branch (must not be main — verify)
-            _, current = self._run_git("branch --show-current")
-            current = (current or "").strip()
-            if current in PROTECTED:
-                logger.error(f"BLOCKED: on protected branch '{current}' — switch to a feature branch first")
-                return False
             push_target = "push origin HEAD"
 
         ok, _ = self._run_git(push_target, timeout=60)
@@ -208,7 +259,7 @@ class GitHubOps:
             "remotes": remote.split("\n") if remote else [],
         }
 
-    # ─── Releases ───
+    # --- Releases ---
 
     def create_release(self, tag: str, title: str, notes: str) -> Optional[str]:
         """Create a tagged release."""
@@ -222,7 +273,7 @@ class GitHubOps:
         )
         return out if ok else None
 
-    # ─── Repo Info ───
+    # --- Repo Info ---
 
     def get_repo_info(self) -> Optional[dict]:
         """Get repository metadata."""
@@ -234,12 +285,12 @@ class GitHubOps:
                 pass
         return None
 
-    # ─── Agent-Specific Helpers ───
+    # --- Agent-Specific Helpers ---
 
     def file_upgrade_issue(self, package: str, current: str, latest: str, severity: str = "low") -> Optional[str]:
         """ObsolescenceMonitor: File an issue for a package upgrade."""
         labels = ["dependency", f"priority:{severity}"]
-        title = f"Upgrade {package}: {current} → {latest}"
+        title = f"Upgrade {package}: {current} -> {latest}"
         body = (
             f"## Dependency Upgrade\n\n"
             f"**Package**: `{package}`\n"

@@ -34,7 +34,10 @@ CLI:
 """
 
 import json
+import logging
 import re
+
+log = logging.getLogger("rudy.handoff")
 from datetime import datetime
 from pathlib import Path
 
@@ -56,6 +59,8 @@ class HandoffWriter:
         self.hard_rules_notes: list[str] = []
         self.technical_notes: list[str] = []
         self.context_estimate: str = "unknown"
+        self.compliance_score: int = 100
+        self.gate_result = None
 
     def record_accomplishment(self, text: str):
         """Record a session accomplishment."""
@@ -258,6 +263,50 @@ class HandoffWriter:
                 lines.append(f"- {f}")
         return "\n".join(lines)
 
+    def _run_post_session_gate(self) -> None:
+        """Run post-session gate and set compliance_score.
+
+        ADR-004 v2.1 Phase 1B: Gate integration into handoff workflow.
+        Import is inside function body per C3 import isolation.
+        """
+        try:
+            from rudy.agents.lucius_gate import post_session_gate
+        except ImportError as e:
+            log.warning(f"lucius_gate import failed; skipping post-session gate: {e}")
+            self.compliance_score = 0
+            self.gate_result = None
+            return
+
+        # Parse context estimate to float
+        context_pct = None
+        if self.context_estimate and self.context_estimate != "unknown":
+            try:
+                match = re.search(r"(\d+(?:\.\d+)?)", self.context_estimate)
+                if match:
+                    context_pct = float(match.group(1))
+            except (ValueError, AttributeError):
+                pass
+
+        try:
+            result = post_session_gate(
+                session_number=self.session_number,
+                context_window_pct=context_pct,
+            )
+            self.gate_result = result
+            if result.passed and not result.degraded:
+                self.compliance_score = 100
+                log.info(f"Post-session gate PASSED: {result.summary()}")
+            elif result.degraded:
+                self.compliance_score = 0
+                log.warning(f"Post-session gate DEGRADED: {result.summary()}")
+            else:
+                self.compliance_score = 0
+                log.error(f"Post-session gate BLOCKED: {result.summary()}")
+        except Exception as e:
+            log.error(f"Post-session gate crashed: {e}. Setting compliance_score=0.")
+            self.compliance_score = 0
+            self.gate_result = None
+
     def write(self) -> Path:
         """Write handoff to all destinations — rudy-data, vault/Handoffs, vault/Sessions.
 
@@ -278,6 +327,10 @@ class HandoffWriter:
                 "before write(). This is a HARD REQUIREMENT — Robin uses it to "
                 "decide whether to start a new session."
             )
+
+
+        # Phase 1B: Run post-session gate
+        self._run_post_session_gate()
 
         content = self.generate_markdown()
         filename_md = f"session-{self.session_number:02d}-handoff.md"
@@ -300,6 +353,8 @@ class HandoffWriter:
             "findings": self.findings,
             "next_priorities": self.next_priorities,
             "handoff_file": str(filepath),
+            "compliance_score": self.compliance_score,
+            "gate_result": self.gate_result.to_dict() if self.gate_result else None,
         }
         sidecar_json = json.dumps(sidecar, indent=2, default=str)
         sidecar_path = HANDOFFS_DIR / filename_json
