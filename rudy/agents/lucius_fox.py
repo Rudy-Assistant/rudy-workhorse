@@ -737,22 +737,32 @@ class LuciusFox(AgentBase):
         """Scan entire codebase for hardcoded paths that should use rudy.paths."""
         self.log.info("Checking for hardcoded paths...")
 
+        # Files/patterns that are expected to contain path strings (not actual usage)
+        EXEMPT_FILES = {"rudy/paths.py", "rudy/agents/lucius_fox.py"}
+
         for root, dirs, files in os.walk(self.RUDY_PKG):
             dirs[:] = [d for d in dirs if d != "__pycache__"]
             for f in files:
                 if not f.endswith(".py"):
                     continue
                 fp = Path(root) / f
+                rel = str(fp.relative_to(self.CODEBASE_ROOT))
+
+                # Skip files that legitimately define/document path patterns
+                if rel in EXEMPT_FILES:
+                    continue
+
                 try:
                     content = fp.read_text(encoding="utf-8", errors="replace")
                     for i, line in enumerate(content.split("\n"), 1):
-                        # Skip comments
                         stripped = line.strip()
+                        # Skip comments and docstrings
                         if stripped.startswith("#"):
+                            continue
+                        if stripped.startswith('"""') or stripped.startswith("'''"):
                             continue
                         for pattern in HARDCODED_PATH_PATTERNS:
                             if re.search(pattern, line, re.IGNORECASE):
-                                rel = str(fp.relative_to(self.CODEBASE_ROOT))
                                 self.findings.append({
                                     "type": "hardcoded_path",
                                     "severity": "high",
