@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-03-29T20:01:00.393292",
+  "timestamp": "2026-03-29T21:27:04.688006",
   "profiler_version": "1.0.0",
   "cpu": {
     "architecture": "AMD64",
@@ -12,11 +12,8 @@
     "cpu_mhz": 2995
   },
   "memory": {
-    "total_mb": 16077,
-    "available_mb": 2534,
-    "used_percent": 84.2,
-    "swap_total_mb": 27862,
-    "swap_used_percent": 2.1
+    "error": "psutil not available",
+    "note": "pip install psutil"
   },
   "gpu": {
     "detected": true,
@@ -28,7 +25,7 @@
   "disk": {
     "C:": {
       "total_gb": 952.7,
-      "free_gb": 138.2,
+      "free_gb": 138.1,
       "used_percent": 85.5
     }
   },
@@ -75,11 +72,11 @@
       "available": false
     },
     "python_packages": {
-      "langgraph": "installed",
+      "langgraph": null,
       "langchain_ollama": null,
-      "playwright": "installed",
-      "psutil": "7.2.2",
-      "pydantic": "2.12.5"
+      "playwright": null,
+      "psutil": null,
+      "pydantic": null
     }
   },
   "network": {
@@ -99,5 +96,5 @@
       "deepseek-r1:8b"
     ]
   },
-  "profile_duration_ms": 14769
+  "profile_duration_ms": 15903
 }

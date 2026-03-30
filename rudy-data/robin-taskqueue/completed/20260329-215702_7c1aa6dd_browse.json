@@ -1,0 +1,20 @@
+{
+  "id": "7c1aa6dd",
+  "type": "browse",
+  "title": "Check Ollama release page",
+  "description": "Browse Ollama releases for newer versions",
+  "priority": 40,
+  "estimated_minutes": 2,
+  "status": "completed",
+  "command": null,
+  "python_code": null,
+  "depends_on": [],
+  "metadata": {
+    "url": "https://github.com/ollama/ollama/releases"
+  },
+  "created": "2026-03-29T21:27:03.450831",
+  "started": null,
+  "completed": "2026-03-29T21:57:02.529350",
+  "result": "Title: \nSuccess: False\nNo text\nCould not find platform independent libraries <prefix>\n",
+  "error": null
+}
