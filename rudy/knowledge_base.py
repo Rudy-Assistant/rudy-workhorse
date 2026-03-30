@@ -72,7 +72,7 @@ COLLECTIONS = {
 
 def _file_hash(filepath: Path) -> str:
     """Quick hash of file for change detection."""
-    h = hashlib.md5()
+    h = hashlib.md5(usedforsecurity=False)  # nosec B324
     h.update(str(filepath).encode())
     h.update(str(filepath.stat().st_mtime).encode())
     h.update(str(filepath.stat().st_size).encode())

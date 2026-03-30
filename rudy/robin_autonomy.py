@@ -512,7 +512,7 @@ class SituationalAwareness:
                 "Authorization": f"Bearer {pat}",
                 "Accept": "application/vnd.github.v3+json",
             })
-            with urllib.request.urlopen(req, timeout=15) as resp:
+            with urllib.request.urlopen(req, timeout=15) as resp:  # nosec B310 — GitHub API
                 prs = json.loads(resp.read())
             return {
                 "count": len(prs),
@@ -764,7 +764,7 @@ pr_review, finding_fix, health_check"""
                 "http://localhost:11434/api/generate",
                 data=data, headers={"Content-Type": "application/json"},
             )
-            with urllib.request.urlopen(req, timeout=90) as resp:
+            with urllib.request.urlopen(req, timeout=90) as resp:  # nosec B310 — localhost Ollama
                 result = json.loads(resp.read().decode())
 
             response_text = result.get("response", "").strip()
@@ -1088,7 +1088,7 @@ class AutonomyEngine:
             import urllib.request
             data = json.dumps({"model": self._get_model(), "prompt": prompt, "stream": False}).encode()
             req = urllib.request.Request("http://localhost:11434/api/generate", data=data, headers={"Content-Type": "application/json"})
-            with urllib.request.urlopen(req, timeout=120) as resp:
+            with urllib.request.urlopen(req, timeout=120) as resp:  # nosec B310 — localhost Ollama
                 result = json.loads(resp.read().decode())
             return {"success": True, "summary": result.get("response", "")[:500], "total_steps": 1}
         except Exception as e:
