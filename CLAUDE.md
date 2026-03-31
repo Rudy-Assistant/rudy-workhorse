@@ -113,19 +113,18 @@ All session records, findings, and institutional knowledge MUST be written to th
 
 ## Last Session Score
 
-Session 38: 66/100 (D) [Batman-corrected]
-  Base deductions (-13):
-    -2: n8n startup blocked (LG-S38-002, delegated to Robin)
-    -3: Under-delegation to Robin (missed 4+ opportunities: P5 backfill, lint fix, audit execution, CI monitoring)
-    -3: Compounding cost of Robin under-utilization (delays proxy/heir training, Colab/HF compute path)
-    -2: Missing Context Evaluation + handoff prompt (FoxGate Step 4 protocol violation)
-    -2: DC read_file workaround cycles (known bug, cost time early)
-    -1: Git CLI quoting struggles before establishing helper script pattern
-  Penalty doubler (x2) applied: Bat Family cooperation failure
-    Tasks completed but system/peers not enriched. Robin starved of learning.
-    Lucius feedback loop activated but not leveraged for concurrent analysis.
-    Alfred also miscalculated own deductions (reported 87 instead of 79) -- self-scoring integrity issue.
-  Finding: LG-S38-003 (Scoring system needs Lucius revision -- concurrent analysis commissioned for S39)
+Session 39: 89/100 (B) [ADR-009 rubric, first use]
+  Base deductions (-11):
+    -2: Process — DC read_file hit + wrong rudy-data path before checking rudy.paths
+    -2: Tool Reuse — DC metadata bug hit once before switching to mount
+    -5: Delegation Quality — merged PR #74 solo (-1), slight instruction ambiguity (-1), no Colab/HF stretch task (-2), Robin output not yet verified (-1)
+    -2: System Enrichment — no Colab/HF milestone progress (focused on Robin revival)
+    0: Finding Discipline — 3 findings logged, triaged, actioned
+    0: Documentation — vault record, CLAUDE.md, handoff all done
+    0: Self-Scoring Integrity — arithmetic verified: 100-11=89
+  Multiplier: x1.0 (Standard) — Robin engaged, Lucius integrated, system enriched
+  Findings: LG-S39-001 (path split), LG-S39-002 (autonomy bug, FIXED), LG-S39-003 (n8n shim)
+  Previous: Session 38: 66/100 (D) [Batman-corrected]
 
 ## Known Workarounds (Hot)
 
