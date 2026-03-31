@@ -1,0 +1,29 @@
+{
+  "version": "2.0.0",
+  "generated_at": "2026-03-31T01:03:06.280157+00:00",
+  "repo_root": "/sessions/blissful-eager-davinci/rudy-workhorse",
+  "modules": [
+    {
+      "path": "rudy/__init__.py",
+      "lines": 2,
+      "imports": [],
+      "docstring": "Rudy - Family Assistant",
+      "last_modified": "2026-03-31T00:53:10.117308+00:00",
+      "size_bytes": 30
+    },
+    {
+      "path": "rudy/admin.py",
+      "lines": 82,
+      "imports": [
+        "os",
+        "pathlib",
+        "rudy",
+        "subprocess",
+        "time"
+      ],
+      "docstring": "Admin Helper — run commands with elevated privileges.",
+      "last_modified": "2026-03-31T00:53:10.117308+00:00",
+      "size_bytes": 2890
+    }
+  ]
+}
