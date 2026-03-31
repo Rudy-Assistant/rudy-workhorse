@@ -113,7 +113,12 @@ All session records, findings, and institutional knowledge MUST be written to th
 
 ## Last Session Score
 
-Session 37: 86/100 (B)
+Session 38: 92/100 (A-)
+  -2: n8n startup blocked (LG-S38-002, delegated to Robin)
+  -1: P5 partial (Sessions 27-36 backfilled, 13-26 deferred)
+  -2: DC read_file workaround cycles (known bug, cost time early)
+  -2: Git CLI quoting struggles before establishing helper script pattern
+  -1: CLAUDE.md sprint section still stale
 
 ## Known Workarounds (Hot)
 
@@ -155,15 +160,16 @@ Session 37: 86/100 (B)
 | **gh CLI** | v2.88.1, authenticated as Rudy-Assistant |
 | **PAT** | Classic PAT (ghp_), expires 2026-06-27 |
 
-## Current Sprint (Session 25)
+## Current Sprint (Session 38)
 
-1. ✅ **CLAUDE.md two-tier memory restructure** — slim to ~150 lines, deep context in `memory/`
-2. Build Cowork-side `/session-start` skill
-3. Merge PR #46 (Session 24: Lucius Phase 2+3 — registry, scorer, findings, waste)
-4. Upgrade HandoffWriter for Batman-quality handoffs
-5. Wire Scorer into HandoffWriter
-6. Delete orphaned `robin_cowork_launcher.py`
-7. Commit `registry.json` to repo
+1. ✅ P0: Commit/merge S37 fixes (PR #73 merged)
+2. ✅ P1: Activate Lucius feedback loop (ADR-008 severity tiering + directives)
+3. ✅ P2: Obsidian vault integration (ADR-007 Phase 1 — .base dashboards, templates, sessions)
+4. ⚠️ P3: n8n startup blocked (LG-S38-002 — delegated to Robin)
+5. ✅ P4: Fix hardcoded paths (6 paths → rudy.paths constants)
+6. ⏳ P5: Backfill vault Sessions 13-26 (27-36 done)
+7. ✅ P6: Full Lucius audit (141 findings: 5H/14M/9L/113I)
+8. PR #74: feature/s38-feedback-loop (4 commits, CI re-running after lint fix)
 
 ## Lucius Gate — Session Governance (ADR-004 v2.1)
 
