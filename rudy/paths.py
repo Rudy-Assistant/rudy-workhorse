@@ -137,3 +137,10 @@ GIT_EXE = find_exe("git", (
     r"C:\Program Files\Git\cmd\git.exe",
     r"C:\Program Files (x86)\Git\cmd\git.exe",
 ))
+
+# Claude desktop app candidate paths (used by robin_wake_alfred.py)
+CLAUDE_APP_GLOBS = [
+    str(HOME / "AppData" / "Local" / "AnthropicClaude" / "app-*" / "claude.exe"),
+    str(HOME / "AppData" / "Local" / "Programs" / "claude-desktop" / "claude*.exe"),
+]
+

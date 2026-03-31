@@ -241,6 +241,157 @@ class RobinMailbox:
             "discovered_at": datetime.now().isoformat(),
         }, priority="high" if severity == "high" else "normal")
 
+
+    def offer_help(self, context: str, what_noticed: str, suggested_action: str = "") -> str:
+        """Proactively offer help to Alfred when Robin notices struggle.
+
+        Session 33 directive: Robin should be assertive about offering help.
+        Don't wait to be asked -- if you notice Alfred struggling, speak up.
+
+        Triggers for offering help:
+            - Alfred's status shows repeated errors
+            - Alfred is doing local I/O that Robin should handle
+            - A delegation failed and Alfred hasn't retried
+            - Alfred has been idle for a while (possible stuck)
+
+        Args:
+            context: What Robin was doing when it noticed the issue.
+            what_noticed: What signal triggered the offer (e.g., "Alfred running local git ops").
+            suggested_action: What Robin proposes to do about it.
+
+        Returns:
+            Message ID of the help offer.
+        """
+        return self.send_to_alfred("help_offer", {
+            "context": context,
+            "what_noticed": what_noticed,
+            "suggested_action": suggested_action or "Let me handle this -- it's a local task.",
+            "robin_capabilities": [
+                "filesystem scans", "git operations", "npm/node tasks",
+                "health checks", "security scans", "shell commands",
+                "port checks", "service management",
+            ],
+            "note": "Robin is offering help proactively. Accept or redirect.",
+        }, priority="normal")
+
+    def log_friction(self, context: str, what_went_wrong: str,
+                     workaround: str = "", severity: str = "low") -> str:
+        """Log a friction point for system improvement.
+
+        Session 33 directive: Robin should document friction points
+        whenever something doesn't work smoothly. These feed into
+        system improvement prioritization.
+
+        Args:
+            context: What Robin was trying to do.
+            what_went_wrong: Description of the friction.
+            workaround: How Robin worked around it (if applicable).
+            severity: low/medium/high -- how much this slowed things down.
+
+        Returns:
+            Message ID of the friction report.
+        """
+        import json
+        from datetime import datetime
+        from rudy.paths import RUDY_DATA
+
+        # Persist locally
+        friction_file = RUDY_DATA / "coordination" / "friction-log.json"
+        existing = []
+        if friction_file.exists():
+            try:
+                existing = json.loads(friction_file.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, OSError):
+                pass
+
+        entry = {
+            "timestamp": datetime.now().isoformat(),
+            "source": "robin",
+            "context": context,
+            "friction": what_went_wrong,
+            "workaround": workaround,
+            "severity": severity,
+        }
+        existing.append(entry)
+        friction_file.write_text(
+            json.dumps(existing[-100:], indent=2, default=str),
+            encoding="utf-8",
+        )
+
+        # Also send to Alfred for awareness
+        return self.send_to_alfred("friction_report", {
+            **entry,
+            "note": "Robin logged this friction point. Consider addressing in next session.",
+        }, priority="normal" if severity == "low" else "high")
+
+    def remind_alfred_to_document(self, what_happened: str) -> str:
+        """Remind Alfred to document a friction point or finding.
+
+        Session 33 directive: Robin should remind Alfred when it notices
+        Alfred encountered something worth documenting but didn't log it.
+
+        Args:
+            what_happened: Description of what Alfred should document.
+
+        Returns:
+            Message ID of the reminder.
+        """
+        return self.send_to_alfred("documentation_reminder", {
+            "what_happened": what_happened,
+            "suggestion": "Please log this as a friction point or finding for improvement.",
+            "note": "Robin noticed this should be documented. Filing as a reminder.",
+        }, priority="normal")
+
+    def detect_alfred_struggle(self) -> dict:
+        """Check Alfred's status for signs of struggle.
+
+        Returns a dict with:
+            - struggling: bool
+            - signals: list of detected struggle signals
+            - recommendation: what Robin should do
+
+        Robin should call this periodically (e.g., every heartbeat cycle)
+        and call offer_help() if struggling is True.
+        """
+        alfred_status = self.get_alfred_status()
+        if not alfred_status:
+            return {"struggling": False, "signals": ["Alfred status unavailable"], "recommendation": "wait"}
+
+        signals = []
+        state = alfred_status.get("state", "unknown")
+        details = alfred_status.get("details", "")
+        updated = alfred_status.get("updated_at", "")
+
+        # Signal: Alfred has been offline for a while
+        if state == "offline":
+            signals.append("Alfred is offline")
+
+        # Signal: Alfred's details mention errors
+        error_keywords = ["error", "fail", "timeout", "blocked", "stuck", "retry"]
+        if any(kw in details.lower() for kw in error_keywords):
+            signals.append(f"Alfred status mentions issues: {details[:100]}")
+
+        # Signal: Alfred status is stale (>10 minutes old)
+        if updated:
+            try:
+                from datetime import datetime
+                last_update = datetime.fromisoformat(updated)
+                age_seconds = (datetime.now() - last_update).total_seconds()
+                if age_seconds > 600:
+                    signals.append(f"Alfred status is stale ({age_seconds:.0f}s old)")
+            except (ValueError, TypeError):
+                pass
+
+        struggling = len(signals) > 0
+        recommendation = "offer_help" if struggling else "standby"
+
+        return {
+            "struggling": struggling,
+            "signals": signals,
+            "recommendation": recommendation,
+            "alfred_state": state,
+        }
+
     def send_health(self):
         """Send a periodic health update to Alfred."""
         try:

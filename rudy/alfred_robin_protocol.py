@@ -593,6 +593,191 @@ def alfred_resumes_control(session_id: str = "", session_number: int = 0) -> dic
     return handler.robin_returns_control(reason="alfred_session_start")
 
 
+
+
+# ---------------------------------------------------------------------------
+# Proactive Mentoring Protocol (Session 33: Alfred mentors Robin)
+# ---------------------------------------------------------------------------
+
+class MentoringProtocol:
+    """Alfred proactively mentors Robin to improve capabilities.
+
+    Behaviors:
+        1. After each delegation, provide structured feedback
+        2. Suggest new capabilities Robin could learn
+        3. Send periodic skill-building micro-tasks
+        4. Track Robin's growth areas and celebrate improvements
+        5. When Alfred struggles, model good behavior by documenting friction
+
+    Session 33 directive: Alfred should mentor Robin, not just delegate.
+    """
+
+    # Robin capabilities to develop (ordered by priority)
+    GROWTH_AREAS = [
+        "git_operations",      # Branch, commit, PR workflows
+        "lucius_governance",   # Running gates, filing findings
+        "registry_audits",     # Checking for redundant code
+        "n8n_workflows",       # Automation pipelines
+        "security_scanning",   # Defensive intelligence
+        "documentation",       # Keeping docs current
+    ]
+
+    def __init__(self, session_id: str = "", session_number: int = 0):
+        self.mailbox = AlfredMailbox(
+            session_id=session_id, session_number=session_number
+        )
+        self.feedback_log = RUDY_DATA / "coordination" / "mentoring-log.json"
+
+    def provide_delegation_feedback(
+        self,
+        delegation_id: str,
+        task_type: str,
+        result: dict,
+        guidance: str = "",
+    ) -> str:
+        """Send structured feedback to Robin after a delegation completes.
+
+        Args:
+            delegation_id: The delegation ID from alfred_delegate.
+            task_type: What type of task was delegated.
+            result: The result dict from delegate_and_wait.
+            guidance: Optional specific guidance for Robin.
+
+        Returns:
+            Message ID of the feedback sent.
+        """
+        success = result.get("success", False)
+        duration = result.get("duration_seconds", 0)
+
+        feedback = {
+            "type": "mentoring_feedback",
+            "delegation_id": delegation_id,
+            "task_type": task_type,
+            "success": success,
+            "duration_seconds": duration,
+            "feedback": guidance or self._auto_feedback(task_type, result),
+            "growth_suggestion": self._suggest_growth(task_type, success),
+        }
+
+        # Log for tracking
+        self._log_feedback(feedback)
+
+        return self.mailbox.respond_to_robin("mentoring", feedback)
+
+    def suggest_capability(self, area: str, description: str, example_task: str = "") -> str:
+        """Proactively suggest a new capability for Robin to develop.
+
+        Alfred sends these when noticing Robin could benefit from
+        learning something new.
+        """
+        return self.mailbox.respond_to_robin("mentoring", {
+            "type": "capability_suggestion",
+            "area": area,
+            "description": description,
+            "example_task": example_task,
+            "note": "This is a growth opportunity -- try it when you have initiative time.",
+        })
+
+    def send_skill_challenge(self, challenge: str, area: str, difficulty: str = "medium") -> str:
+        """Send a skill-building micro-task for Robin to attempt during initiative mode.
+
+        These are low-stakes tasks that help Robin build new capabilities.
+        """
+        return self.mailbox.respond_to_robin("mentoring", {
+            "type": "skill_challenge",
+            "challenge": challenge,
+            "area": area,
+            "difficulty": difficulty,
+            "note": "No pressure -- attempt this when idle. Report what you learn.",
+        })
+
+    def document_friction(self, context: str, what_struggled: str, resolution: str = "") -> None:
+        """Alfred models good behavior by documenting when IT struggles.
+
+        Session 33 directive: Alfred should document friction points
+        so the system improves. Robin learns from seeing Alfred do this.
+        """
+        entry = {
+            "timestamp": datetime.now().isoformat(),
+            "context": context,
+            "friction": what_struggled,
+            "resolution": resolution,
+            "source": "alfred",
+        }
+
+        friction_file = RUDY_DATA / "coordination" / "friction-log.json"
+        existing = []
+        if friction_file.exists():
+            try:
+                existing = json.loads(friction_file.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, OSError):
+                pass
+
+        existing.append(entry)
+        friction_file.write_text(
+            json.dumps(existing[-100:], indent=2, default=str),
+            encoding="utf-8",
+        )
+
+        # Also notify Robin so it sees the pattern
+        self.mailbox.respond_to_robin("mentoring", {
+            "type": "friction_documented",
+            "context": context,
+            "friction": what_struggled,
+            "resolution": resolution,
+            "note": "Alfred is documenting this friction point. Robin should do the same.",
+        })
+
+    def _auto_feedback(self, task_type: str, result: dict) -> str:
+        """Generate automatic feedback based on task result."""
+        if result.get("success"):
+            duration = result.get("duration_seconds", 0)
+            if duration < 3:
+                return f"Excellent -- {task_type} completed in {duration:.1f}s. Fast and reliable."
+            elif duration < 10:
+                return f"Good work on {task_type} ({duration:.1f}s). Solid execution."
+            else:
+                return (
+                    f"{task_type} completed in {duration:.1f}s. Consider whether "
+                    f"this could be optimized for faster execution next time."
+                )
+        else:
+            error = result.get("error", "unknown")
+            return (
+                f"{task_type} failed: {error}. "
+                f"When a task fails, log a friction point and try an alternative approach."
+            )
+
+    def _suggest_growth(self, task_type: str, success: bool) -> str:
+        """Suggest a growth area based on the task context."""
+        suggestions = {
+            "health_check": "Try adding custom health metrics (e.g., service-specific checks).",
+            "security_scan": "Consider learning to parse scan results and auto-file findings.",
+            "shell": "Practice chaining commands for multi-step local operations.",
+            "git_ops": "Try running pre_commit_check before pushing changes.",
+        }
+        if success:
+            return suggestions.get(task_type, "Keep building on this capability.")
+        return f"Review why {task_type} failed and add error handling for this case."
+
+    def _log_feedback(self, feedback: dict) -> None:
+        """Persist feedback for growth tracking."""
+        existing = []
+        if self.feedback_log.exists():
+            try:
+                existing = json.loads(self.feedback_log.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, OSError):
+                pass
+
+        existing.append({
+            "timestamp": datetime.now().isoformat(),
+            **feedback,
+        })
+        self.feedback_log.write_text(
+            json.dumps(existing[-200:], indent=2, default=str),
+            encoding="utf-8",
+        )
+
 # ---------------------------------------------------------------------------
 # CLI -- for testing and manual operation
 # ---------------------------------------------------------------------------

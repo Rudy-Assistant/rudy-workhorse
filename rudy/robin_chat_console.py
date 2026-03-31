@@ -423,6 +423,133 @@ def _cmd_inbox() -> None:
     print()
 
 
+
+def _cmd_activate(args: str) -> None:
+    """Force Robin into active autonomy mode, bypassing idle timer."""
+    import json
+    from datetime import datetime
+    from rudy.paths import RUDY_DATA
+
+    mode = args.strip().lower() if args.strip() else "indefinite"
+    print(_bold("\n--- Activating Robin ---"))
+
+    # Write activation signal
+    activation = {
+        "activated_at": datetime.now().isoformat(),
+        "activated_by": "batman",
+        "mode": mode,
+        "note": "Manual activation via chat console",
+    }
+    signal_file = RUDY_DATA / "coordination" / "robin-activation.json"
+    signal_file.write_text(json.dumps(activation, indent=2), encoding="utf-8")
+    print(_green(f"  Activation signal written: mode={mode}"))
+
+    # If a duration was given, create a directive
+    if mode != "indefinite" and any(c.isdigit() for c in mode):
+        try:
+            hours = float("".join(c for c in mode.split()[0] if c.isdigit() or c == "."))
+            from rudy.robin_autonomy import DirectiveTracker
+            directive_text = " ".join(mode.split()[1:]) or "Batman-activated work session"
+            DirectiveTracker.create_directive(directive_text, hours)
+            print(_green(f"  Directive created: {hours}h -- {directive_text}"))
+        except Exception as e:
+            print(_yellow(f"  Directive creation failed: {e}"))
+    else:
+        # Ensure perpetual directive exists
+        directive_file = RUDY_DATA / "coordination" / "active-directive.json"
+        if not directive_file.exists():
+            from rudy.robin_autonomy import DirectiveTracker
+            DirectiveTracker.create_directive(
+                "Perpetual autonomous collaboration -- activated by Batman", 8760
+            )
+            print(_green("  Perpetual directive created"))
+        else:
+            print(_green("  Perpetual directive already active"))
+
+    print(_green("  Robin should pick this up within ~30 seconds"))
+    print()
+
+
+def _cmd_wake_alfred(args: str) -> None:
+    """Manually trigger the Alfred wake mechanism."""
+    print(_bold("\n--- Wake Alfred ---"))
+    try:
+        from rudy.robin_wake_alfred import wake_alfred, should_wake_alfred
+        should, reason = should_wake_alfred()
+        print(f"  Should wake: {_green('YES') if should else _yellow('NO')}")
+        print(f"  Reason: {reason}")
+
+        if args.strip().lower() == "force" or should:
+            print("  Triggering wake...")
+            result = wake_alfred()
+            if result.get("woke"):
+                print(_green(f"  Woke Alfred via: {result.get('methods_tried', [])}"))
+            else:
+                print(_yellow(f"  Wake failed: {result.get('reason', 'unknown')}"))
+        elif not should:
+            print(_dim("  Use '/wake-alfred force' to override"))
+    except ImportError:
+        print(_red("  robin_wake_alfred module not available"))
+    except Exception as e:
+        print(_red(f"  Error: {e}"))
+    print()
+
+
+def _cmd_session(args: str) -> None:
+    """Start a timed Alfred-Robin collaboration session."""
+    import json
+    from datetime import datetime
+    from rudy.paths import RUDY_DATA
+
+    parts = args.strip().split(None, 1)
+    hours = 2.0  # default
+    task = "General collaboration session"
+
+    if parts:
+        try:
+            hours = float(parts[0].rstrip("h"))
+            task = parts[1] if len(parts) > 1 else task
+        except ValueError:
+            task = args.strip()
+
+    print(_bold(f"\n--- Starting {hours}h Session ---"))
+    print(f"  Task: {task}")
+
+    # Create directive
+    try:
+        from rudy.robin_autonomy import DirectiveTracker
+        DirectiveTracker.create_directive(task, hours)
+        print(_green(f"  Directive created ({hours}h)"))
+    except Exception as e:
+        print(_red(f"  Directive creation failed: {e}"))
+
+    # Activate Robin
+    activation = {
+        "activated_at": datetime.now().isoformat(),
+        "activated_by": "batman",
+        "mode": f"session-{hours}h",
+        "task": task,
+    }
+    signal_file = RUDY_DATA / "coordination" / "robin-activation.json"
+    signal_file.write_text(json.dumps(activation, indent=2), encoding="utf-8")
+
+    # Wake Alfred
+    try:
+        from rudy.robin_wake_alfred import wake_alfred
+        result = wake_alfred()
+        if result.get("woke"):
+            print(_green(f"  Alfred notified via: {result.get('methods_tried', [])}"))
+        else:
+            print(_yellow(f"  Alfred wake skipped: {result.get('reason', '')}"))
+    except ImportError:
+        print(_yellow("  Wake module not available -- Alfred not notified"))
+    except Exception as e:
+        print(_yellow(f"  Alfred wake error: {e}"))
+
+    print(_green(f"  Session active. Robin will drive for {hours}h."))
+    print()
+
+
 def _cmd_help() -> None:
     """Show available commands."""
     print(_bold("\n--- Robin Chat Console ---"))
@@ -437,6 +564,9 @@ def _cmd_help() -> None:
     print(f"    {_cyan('/journal')}    - Robin's initiative journal")
     print(f"    {_cyan('/logs')}       - Recent log entries (/logs <file>)")
     print(f"    {_cyan('/help')}       - This help message")
+    print(f"    {_cyan('/activate')}   - Force Robin active (/activate 2h Fix X)")
+    print(f"    {_cyan('/wake-alfred')}- Trigger Alfred wake (/wake-alfred force)")
+    print(f"    {_cyan('/session')}    - Start timed session (/session 2h Merge PR)")
     print(f"    {_cyan('/quit')}       - Exit console")
     print()
 
@@ -513,6 +643,12 @@ def run_console():
                 _cmd_bridge()
             elif cmd == "/inbox":
                 _cmd_inbox()
+            elif cmd == "/activate":
+                _cmd_activate(cmd_args)
+            elif cmd == "/wake-alfred":
+                _cmd_wake_alfred(cmd_args)
+            elif cmd == "/session":
+                _cmd_session(cmd_args)
             elif cmd == "/help":
                 _cmd_help()
             else:
