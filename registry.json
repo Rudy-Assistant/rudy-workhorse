@@ -24,19 +24,2376 @@
       "docstring": "Admin Helper — run commands with elevated privileges.",
       "last_modified": "2026-03-31T00:53:10.117308+00:00",
       "size_bytes": 2890
+    },
+    {
+      "path": "rudy/agents/__init__.py",
+      "lines": 200,
+      "imports": [
+        "datetime",
+        "json",
+        "logging",
+        "os",
+        "pathlib",
+        "rudy",
+        "sys",
+        "time",
+        "traceback"
+      ],
+      "docstring": "Base Agent — common infrastructure for all Workhorse agents.",
+      "last_modified": "2026-03-31T01:02:40.250611+00:00",
+      "size_bytes": 7592
+    },
+    {
+      "path": "rudy/agents/lucius_findings.py",
+      "lines": 521,
+      "imports": [
+        "argparse",
+        "datetime",
+        "hashlib",
+        "json",
+        "logging",
+        "os",
+        "pathlib",
+        "rudy",
+        "tempfile",
+        "time",
+        "typing"
+      ],
+      "docstring": "Lucius Findings Tracker — Persistent cross-session finding management.",
+      "last_modified": "2026-03-31T01:02:40.250611+00:00",
+      "size_bytes": 18026
+    },
+    {
+      "path": "rudy/agents/lucius_fox.py",
+      "lines": 1687,
+      "imports": [
+        "argparse",
+        "datetime",
+        "json",
+        "os",
+        "pathlib",
+        "re",
+        "rudy",
+        "subprocess",
+        "sys",
+        "typing"
+      ],
+      "docstring": "Lucius Fox — The Batcave's Librarian, Gatekeeper, and Quality Conscience.",
+      "last_modified": "2026-03-31T01:02:40.251611+00:00",
+      "size_bytes": 77416
+    },
+    {
+      "path": "rudy/agents/lucius_gate.py",
+      "lines": 1102,
+      "imports": [
+        "dataclasses",
+        "enum",
+        "func_timeout",
+        "json",
+        "logging",
+        "os",
+        "pathlib",
+        "rudy",
+        "socket",
+        "subprocess",
+        "sys",
+        "time",
+        "typing",
+        "urllib",
+        "yaml"
+      ],
+      "docstring": "Lucius Gate – Session governance with circuit breakers and degraded-mode fallbacks.",
+      "last_modified": "2026-03-31T01:02:40.252611+00:00",
+      "size_bytes": 37979
+    },
+    {
+      "path": "rudy/agents/lucius_registry.py",
+      "lines": 685,
+      "imports": [
+        "argparse",
+        "ast",
+        "datetime",
+        "json",
+        "logging",
+        "os",
+        "pathlib",
+        "rudy",
+        "time",
+        "typing",
+        "yaml"
+      ],
+      "docstring": "Lucius Registry — Phase 2: Living Registry (ADR-004 v2.0)",
+      "last_modified": "2026-03-31T01:02:40.252611+00:00",
+      "size_bytes": 27413
+    },
+    {
+      "path": "rudy/agents/lucius_scorer.py",
+      "lines": 506,
+      "imports": [
+        "argparse",
+        "datetime",
+        "json",
+        "logging",
+        "pathlib",
+        "typing"
+      ],
+      "docstring": "Lucius Scorer — Phase 3: Capability Maximization (ADR-004 v2.0)",
+      "last_modified": "2026-03-31T01:02:40.253611+00:00",
+      "size_bytes": 15832
+    },
+    {
+      "path": "rudy/agents/lucius_waste.py",
+      "lines": 282,
+      "imports": [
+        "argparse",
+        "datetime",
+        "json",
+        "logging",
+        "os",
+        "pathlib",
+        "rudy",
+        "time",
+        "typing"
+      ],
+      "docstring": "Lucius Waste Detection — Phase 3: Stale artifacts, orphaned code, duplicates.",
+      "last_modified": "2026-03-31T01:02:40.253611+00:00",
+      "size_bytes": 9811
+    },
+    {
+      "path": "rudy/agents/operations_monitor.py",
+      "lines": 186,
+      "imports": [
+        "datetime",
+        "os",
+        "shutil",
+        "subprocess",
+        "sys"
+      ],
+      "docstring": "OperationsMonitor — System Maintenance & Cleanup Agent.",
+      "last_modified": "2026-03-31T00:53:10.118308+00:00",
+      "size_bytes": 6395
+    },
+    {
+      "path": "rudy/agents/research_intel.py",
+      "lines": 897,
+      "imports": [
+        "datetime",
+        "glob",
+        "json",
+        "re",
+        "requests",
+        "rudy",
+        "subprocess",
+        "sys",
+        "trafilatura",
+        "urllib"
+      ],
+      "docstring": "ResearchIntel — Intelligence & Learning Agent.",
+      "last_modified": "2026-03-31T00:53:10.118308+00:00",
+      "size_bytes": 39265
+    },
+    {
+      "path": "rudy/agents/robin_bridge.py",
+      "lines": 460,
+      "imports": [
+        "base64",
+        "datetime",
+        "httpx",
+        "json",
+        "keyring",
+        "logging",
+        "os",
+        "pathlib",
+        "re",
+        "rudy",
+        "sys",
+        "time",
+        "urllib"
+      ],
+      "docstring": "Robin Bridge — Polls alfred-skills/docs/robin-tasks/ for pending tasks from Alfred.",
+      "last_modified": "2026-03-31T00:53:10.118308+00:00",
+      "size_bytes": 17785
+    },
+    {
+      "path": "rudy/agents/robin_presence.py",
+      "lines": 607,
+      "imports": [
+        "ctypes",
+        "datetime",
+        "enum",
+        "json",
+        "logging",
+        "os",
+        "pathlib",
+        "rudy",
+        "sys",
+        "time",
+        "typing"
+      ],
+      "docstring": "Robin Presence Monitor -- Detects Batman activity and manages handoffs.",
+      "last_modified": "2026-03-31T00:53:10.119308+00:00",
+      "size_bytes": 23364
+    },
+    {
+      "path": "rudy/agents/robin_sentinel.py",
+      "lines": 829,
+      "imports": [
+        "datetime",
+        "json",
+        "logging",
+        "os",
+        "pathlib",
+        "platform",
+        "rudy",
+        "shutil",
+        "socket",
+        "subprocess",
+        "sys",
+        "time",
+        "typing"
+      ],
+      "docstring": "Robin Sentinel — The Batcave's Immune System + Night Shift Operator",
+      "last_modified": "2026-03-31T00:53:10.119308+00:00",
+      "size_bytes": 32060
+    },
+    {
+      "path": "rudy/agents/runner.py",
+      "lines": 186,
+      "imports": [
+        "argparse",
+        "datetime",
+        "importlib",
+        "json",
+        "os",
+        "pathlib",
+        "rudy",
+        "sys"
+      ],
+      "docstring": "Unified Agent Runner — bridges scheduled tasks, command runner, and Cowork to the sub-agent system.",
+      "last_modified": "2026-03-31T00:53:10.119308+00:00",
+      "size_bytes": 7233
+    },
+    {
+      "path": "rudy/agents/security_agent.py",
+      "lines": 549,
+      "imports": [
+        "collections",
+        "datetime",
+        "hashlib",
+        "httpx",
+        "json",
+        "pathlib",
+        "psutil",
+        "rudy",
+        "subprocess"
+      ],
+      "docstring": "SecurityAgent — Defensive Intelligence & Threat Detection.",
+      "last_modified": "2026-03-31T00:53:10.119308+00:00",
+      "size_bytes": 21890
+    },
+    {
+      "path": "rudy/agents/sentinel.py",
+      "lines": 1171,
+      "imports": [
+        "datetime",
+        "hashlib",
+        "json",
+        "pathlib",
+        "rudy",
+        "shutil",
+        "subprocess",
+        "time",
+        "urllib"
+      ],
+      "docstring": "Sentinel — The Trickle Agent.",
+      "last_modified": "2026-03-31T01:02:40.254611+00:00",
+      "size_bytes": 50427
+    },
+    {
+      "path": "rudy/agents/system_master.py",
+      "lines": 266,
+      "imports": [
+        "datetime",
+        "psutil",
+        "rudy",
+        "shutil",
+        "subprocess",
+        "sys",
+        "tabulate"
+      ],
+      "docstring": "SystemMaster — Machine Health & Recovery Agent.",
+      "last_modified": "2026-03-31T00:53:10.120308+00:00",
+      "size_bytes": 10225
+    },
+    {
+      "path": "rudy/agents/task_master.py",
+      "lines": 145,
+      "imports": [
+        "datetime",
+        "json",
+        "rudy",
+        "sys"
+      ],
+      "docstring": "TaskMaster — Work Execution & Coordination Agent.",
+      "last_modified": "2026-03-31T00:53:10.120308+00:00",
+      "size_bytes": 5768
+    },
+    {
+      "path": "rudy/api_server.py",
+      "lines": 275,
+      "imports": [
+        "datetime",
+        "fastapi",
+        "json",
+        "os",
+        "pathlib",
+        "rudy",
+        "secrets",
+        "time",
+        "uvicorn"
+      ],
+      "docstring": "Rudy API Server — Webhook receiver and REST API for inbound automation.",
+      "last_modified": "2026-03-31T00:53:10.120308+00:00",
+      "size_bytes": 10240
+    },
+    {
+      "path": "rudy/avatar.py",
+      "lines": 562,
+      "imports": [
+        "cv2",
+        "datetime",
+        "diffusers",
+        "insightface",
+        "json",
+        "moviepy",
+        "numpy",
+        "os",
+        "pathlib",
+        "rudy",
+        "sadtalker",
+        "shutil",
+        "subprocess",
+        "torch",
+        "typing"
+      ],
+      "docstring": "Digital Avatar — Face swap, talking-head video, and digital presenter creation.",
+      "last_modified": "2026-03-31T00:53:10.120308+00:00",
+      "size_bytes": 21060
+    },
+    {
+      "path": "rudy/batcave_memory.py",
+      "lines": 259,
+      "imports": [
+        "datetime",
+        "json",
+        "logging",
+        "os",
+        "pathlib",
+        "rudy"
+      ],
+      "docstring": "Batcave Shared Memory System - Compounding knowledge across sessions.",
+      "last_modified": "2026-03-31T00:53:10.120308+00:00",
+      "size_bytes": 9716
+    },
+    {
+      "path": "rudy/core/rudy-auth-fix.py",
+      "lines": 358,
+      "imports": [
+        "imaplib",
+        "json",
+        "os",
+        "pathlib",
+        "playwright",
+        "rudy",
+        "shutil",
+        "socket",
+        "ssl",
+        "subprocess",
+        "sys",
+        "time"
+      ],
+      "docstring": "Rudy Auth Fix — Playwright-based Google Account Checker",
+      "last_modified": "2026-03-31T00:53:10.120308+00:00",
+      "size_bytes": 14345
+    },
+    {
+      "path": "rudy/core/rudy-command-runner.py",
+      "lines": 178,
+      "imports": [
+        "datetime",
+        "logging",
+        "os",
+        "pathlib",
+        "rudy",
+        "subprocess",
+        "sys",
+        "time"
+      ],
+      "docstring": "Rudy Command Runner — Cowork-to-Windows Bridge",
+      "last_modified": "2026-03-31T00:53:10.120308+00:00",
+      "size_bytes": 5462
+    },
+    {
+      "path": "rudy/core/rudy-gmail-api.py",
+      "lines": 412,
+      "imports": [
+        "base64",
+        "datetime",
+        "email",
+        "google",
+        "google_auth_oauthlib",
+        "googleapiclient",
+        "json",
+        "logging",
+        "os",
+        "pathlib",
+        "rudy",
+        "subprocess",
+        "sys",
+        "time",
+        "traceback"
+      ],
+      "docstring": "Rudy — Gmail API Listener (IMAP-free alternative)",
+      "last_modified": "2026-03-31T00:53:10.120308+00:00",
+      "size_bytes": 15341
+    },
+    {
+      "path": "rudy/core/rudy-listener.py",
+      "lines": 675,
+      "imports": [
+        "datetime",
+        "email",
+        "imaplib",
+        "json",
+        "logging",
+        "os",
+        "pathlib",
+        "rudy",
+        "smtplib",
+        "socket",
+        "ssl",
+        "subprocess",
+        "sys",
+        "time",
+        "traceback"
+      ],
+      "docstring": "Rudy — Family Assistant Email Listener v2.0",
+      "last_modified": "2026-03-31T00:53:10.120308+00:00",
+      "size_bytes": 24433
+    },
+    {
+      "path": "rudy/core/rudy-stealth-browser.py",
+      "lines": 156,
+      "imports": [
+        "pathlib",
+        "playwright",
+        "playwright_stealth",
+        "pyotp",
+        "random",
+        "re",
+        "rudy",
+        "time",
+        "twocaptcha"
+      ],
+      "docstring": "Rudy Stealth Browser - reusable module for bot-resistant Playwright automation.",
+      "last_modified": "2026-03-31T00:53:10.121308+00:00",
+      "size_bytes": 5232
+    },
+    {
+      "path": "rudy/email_multi.py",
+      "lines": 390,
+      "imports": [
+        "dataclasses",
+        "datetime",
+        "email",
+        "imaplib",
+        "json",
+        "os",
+        "pathlib",
+        "rudy",
+        "smtplib",
+        "typing"
+      ],
+      "docstring": "Multi-Provider Email Backend — Resilient email for Rudy.",
+      "last_modified": "2026-03-31T00:53:10.121308+00:00",
+      "size_bytes": 13454
+    },
+    {
+      "path": "rudy/email_poller.py",
+      "lines": 439,
+      "imports": [
+        "datetime",
+        "email",
+        "imaplib",
+        "json",
+        "logging",
+        "os",
+        "pathlib",
+        "rudy",
+        "smtplib",
+        "subprocess",
+        "sys",
+        "time",
+        "traceback"
+      ],
+      "docstring": "Rudy -- Email Poller v1.0",
+      "last_modified": "2026-03-31T00:53:10.121308+00:00",
+      "size_bytes": 13681
+    },
+    {
+      "path": "rudy/environment_profiler.py",
+      "lines": 465,
+      "imports": [
+        "datetime",
+        "json",
+        "logging",
+        "os",
+        "pathlib",
+        "platform",
+        "psutil",
+        "rudy",
+        "shutil",
+        "socket",
+        "subprocess",
+        "sys",
+        "time",
+        "typing",
+        "urllib",
+        "winreg"
+      ],
+      "docstring": "Environment Profiler for the Batcave.",
+      "last_modified": "2026-03-31T00:53:10.121308+00:00",
+      "size_bytes": 17530
+    },
+    {
+      "path": "rudy/financial.py",
+      "lines": 338,
+      "imports": [
+        "datetime",
+        "json",
+        "os",
+        "pathlib",
+        "rudy",
+        "typing",
+        "yfinance"
+      ],
+      "docstring": "Financial Intelligence Module — Market data, portfolio tracking, economic alerts.",
+      "last_modified": "2026-03-31T00:53:10.121308+00:00",
+      "size_bytes": 12243
+    },
+    {
+      "path": "rudy/find_my.py",
+      "lines": 723,
+      "imports": [
+        "datetime",
+        "json",
+        "keyring",
+        "math",
+        "os",
+        "pathlib",
+        "pyicloud",
+        "rudy",
+        "sys",
+        "typing"
+      ],
+      "docstring": "Find My — iCloud location monitoring for family safety.",
+      "last_modified": "2026-03-31T00:53:10.122308+00:00",
+      "size_bytes": 27142
+    },
+    {
+      "path": "rudy/human_simulation.py",
+      "lines": 1332,
+      "imports": [
+        "datetime",
+        "email",
+        "json",
+        "math",
+        "os",
+        "pathlib",
+        "random",
+        "rudy",
+        "smtplib",
+        "string",
+        "time",
+        "typing"
+      ],
+      "docstring": "Human Behavior Simulation — Natural interaction patterns for browser automation.",
+      "last_modified": "2026-03-31T00:53:10.122308+00:00",
+      "size_bytes": 50369
+    },
+    {
+      "path": "rudy/integrations/__init__.py",
+      "lines": 2,
+      "imports": [],
+      "docstring": "",
+      "last_modified": "2026-03-31T00:53:10.122308+00:00",
+      "size_bytes": 54
+    },
+    {
+      "path": "rudy/integrations/github_ops.py",
+      "lines": 338,
+      "imports": [
+        "datetime",
+        "json",
+        "logging",
+        "rudy",
+        "subprocess",
+        "typing"
+      ],
+      "docstring": "rudy.integrations.github_ops -- GitHub Operations for Rudy Agents",
+      "last_modified": "2026-03-31T00:53:10.122308+00:00",
+      "size_bytes": 12190
+    },
+    {
+      "path": "rudy/integrations/rudy-suno-generate.py",
+      "lines": 47,
+      "imports": [
+        "json",
+        "pathlib",
+        "rudy_suno",
+        "sys"
+      ],
+      "docstring": "Rudy Suno Quick Generate — Drop-in script for the command runner.",
+      "last_modified": "2026-03-31T00:53:10.122308+00:00",
+      "size_bytes": 1442
+    },
+    {
+      "path": "rudy/integrations/rudy-suno.py",
+      "lines": 339,
+      "imports": [
+        "argparse",
+        "datetime",
+        "json",
+        "pathlib",
+        "requests",
+        "rudy",
+        "sys"
+      ],
+      "docstring": "Rudy Suno Integration — AI Music Generation for The Workhorse",
+      "last_modified": "2026-03-31T00:53:10.122308+00:00",
+      "size_bytes": 11854
+    },
+    {
+      "path": "rudy/intruder_profiler.py",
+      "lines": 489,
+      "imports": [
+        "datetime",
+        "json",
+        "os",
+        "pathlib",
+        "re",
+        "rudy",
+        "subprocess"
+      ],
+      "docstring": "Intruder Profiler — Counter-espionage device intelligence for high-threat networks.",
+      "last_modified": "2026-03-31T00:53:10.122308+00:00",
+      "size_bytes": 18852
+    },
+    {
+      "path": "rudy/knowledge_base.py",
+      "lines": 376,
+      "imports": [
+        "chromadb",
+        "datetime",
+        "hashlib",
+        "json",
+        "os",
+        "pathlib",
+        "re",
+        "rudy",
+        "sentence_transformers",
+        "time",
+        "typing"
+      ],
+      "docstring": "Knowledge Base Engine — Semantic search over all Rudy data.",
+      "last_modified": "2026-03-31T00:53:10.122308+00:00",
+      "size_bytes": 13120
+    },
+    {
+      "path": "rudy/local_ai.py",
+      "lines": 661,
+      "imports": [
+        "datetime",
+        "hashlib",
+        "json",
+        "llama_cpp",
+        "os",
+        "pathlib",
+        "requests",
+        "rudy",
+        "time",
+        "typing",
+        "urllib"
+      ],
+      "docstring": "Local AI Engine — Offline intelligence for The Workhorse.",
+      "last_modified": "2026-03-31T00:53:10.123308+00:00",
+      "size_bytes": 24772
+    },
+    {
+      "path": "rudy/movement_feed.py",
+      "lines": 413,
+      "imports": [
+        "datetime",
+        "json",
+        "os",
+        "pathlib",
+        "rudy"
+      ],
+      "docstring": "Movement Feed — Real-time activity and movement timeline from network presence data.",
+      "last_modified": "2026-03-31T00:53:10.123308+00:00",
+      "size_bytes": 15605
+    },
+    {
+      "path": "rudy/network_defense.py",
+      "lines": 694,
+      "imports": [
+        "collections",
+        "datetime",
+        "hashlib",
+        "json",
+        "os",
+        "pathlib",
+        "psutil",
+        "re",
+        "rudy",
+        "socket",
+        "subprocess"
+      ],
+      "docstring": "Network Defense Module — Defensive countermeasures for The Workhorse.",
+      "last_modified": "2026-03-31T00:53:10.123308+00:00",
+      "size_bytes": 28196
+    },
+    {
+      "path": "rudy/nlp.py",
+      "lines": 274,
+      "imports": [
+        "collections",
+        "json",
+        "nltk",
+        "os",
+        "pathlib",
+        "re",
+        "rudy",
+        "spacy",
+        "sumy",
+        "textblob",
+        "typing"
+      ],
+      "docstring": "NLP Module — Natural language processing for command understanding,",
+      "last_modified": "2026-03-31T00:53:10.123308+00:00",
+      "size_bytes": 9624
+    },
+    {
+      "path": "rudy/obsolescence_monitor.py",
+      "lines": 530,
+      "imports": [
+        "datetime",
+        "importlib",
+        "json",
+        "os",
+        "pathlib",
+        "rudy",
+        "subprocess",
+        "sys",
+        "typing"
+      ],
+      "docstring": "Obsolescence Monitor — Periodic capability audit, tool freshness checks,",
+      "last_modified": "2026-03-31T00:53:10.123308+00:00",
+      "size_bytes": 19718
+    },
+    {
+      "path": "rudy/ocr.py",
+      "lines": 287,
+      "imports": [
+        "PyPDF2",
+        "bs4",
+        "docx",
+        "docx2txt",
+        "easyocr",
+        "ebooklib",
+        "json",
+        "os",
+        "pathlib",
+        "pdfplumber",
+        "pptx",
+        "re",
+        "rudy",
+        "striprtf",
+        "typing"
+      ],
+      "docstring": "OCR & Document Intelligence — Extract text from images, PDFs, documents.",
+      "last_modified": "2026-03-31T00:53:10.123308+00:00",
+      "size_bytes": 10315
+    },
+    {
+      "path": "rudy/offline_ops.py",
+      "lines": 427,
+      "imports": [
+        "datetime",
+        "json",
+        "os",
+        "pathlib",
+        "requests",
+        "rudy",
+        "socket",
+        "time",
+        "typing"
+      ],
+      "docstring": "Offline Operations Controller — Autonomous operation during internet outages.",
+      "last_modified": "2026-03-31T00:53:10.123308+00:00",
+      "size_bytes": 15110
+    },
+    {
+      "path": "rudy/paths.py",
+      "lines": 140,
+      "imports": [
+        "os",
+        "pathlib",
+        "shutil",
+        "sys"
+      ],
+      "docstring": "Canonical path resolver for the Batcave.",
+      "last_modified": "2026-03-31T00:53:10.123308+00:00",
+      "size_bytes": 4925
+    },
+    {
+      "path": "rudy/phone_check.py",
+      "lines": 1609,
+      "imports": [
+        "asyncio",
+        "datetime",
+        "json",
+        "os",
+        "pathlib",
+        "pymobiledevice3",
+        "re",
+        "requests",
+        "rudy",
+        "subprocess",
+        "time",
+        "typing"
+      ],
+      "docstring": "Phone Check — Professional-grade mobile device security scanning.",
+      "last_modified": "2026-03-31T00:53:10.124308+00:00",
+      "size_bytes": 63211
+    },
+    {
+      "path": "rudy/photo_intel.py",
+      "lines": 770,
+      "imports": [
+        "PIL",
+        "collections",
+        "datetime",
+        "geopy",
+        "hashlib",
+        "imagehash",
+        "json",
+        "os",
+        "pathlib",
+        "re",
+        "rudy",
+        "time",
+        "typing"
+      ],
+      "docstring": "Photo Intelligence — EXIF metadata analysis, GPS extraction, timeline",
+      "last_modified": "2026-03-31T00:53:10.124308+00:00",
+      "size_bytes": 27267
+    },
+    {
+      "path": "rudy/presence.py",
+      "lines": 391,
+      "imports": [
+        "datetime",
+        "json",
+        "os",
+        "pathlib",
+        "re",
+        "rudy",
+        "socket",
+        "subprocess",
+        "time"
+      ],
+      "docstring": "WiFi Presence Monitor — tracks devices on the local network.",
+      "last_modified": "2026-03-31T00:53:10.124308+00:00",
+      "size_bytes": 14106
+    },
+    {
+      "path": "rudy/presence_analytics.py",
+      "lines": 1009,
+      "imports": [
+        "collections",
+        "datetime",
+        "itertools",
+        "json",
+        "os",
+        "pathlib",
+        "rudy"
+      ],
+      "docstring": "Presence Analytics Engine — Device identification and ownership inference",
+      "last_modified": "2026-03-31T00:53:10.125308+00:00",
+      "size_bytes": 37421
+    },
+    {
+      "path": "rudy/prompt_registry.py",
+      "lines": 219,
+      "imports": [],
+      "docstring": "[SYNTAX ERROR]",
+      "last_modified": "2026-03-31T00:53:10.125308+00:00",
+      "size_bytes": 8661
+    },
+    {
+      "path": "rudy/robin_agent.py",
+      "lines": 688,
+      "imports": [
+        "dataclasses",
+        "datetime",
+        "json",
+        "logging",
+        "pathlib",
+        "re",
+        "rudy",
+        "time",
+        "typing",
+        "urllib"
+      ],
+      "docstring": "Robin Agent -- DeepSeek-powered autonomous agent with MCP tool use.",
+      "last_modified": "2026-03-31T00:53:10.125308+00:00",
+      "size_bytes": 24438
+    },
+    {
+      "path": "rudy/robin_agent_langgraph.py",
+      "lines": 864,
+      "imports": [
+        "dataclasses",
+        "datetime",
+        "json",
+        "langgraph",
+        "logging",
+        "pathlib",
+        "re",
+        "rudy",
+        "sys",
+        "time",
+        "typing",
+        "urllib"
+      ],
+      "docstring": "Robin Agent v2 -- LangGraph-powered autonomous agent with MCP tool use.",
+      "last_modified": "2026-03-31T00:53:10.125308+00:00",
+      "size_bytes": 29572
+    },
+    {
+      "path": "rudy/robin_agent_loader.py",
+      "lines": 34,
+      "imports": [
+        "logging",
+        "os",
+        "rudy"
+      ],
+      "docstring": "Robin Agent Loader — feature-flag switch between v1 (manual loop) and v2 (LangGraph).",
+      "last_modified": "2026-03-31T00:53:10.125308+00:00",
+      "size_bytes": 1141
+    },
+    {
+      "path": "rudy/robin_alfred_protocol.py",
+      "lines": 477,
+      "imports": [
+        "dataclasses",
+        "datetime",
+        "json",
+        "os",
+        "pathlib",
+        "psutil",
+        "rudy",
+        "time",
+        "typing"
+      ],
+      "docstring": "Robin <-> Alfred Coordination Protocol",
+      "last_modified": "2026-03-31T00:53:10.125308+00:00",
+      "size_bytes": 18340
+    },
+    {
+      "path": "rudy/robin_autonomy.py",
+      "lines": 1133,
+      "imports": [
+        "datetime",
+        "json",
+        "logging",
+        "os",
+        "pathlib",
+        "rudy",
+        "subprocess",
+        "time",
+        "urllib"
+      ],
+      "docstring": "Robin Autonomy Engine - Self-directed intelligence for when Batman is away.",
+      "last_modified": "2026-03-31T00:53:10.126308+00:00",
+      "size_bytes": 50717
+    },
+    {
+      "path": "rudy/robin_chat_gui.py",
+      "lines": 655,
+      "imports": [
+        "datetime",
+        "flask",
+        "json",
+        "os",
+        "pathlib",
+        "rudy",
+        "threading",
+        "urllib"
+      ],
+      "docstring": "Robin Chat GUI -- Local web interface for chatting with Robin (Batcave AI).",
+      "last_modified": "2026-03-31T00:53:10.126308+00:00",
+      "size_bytes": 19410
+    },
+    {
+      "path": "rudy/robin_cowork_launcher.py",
+      "lines": 20,
+      "imports": [],
+      "docstring": "DISCARDED (2026-03-29) — Per Lucius Build Process Audit.",
+      "last_modified": "2026-03-31T00:53:10.126308+00:00",
+      "size_bytes": 610
+    },
+    {
+      "path": "rudy/robin_human_adapter.py",
+      "lines": 155,
+      "imports": [
+        "dataclasses",
+        "random",
+        "string",
+        "typing"
+      ],
+      "docstring": "Robin Human Adapter - Adapts human_simulation.py engines for Windows-MCP tools.",
+      "last_modified": "2026-03-31T00:53:10.127308+00:00",
+      "size_bytes": 6616
+    },
+    {
+      "path": "rudy/robin_liveness.py",
+      "lines": 340,
+      "imports": [
+        "argparse",
+        "datetime",
+        "json",
+        "logging",
+        "os",
+        "pathlib",
+        "rudy",
+        "subprocess",
+        "sys",
+        "time"
+      ],
+      "docstring": "Robin Liveness Protocol — Heartbeat, status, and auto-recovery.",
+      "last_modified": "2026-03-31T00:53:10.127308+00:00",
+      "size_bytes": 11326
+    },
+    {
+      "path": "rudy/robin_logger.py",
+      "lines": 254,
+      "imports": [
+        "datetime",
+        "json",
+        "keyring",
+        "logging",
+        "os",
+        "pathlib",
+        "rudy",
+        "typing",
+        "urllib"
+      ],
+      "docstring": "Robin Logger -- Autonomous logging to Notion after task completion.",
+      "last_modified": "2026-03-31T00:53:10.127308+00:00",
+      "size_bytes": 7439
+    },
+    {
+      "path": "rudy/robin_main.py",
+      "lines": 960,
+      "imports": [
+        "base64",
+        "datetime",
+        "json",
+        "logging",
+        "os",
+        "pathlib",
+        "rudy",
+        "shutil",
+        "signal",
+        "sys",
+        "threading",
+        "time",
+        "typing",
+        "urllib"
+      ],
+      "docstring": "Robin Main -- The unified orchestrator for Robin's autonomous operation.",
+      "last_modified": "2026-03-31T00:53:10.128308+00:00",
+      "size_bytes": 36971
+    },
+    {
+      "path": "rudy/robin_mcp_client.py",
+      "lines": 601,
+      "imports": [
+        "dataclasses",
+        "json",
+        "logging",
+        "os",
+        "pathlib",
+        "re",
+        "subprocess",
+        "threading",
+        "time",
+        "typing",
+        "xml"
+      ],
+      "docstring": "Robin MCP Client -- Connects Robin to MCP servers via stdio JSON-RPC.",
+      "last_modified": "2026-03-31T01:02:40.254611+00:00",
+      "size_bytes": 20915
+    },
+    {
+      "path": "rudy/robin_sentinel.py",
+      "lines": 13,
+      "imports": [
+        "rudy"
+      ],
+      "docstring": "Compatibility shim - SentinelObserver has been consolidated into rudy/agents/sentinel.py.",
+      "last_modified": "2026-03-31T00:53:10.130308+00:00",
+      "size_bytes": 408
+    },
+    {
+      "path": "rudy/robin_taskqueue.py",
+      "lines": 694,
+      "imports": [
+        "datetime",
+        "json",
+        "logging",
+        "os",
+        "pathlib",
+        "re",
+        "rudy",
+        "shutil",
+        "subprocess",
+        "sys",
+        "time",
+        "typing",
+        "uuid"
+      ],
+      "docstring": "Robin Task Queue — Extended Absence Operating Framework.",
+      "last_modified": "2026-03-31T01:02:40.254611+00:00",
+      "size_bytes": 27174
+    },
+    {
+      "path": "rudy/sanitize.py",
+      "lines": 60,
+      "imports": [
+        "json",
+        "re"
+      ],
+      "docstring": "Shared input sanitization utilities for the Batcave.",
+      "last_modified": "2026-03-31T00:53:10.131308+00:00",
+      "size_bytes": 1631
+    },
+    {
+      "path": "rudy/surveillance.py",
+      "lines": 591,
+      "imports": [
+        "cv2",
+        "datetime",
+        "json",
+        "numpy",
+        "os",
+        "pathlib",
+        "rudy",
+        "subprocess",
+        "sys",
+        "time",
+        "typing"
+      ],
+      "docstring": "Surveillance — Video camera integration for security monitoring.",
+      "last_modified": "2026-03-31T00:53:10.131308+00:00",
+      "size_bytes": 21279
+    },
+    {
+      "path": "rudy/tools/__init__.py",
+      "lines": 3,
+      "imports": [],
+      "docstring": "",
+      "last_modified": "2026-03-31T00:53:10.131308+00:00",
+      "size_bytes": 135
+    },
+    {
+      "path": "rudy/tools/browser_integration.py",
+      "lines": 115,
+      "imports": [
+        "logging",
+        "rudy"
+      ],
+      "docstring": "Browser Tool Integration for Robin's LangGraph Agent.",
+      "last_modified": "2026-03-31T00:53:10.131308+00:00",
+      "size_bytes": 3792
+    },
+    {
+      "path": "rudy/tools/browser_tool.py",
+      "lines": 355,
+      "imports": [
+        "dataclasses",
+        "json",
+        "logging",
+        "pathlib",
+        "playwright",
+        "rudy",
+        "time",
+        "typing",
+        "urllib"
+      ],
+      "docstring": "Browser Tool for Robin Agent -- Playwright-direct web capability.",
+      "last_modified": "2026-03-31T00:53:10.132308+00:00",
+      "size_bytes": 12063
+    },
+    {
+      "path": "rudy/tools/notion_client.py",
+      "lines": 292,
+      "imports": [
+        "datetime",
+        "httpx",
+        "json",
+        "keyring",
+        "logging",
+        "os",
+        "pathlib",
+        "rudy",
+        "sys",
+        "typing",
+        "urllib"
+      ],
+      "docstring": "Notion Client for Robin — Read/write access to the Bat Family's shared knowledge.",
+      "last_modified": "2026-03-31T00:53:10.132308+00:00",
+      "size_bytes": 10030
+    },
+    {
+      "path": "rudy/tools/rudy-complete-setup.py",
+      "lines": 93,
+      "imports": [
+        "email",
+        "imaplib",
+        "json",
+        "pathlib",
+        "rudy",
+        "smtplib",
+        "sys"
+      ],
+      "docstring": "Rudy Complete Setup — Run this after enabling IMAP in Gmail settings.",
+      "last_modified": "2026-03-31T00:53:10.132308+00:00",
+      "size_bytes": 2717
+    },
+    {
+      "path": "rudy/tools/rudy-diagnose.py",
+      "lines": 542,
+      "imports": [
+        "ctypes",
+        "datetime",
+        "email",
+        "imaplib",
+        "os",
+        "pathlib",
+        "rudy",
+        "smtplib",
+        "socket",
+        "ssl",
+        "subprocess",
+        "sys"
+      ],
+      "docstring": "Rudy Diagnostic Tool",
+      "last_modified": "2026-03-31T00:53:10.132308+00:00",
+      "size_bytes": 20366
+    },
+    {
+      "path": "rudy/travel_mode.py",
+      "lines": 709,
+      "imports": [
+        "collections",
+        "datetime",
+        "hashlib",
+        "httpx",
+        "json",
+        "os",
+        "pathlib",
+        "re",
+        "requests",
+        "rudy",
+        "shutil",
+        "socket",
+        "subprocess",
+        "time"
+      ],
+      "docstring": "Travel Mode — Portable network intelligence for The Workhorse.",
+      "last_modified": "2026-03-31T00:53:10.133308+00:00",
+      "size_bytes": 26998
+    },
+    {
+      "path": "rudy/usb_quarantine.py",
+      "lines": 1050,
+      "imports": [
+        "ctypes",
+        "datetime",
+        "json",
+        "os",
+        "pathlib",
+        "pprint",
+        "re",
+        "rudy",
+        "subprocess",
+        "sys",
+        "time",
+        "typing"
+      ],
+      "docstring": "USB Quarantine — Full quarantine protocol for unknown devices.",
+      "last_modified": "2026-03-31T00:53:10.133308+00:00",
+      "size_bytes": 41974
+    },
+    {
+      "path": "rudy/voice.py",
+      "lines": 248,
+      "imports": [
+        "gtts",
+        "os",
+        "pathlib",
+        "pydub",
+        "pyttsx3",
+        "rudy",
+        "subprocess",
+        "time",
+        "typing",
+        "whisper"
+      ],
+      "docstring": "Voice & Audio Module — Text-to-speech, speech-to-text, audio processing.",
+      "last_modified": "2026-03-31T00:53:10.133308+00:00",
+      "size_bytes": 9606
+    },
+    {
+      "path": "rudy/voice_clone.py",
+      "lines": 678,
+      "imports": [
+        "TTS",
+        "bark",
+        "datetime",
+        "gtts",
+        "json",
+        "numpy",
+        "openvoice",
+        "os",
+        "pathlib",
+        "pocket_tts",
+        "pydub",
+        "pyttsx3",
+        "rudy",
+        "shutil",
+        "soundfile",
+        "time",
+        "typing"
+      ],
+      "docstring": "Voice Clone — Voice cloning, custom character voices, and memorial voice recreation.",
+      "last_modified": "2026-03-31T00:53:10.133308+00:00",
+      "size_bytes": 24534
+    },
+    {
+      "path": "rudy/web_intelligence.py",
+      "lines": 393,
+      "imports": [
+        "bs4",
+        "datetime",
+        "dns",
+        "feedparser",
+        "hashlib",
+        "ipwhois",
+        "json",
+        "newspaper",
+        "os",
+        "pathlib",
+        "requests",
+        "rudy",
+        "time",
+        "trafilatura",
+        "typing",
+        "urllib",
+        "whois"
+      ],
+      "docstring": "Web Intelligence Module — Smart web scraping, article extraction,",
+      "last_modified": "2026-03-31T00:53:10.133308+00:00",
+      "size_bytes": 14459
+    },
+    {
+      "path": "rudy/wellness.py",
+      "lines": 359,
+      "imports": [
+        "datetime",
+        "json",
+        "os",
+        "pathlib",
+        "rudy"
+      ],
+      "docstring": "Wellness Monitor — Family safety through network presence intelligence.",
+      "last_modified": "2026-03-31T00:53:10.133308+00:00",
+      "size_bytes": 14863
+    },
+    {
+      "path": "rudy/workflows/__init__.py",
+      "lines": 7,
+      "imports": [],
+      "docstring": "rudy.workflows — Composable operational workflows.",
+      "last_modified": "2026-03-31T00:53:10.133308+00:00",
+      "size_bytes": 196
+    },
+    {
+      "path": "rudy/workflows/handoff.py",
+      "lines": 605,
+      "imports": [
+        "datetime",
+        "json",
+        "logging",
+        "pathlib",
+        "re",
+        "rudy",
+        "sys"
+      ],
+      "docstring": "Automated Handoff Protocol — Continuity loop between Alfred sessions.",
+      "last_modified": "2026-03-31T01:02:40.268611+00:00",
+      "size_bytes": 22903
+    },
+    {
+      "path": "rudy/workflows/pr_review.py",
+      "lines": 195,
+      "imports": [
+        "datetime",
+        "json",
+        "logging",
+        "pathlib",
+        "rudy",
+        "subprocess",
+        "sys"
+      ],
+      "docstring": "rudy.workflows.pr_review — Lucius-gated PR review workflow.",
+      "last_modified": "2026-03-31T00:53:10.134308+00:00",
+      "size_bytes": 6403
+    },
+    {
+      "path": "rudy/workflows/session_gate.py",
+      "lines": 209,
+      "imports": [
+        "datetime",
+        "json",
+        "logging",
+        "pathlib",
+        "rudy",
+        "time",
+        "typing"
+      ],
+      "docstring": "rudy.workflows.session_gate -- Session start gate integration.",
+      "last_modified": "2026-03-31T00:53:10.134308+00:00",
+      "size_bytes": 6806
+    },
+    {
+      "path": "scripts/agents/run-all-agents.py",
+      "lines": 9,
+      "imports": [
+        "os",
+        "rudy",
+        "sys"
+      ],
+      "docstring": "Run all agents sequentially — for manual invocation or diagnostics.",
+      "last_modified": "2026-03-31T00:53:10.134308+00:00",
+      "size_bytes": 438
+    },
+    {
+      "path": "scripts/agents/run-morning-briefing.py",
+      "lines": 7,
+      "imports": [
+        "os",
+        "rudy",
+        "sys"
+      ],
+      "docstring": "Scheduled task wrapper: TaskMaster morning briefing (daily 7:30 AM).",
+      "last_modified": "2026-03-31T00:53:10.134308+00:00",
+      "size_bytes": 296
+    },
+    {
+      "path": "scripts/agents/run-research-digest.py",
+      "lines": 7,
+      "imports": [
+        "os",
+        "rudy",
+        "sys"
+      ],
+      "docstring": "Scheduled task wrapper: ResearchIntel daily digest (daily 6 AM).",
+      "last_modified": "2026-03-31T00:53:10.134308+00:00",
+      "size_bytes": 293
+    },
+    {
+      "path": "scripts/agents/run-security-agent.py",
+      "lines": 7,
+      "imports": [
+        "os",
+        "rudy",
+        "sys"
+      ],
+      "docstring": "Scheduled task wrapper: SecurityAgent defensive sweep (every 30 min).",
+      "last_modified": "2026-03-31T00:53:10.134308+00:00",
+      "size_bytes": 296
+    },
+    {
+      "path": "scripts/agents/run-self-improvement.py",
+      "lines": 7,
+      "imports": [
+        "os",
+        "rudy",
+        "sys"
+      ],
+      "docstring": "Scheduled task wrapper: ResearchIntel capability audit (M/W/F 10 AM).",
+      "last_modified": "2026-03-31T00:53:10.134308+00:00",
+      "size_bytes": 302
+    },
+    {
+      "path": "scripts/agents/run-sentinel.py",
+      "lines": 7,
+      "imports": [
+        "os",
+        "rudy",
+        "sys"
+      ],
+      "docstring": "Scheduled task wrapper: Sentinel awareness check (every 15 min, max 30s).",
+      "last_modified": "2026-03-31T00:53:10.134308+00:00",
+      "size_bytes": 294
+    },
+    {
+      "path": "scripts/agents/run-system-master.py",
+      "lines": 7,
+      "imports": [
+        "os",
+        "rudy",
+        "sys"
+      ],
+      "docstring": "Scheduled task wrapper: SystemMaster health check (every 5 min via WorkhorseHealthCheck).",
+      "last_modified": "2026-03-31T00:53:10.134308+00:00",
+      "size_bytes": 315
+    },
+    {
+      "path": "scripts/agents/run-weekly-maintenance.py",
+      "lines": 7,
+      "imports": [
+        "os",
+        "rudy",
+        "sys"
+      ],
+      "docstring": "Scheduled task wrapper: OperationsMonitor weekly maintenance (Sun 4 AM).",
+      "last_modified": "2026-03-31T00:53:10.134308+00:00",
+      "size_bytes": 303
+    },
+    {
+      "path": "scripts/ci/lucius_pr_review.py",
+      "lines": 259,
+      "imports": [
+        "datetime",
+        "json",
+        "os",
+        "re",
+        "subprocess",
+        "sys",
+        "urllib"
+      ],
+      "docstring": "Lucius Fox CI — Batcave-specific PR checks.",
+      "last_modified": "2026-03-31T00:53:10.134308+00:00",
+      "size_bytes": 8982
+    },
+    {
+      "path": "scripts/langgraph_poc.py",
+      "lines": 121,
+      "imports": [],
+      "docstring": "[SYNTAX ERROR]",
+      "last_modified": "2026-03-31T00:53:10.134308+00:00",
+      "size_bytes": 4566
+    },
+    {
+      "path": "scripts/rudy/rudy-auth-fix.py",
+      "lines": 357,
+      "imports": [
+        "imaplib",
+        "json",
+        "os",
+        "pathlib",
+        "playwright",
+        "shutil",
+        "socket",
+        "ssl",
+        "subprocess",
+        "sys",
+        "time"
+      ],
+      "docstring": "Rudy Auth Fix — Playwright-based Google Account Checker",
+      "last_modified": "2026-03-31T00:53:10.134308+00:00",
+      "size_bytes": 14383
+    },
+    {
+      "path": "scripts/rudy/rudy-complete-setup.py",
+      "lines": 92,
+      "imports": [
+        "email",
+        "imaplib",
+        "json",
+        "os",
+        "pathlib",
+        "rudy",
+        "smtplib",
+        "sys"
+      ],
+      "docstring": "Rudy Complete Setup — Run this after enabling IMAP in Gmail settings.",
+      "last_modified": "2026-03-31T00:53:10.135308+00:00",
+      "size_bytes": 2812
+    },
+    {
+      "path": "scripts/rudy/rudy-diagnose.py",
+      "lines": 554,
+      "imports": [
+        "ctypes",
+        "datetime",
+        "email",
+        "imaplib",
+        "json",
+        "os",
+        "pathlib",
+        "smtplib",
+        "socket",
+        "ssl",
+        "subprocess",
+        "sys"
+      ],
+      "docstring": "Rudy Diagnostic Tool",
+      "last_modified": "2026-03-31T00:53:10.135308+00:00",
+      "size_bytes": 20422
+    },
+    {
+      "path": "scripts/rudy/rudy-gmail-api.py",
+      "lines": 412,
+      "imports": [
+        "base64",
+        "datetime",
+        "email",
+        "google",
+        "google_auth_oauthlib",
+        "googleapiclient",
+        "json",
+        "logging",
+        "os",
+        "pathlib",
+        "subprocess",
+        "sys",
+        "time",
+        "traceback"
+      ],
+      "docstring": "Rudy — Gmail API Listener (IMAP-free alternative)",
+      "last_modified": "2026-03-31T00:53:10.135308+00:00",
+      "size_bytes": 15397
+    },
+    {
+      "path": "scripts/rudy/rudy-stealth-browser.py",
+      "lines": 159,
+      "imports": [
+        "json",
+        "pathlib",
+        "playwright",
+        "playwright_stealth",
+        "pyotp",
+        "random",
+        "re",
+        "rudy",
+        "sys",
+        "time",
+        "twocaptcha"
+      ],
+      "docstring": "Rudy Stealth Browser - reusable module for bot-resistant Playwright automation.",
+      "last_modified": "2026-03-31T00:53:10.135308+00:00",
+      "size_bytes": 5234
+    },
+    {
+      "path": "scripts/rudy/rudy-suno-generate.py",
+      "lines": 47,
+      "imports": [
+        "json",
+        "pathlib",
+        "rudy_suno",
+        "sys"
+      ],
+      "docstring": "Rudy Suno Quick Generate — Drop-in script for the command runner.",
+      "last_modified": "2026-03-31T00:53:10.135308+00:00",
+      "size_bytes": 1442
+    },
+    {
+      "path": "scripts/rudy/rudy-suno.py",
+      "lines": 348,
+      "imports": [
+        "argparse",
+        "datetime",
+        "json",
+        "os",
+        "pathlib",
+        "requests",
+        "rudy",
+        "sys",
+        "time"
+      ],
+      "docstring": "Rudy Suno Integration — AI Music Generation for The Workhorse",
+      "last_modified": "2026-03-31T00:53:10.135308+00:00",
+      "size_bytes": 11998
+    },
+    {
+      "path": "scripts/run_lucius_audit.py",
+      "lines": 13,
+      "imports": [
+        "pathlib",
+        "rudy",
+        "sys"
+      ],
+      "docstring": "Run a full Lucius Fox audit. Portable — uses rudy.paths for all paths.",
+      "last_modified": "2026-03-31T00:53:10.135308+00:00",
+      "size_bytes": 388
+    },
+    {
+      "path": "scripts/workhorse/run-presence-scan.py",
+      "lines": 7,
+      "imports": [
+        "pathlib",
+        "rudy",
+        "sys"
+      ],
+      "docstring": "Run a WiFi presence scan — can be called standalone or by agents.",
+      "last_modified": "2026-03-31T00:53:10.136308+00:00",
+      "size_bytes": 227
+    },
+    {
+      "path": "scripts/workhorse/run-security-agent.py",
+      "lines": 7,
+      "imports": [
+        "pathlib",
+        "rudy",
+        "sys"
+      ],
+      "docstring": "Invoker for SecurityAgent — called by Task Scheduler every 30 min.",
+      "last_modified": "2026-03-31T00:53:10.136308+00:00",
+      "size_bytes": 272
+    },
+    {
+      "path": "scripts/workhorse/run-sentinel.py",
+      "lines": 7,
+      "imports": [
+        "pathlib",
+        "rudy",
+        "sys"
+      ],
+      "docstring": "Invoker for Sentinel agent — called by Task Scheduler every 15 min.",
+      "last_modified": "2026-03-31T00:53:10.136308+00:00",
+      "size_bytes": 246
+    },
+    {
+      "path": "scripts/workhorse/update-hosts-blocklist.py",
+      "lines": 59,
+      "imports": [
+        "datetime",
+        "httpx",
+        "json",
+        "os",
+        "pathlib",
+        "rudy",
+        "sys",
+        "time",
+        "urllib"
+      ],
+      "docstring": "Weekly hosts file blocklist update — refreshes DNS-level threat blocking.",
+      "last_modified": "2026-03-31T00:53:10.136308+00:00",
+      "size_bytes": 1884
+    },
+    {
+      "path": "scripts/workhorse/validate-research-feed.py",
+      "lines": 159,
+      "imports": [
+        "ast",
+        "os",
+        "pathlib",
+        "sys"
+      ],
+      "docstring": "Quick validation script for research feed system.",
+      "last_modified": "2026-03-31T00:53:10.136308+00:00",
+      "size_bytes": 4501
+    },
+    {
+      "path": "scripts/workhorse/workhorse-maintenance.py",
+      "lines": 219,
+      "imports": [
+        "datetime",
+        "json",
+        "logging",
+        "os",
+        "pathlib",
+        "rudy",
+        "shutil",
+        "subprocess",
+        "sys",
+        "time"
+      ],
+      "docstring": "The Workhorse — Scheduled Maintenance",
+      "last_modified": "2026-03-31T00:53:10.136308+00:00",
+      "size_bytes": 8100
+    },
+    {
+      "path": "scripts/workhorse/workhorse-research-feed.py",
+      "lines": 615,
+      "imports": [
+        "argparse",
+        "bs4",
+        "dataclasses",
+        "datetime",
+        "feedparser",
+        "hashlib",
+        "json",
+        "logging",
+        "os",
+        "pathlib",
+        "requests",
+        "sys",
+        "traceback",
+        "typing",
+        "urllib"
+      ],
+      "docstring": "Workhorse Research Feed System",
+      "last_modified": "2026-03-31T00:53:10.136308+00:00",
+      "size_bytes": 21595
+    },
+    {
+      "path": "scripts/workhorse/workhorse-subscribe.py",
+      "lines": 468,
+      "imports": [
+        "argparse",
+        "feedparser",
+        "json",
+        "logging",
+        "pathlib",
+        "requests",
+        "sys",
+        "traceback",
+        "typing",
+        "urllib"
+      ],
+      "docstring": "Workhorse Feed Subscription Manager",
+      "last_modified": "2026-03-31T00:53:10.136308+00:00",
+      "size_bytes": 15711
+    },
+    {
+      "path": "scripts/workhorse/workhorse-watchdog.py",
+      "lines": 334,
+      "imports": [
+        "datetime",
+        "json",
+        "logging",
+        "os",
+        "pathlib",
+        "rudy",
+        "subprocess",
+        "sys",
+        "time"
+      ],
+      "docstring": "The Workhorse — Watchdog Service",
+      "last_modified": "2026-03-31T00:53:10.137308+00:00",
+      "size_bytes": 11313
     }
   ],
   "agents": [
     {
-      "path": "rudy/agents/__init__.py",
-      "module": "Base Agent",
-      "lines": 200
+      "name": "system_master",
+      "module": "rudy/agents/system_master.py",
+      "exists": true,
+      "status": "unknown",
+      "last_run": null,
+      "last_duration_sec": null,
+      "lines": 266
+    },
+    {
+      "name": "security_agent",
+      "module": "rudy/agents/security_agent.py",
+      "exists": true,
+      "status": "unknown",
+      "last_run": null,
+      "last_duration_sec": null,
+      "lines": 549
+    },
+    {
+      "name": "sentinel",
+      "module": "rudy/agents/sentinel.py",
+      "exists": true,
+      "status": "unknown",
+      "last_run": null,
+      "last_duration_sec": null,
+      "lines": 1171
+    },
+    {
+      "name": "task_master",
+      "module": "rudy/agents/task_master.py",
+      "exists": true,
+      "status": "unknown",
+      "last_run": null,
+      "last_duration_sec": null,
+      "lines": 145
+    },
+    {
+      "name": "research_intel",
+      "module": "rudy/agents/research_intel.py",
+      "exists": true,
+      "status": "unknown",
+      "last_run": null,
+      "last_duration_sec": null,
+      "lines": 897
+    },
+    {
+      "name": "operations_monitor",
+      "module": "rudy/agents/operations_monitor.py",
+      "exists": true,
+      "status": "unknown",
+      "last_run": null,
+      "last_duration_sec": null,
+      "lines": 186
+    },
+    {
+      "name": "lucius_fox",
+      "module": "rudy/agents/lucius_fox.py",
+      "exists": true,
+      "status": "unknown",
+      "last_run": null,
+      "last_duration_sec": null,
+      "lines": 1687
+    }
+  ],
+  "skills": [
+    {
+      "name": "docx",
+      "type": "core",
+      "triggers": [
+        "word",
+        "docx",
+        "report",
+        "memo"
+      ]
+    },
+    {
+      "name": "pptx",
+      "type": "core",
+      "triggers": [
+        "powerpoint",
+        "pptx",
+        "slides",
+        "deck"
+      ]
+    },
+    {
+      "name": "xlsx",
+      "type": "core",
+      "triggers": [
+        "excel",
+        "xlsx",
+        "spreadsheet",
+        "budget"
+      ]
+    },
+    {
+      "name": "pdf",
+      "type": "core",
+      "triggers": [
+        "pdf",
+        "form",
+        "extract",
+        "merge"
+      ]
+    },
+    {
+      "name": "schedule",
+      "type": "core",
+      "triggers": [
+        "schedule",
+        "recurring",
+        "cron"
+      ]
+    },
+    {
+      "name": "skill-creator",
+      "type": "core",
+      "triggers": [
+        "create skill",
+        "optimize skill"
+      ]
+    },
+    {
+      "name": "research-brief",
+      "type": "core",
+      "triggers": [
+        "research",
+        "investigate",
+        "brief"
+      ]
+    },
+    {
+      "name": "code-runner",
+      "type": "core",
+      "triggers": [
+        "code",
+        "script",
+        "execute"
+      ]
+    },
+    {
+      "name": "engineering:standup",
+      "type": "plugin",
+      "plugin": "Engineering"
+    },
+    {
+      "name": "engineering:code-review",
+      "type": "plugin",
+      "plugin": "Engineering"
+    },
+    {
+      "name": "engineering:architecture",
+      "type": "plugin",
+      "plugin": "Engineering"
+    },
+    {
+      "name": "engineering:incident-response",
+      "type": "plugin",
+      "plugin": "Engineering"
+    },
+    {
+      "name": "engineering:debug",
+      "type": "plugin",
+      "plugin": "Engineering"
+    },
+    {
+      "name": "engineering:deploy-checklist",
+      "type": "plugin",
+      "plugin": "Engineering"
+    },
+    {
+      "name": "engineering:testing-strategy",
+      "type": "plugin",
+      "plugin": "Engineering"
+    },
+    {
+      "name": "engineering:tech-debt",
+      "type": "plugin",
+      "plugin": "Engineering"
+    },
+    {
+      "name": "engineering:system-design",
+      "type": "plugin",
+      "plugin": "Engineering"
+    },
+    {
+      "name": "engineering:documentation",
+      "type": "plugin",
+      "plugin": "Engineering"
+    },
+    {
+      "name": "productivity:memory-management",
+      "type": "plugin",
+      "plugin": "Productivity"
+    },
+    {
+      "name": "productivity:start",
+      "type": "plugin",
+      "plugin": "Productivity"
+    },
+    {
+      "name": "productivity:task-management",
+      "type": "plugin",
+      "plugin": "Productivity"
+    },
+    {
+      "name": "productivity:update",
+      "type": "plugin",
+      "plugin": "Productivity"
+    },
+    {
+      "name": "operations:capacity-plan",
+      "type": "plugin",
+      "plugin": "Operations"
+    },
+    {
+      "name": "operations:change-request",
+      "type": "plugin",
+      "plugin": "Operations"
+    },
+    {
+      "name": "operations:compliance-tracking",
+      "type": "plugin",
+      "plugin": "Operations"
+    },
+    {
+      "name": "operations:process-doc",
+      "type": "plugin",
+      "plugin": "Operations"
+    },
+    {
+      "name": "operations:process-optimization",
+      "type": "plugin",
+      "plugin": "Operations"
+    },
+    {
+      "name": "operations:risk-assessment",
+      "type": "plugin",
+      "plugin": "Operations"
+    },
+    {
+      "name": "operations:runbook",
+      "type": "plugin",
+      "plugin": "Operations"
+    },
+    {
+      "name": "operations:status-report",
+      "type": "plugin",
+      "plugin": "Operations"
+    },
+    {
+      "name": "operations:vendor-review",
+      "type": "plugin",
+      "plugin": "Operations"
+    },
+    {
+      "name": "legal:brief",
+      "type": "plugin",
+      "plugin": "Legal"
+    },
+    {
+      "name": "legal:compliance-check",
+      "type": "plugin",
+      "plugin": "Legal"
+    },
+    {
+      "name": "legal:legal-response",
+      "type": "plugin",
+      "plugin": "Legal"
+    },
+    {
+      "name": "legal:legal-risk-assessment",
+      "type": "plugin",
+      "plugin": "Legal"
+    },
+    {
+      "name": "legal:meeting-briefing",
+      "type": "plugin",
+      "plugin": "Legal"
+    },
+    {
+      "name": "legal:review-contract",
+      "type": "plugin",
+      "plugin": "Legal"
+    },
+    {
+      "name": "legal:signature-request",
+      "type": "plugin",
+      "plugin": "Legal"
+    },
+    {
+      "name": "legal:triage-nda",
+      "type": "plugin",
+      "plugin": "Legal"
+    },
+    {
+      "name": "legal:vendor-check",
+      "type": "plugin",
+      "plugin": "Legal"
+    },
+    {
+      "name": "data:analyze",
+      "type": "plugin",
+      "plugin": "Data"
+    },
+    {
+      "name": "data:build-dashboard",
+      "type": "plugin",
+      "plugin": "Data"
+    },
+    {
+      "name": "data:create-viz",
+      "type": "plugin",
+      "plugin": "Data"
+    },
+    {
+      "name": "data:explore-data",
+      "type": "plugin",
+      "plugin": "Data"
+    },
+    {
+      "name": "data:sql-queries",
+      "type": "plugin",
+      "plugin": "Data"
+    },
+    {
+      "name": "data:statistical-analysis",
+      "type": "plugin",
+      "plugin": "Data"
+    },
+    {
+      "name": "data:validate-data",
+      "type": "plugin",
+      "plugin": "Data"
+    },
+    {
+      "name": "data:write-query",
+      "type": "plugin",
+      "plugin": "Data"
+    },
+    {
+      "name": "finance:audit-support",
+      "type": "plugin",
+      "plugin": "Finance"
+    },
+    {
+      "name": "finance:close-management",
+      "type": "plugin",
+      "plugin": "Finance"
+    },
+    {
+      "name": "finance:financial-statements",
+      "type": "plugin",
+      "plugin": "Finance"
+    },
+    {
+      "name": "finance:journal-entry",
+      "type": "plugin",
+      "plugin": "Finance"
+    },
+    {
+      "name": "finance:reconciliation",
+      "type": "plugin",
+      "plugin": "Finance"
+    },
+    {
+      "name": "finance:sox-testing",
+      "type": "plugin",
+      "plugin": "Finance"
+    },
+    {
+      "name": "finance:variance-analysis",
+      "type": "plugin",
+      "plugin": "Finance"
+    }
+  ],
+  "mcps": [
+    {
+      "name": "brave-search",
+      "tier": "OPTIONAL",
+      "source": "lucius_mcp_tiers.yml"
+    },
+    {
+      "name": "chrome",
+      "tier": "OPTIONAL",
+      "source": "lucius_mcp_tiers.yml"
+    },
+    {
+      "name": "context7",
+      "tier": "OPTIONAL",
+      "source": "lucius_mcp_tiers.yml"
+    },
+    {
+      "name": "desktop-commander",
+      "tier": "CRITICAL",
+      "source": "lucius_mcp_tiers.yml"
+    },
+    {
+      "name": "github",
+      "tier": "CRITICAL",
+      "source": "lucius_mcp_tiers.yml"
+    },
+    {
+      "name": "gmail",
+      "tier": "IMPORTANT",
+      "source": "lucius_mcp_tiers.yml"
+    },
+    {
+      "name": "google-calendar",
+      "tier": "IMPORTANT",
+      "source": "lucius_mcp_tiers.yml"
+    },
+    {
+      "name": "huggingface",
+      "tier": "OPTIONAL",
+      "source": "lucius_mcp_tiers.yml"
+    },
+    {
+      "name": "notion",
+      "tier": "IMPORTANT",
+      "source": "lucius_mcp_tiers.yml"
+    },
+    {
+      "name": "windows-mcp",
+      "tier": "IMPORTANT",
+      "source": "lucius_mcp_tiers.yml"
+    }
+  ],
+  "scheduled_tasks": [
+    {
+      "name": "RudySystemMaster",
+      "schedule": "Every 5 min",
+      "agent": "system_master"
+    },
+    {
+      "name": "RudySecurityAgent",
+      "schedule": "Every 30 min",
+      "agent": "security_agent"
+    },
+    {
+      "name": "RudySentinel",
+      "schedule": "Every 15 min",
+      "agent": "sentinel"
+    },
+    {
+      "name": "RudyMorningBriefing",
+      "schedule": "Daily 7:30 AM",
+      "agent": "task_master"
+    },
+    {
+      "name": "RudyResearchDigest",
+      "schedule": "Daily 6 AM",
+      "agent": "research_intel"
+    },
+    {
+      "name": "RudySelfImprove-Mon/Wed/Fri",
+      "schedule": "M/W/F 10 AM",
+      "agent": "research_intel"
+    },
+    {
+      "name": "RudyWeeklyMaintenance",
+      "schedule": "Sunday 4 AM",
+      "agent": "operations_monitor"
+    },
+    {
+      "name": "RustDeskWatchdog",
+      "schedule": "Every 2 min",
+      "agent": "system"
+    },
+    {
+      "name": "TailscaleKeepalive",
+      "schedule": "Every 5 min",
+      "agent": "system"
+    },
+    {
+      "name": "ConnectionMonitor",
+      "schedule": "Every 5 min",
+      "agent": "system"
+    },
+    {
+      "name": "AutoGitPush",
+      "schedule": "Daily 11:59 PM",
+      "agent": "system"
     }
   ],
   "stats": {
-    "total_lines": 9847,
-    "total_agents": 5,
-    "total_skills": 12,
-    "total_mcps": 3
+    "total_files": 111,
+    "total_lines": 43627,
+    "total_agents": 7,
+    "total_skills": 55,
+    "total_mcps": 10,
+    "total_scheduled_tasks": 11,
+    "scan_duration_sec": 0.386
   }
 }
