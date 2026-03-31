@@ -111,6 +111,14 @@ Custom code is a **liability**, not an asset. Every line we write is a line we m
 
 All session records, findings, and institutional knowledge MUST be written to the **BatcaveVault** (`vault/`). HandoffWriter handles session records automatically. ADRs → `vault/Architecture/`. Protocols → `vault/Protocols/`. Sessions → `vault/Sessions/`. Never scatter records without also writing to the vault.
 
+## Known Workarounds (Hot)
+
+| Bug | Workaround |
+|-----|-----------|
+| **DC read_file returns metadata-only** (LG-S34-003) | Write a Python helper script to `rudy-data/` and execute via `start_process`. Do NOT call `read_file` repeatedly hoping it works. |
+| **CMD mangles Python -c quotes** | Write `.py` scripts to `rudy-data/` and execute. Never use inline Python via CMD. |
+| **PR/merge is Robin's job** (LG-S35-002) | Do not burn Alfred tokens on lint fixes, CI monitoring, or merge mechanics. Delegate to Robin or use the git-ci-fix-and-merge skill. |
+
 ## Engineering Principles
 
 1. **Best-in-Class First** — Search for existing open-source tools BEFORE building. Evaluate at least 3 candidates. Only build custom if no existing solution fits. Document the search in Notion Improvement Log.

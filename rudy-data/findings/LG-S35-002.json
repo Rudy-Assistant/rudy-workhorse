@@ -1,0 +1,9 @@
+{
+  "id": "LG-S35-002",
+  "severity": "HIGH",
+  "session": 35,
+  "title": "PR/merge flow should be a Robin skill, not Alfred work",
+  "description": "Every session burns 30%+ of Alfred tokens on the same PR check/fix/push/wait/merge cycle. This is mechanical local work that Robin can and should own via a skill.",
+  "fix": "Create a Robin skill: git-ci-fix-and-merge. Robin runs ruff locally, fixes lint, pushes, monitors CI, merges when green. Alfred only intervenes for design decisions.",
+  "status": "OPEN"
+}

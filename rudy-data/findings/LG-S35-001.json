@@ -1,0 +1,9 @@
+{
+  "id": "LG-S35-001",
+  "severity": "HIGH",
+  "session": 35,
+  "title": "Alfred wastes tokens re-confirming known bugs",
+  "description": "Alfred called Desktop Commander read_file 5+ times despite LG-S34-003 being listed as RECURRING in the session prompt. Also re-confirmed known CI failures instead of trusting handoff. Institutional knowledge transmission is useless if the receiver ignores it to verify independently.",
+  "fix": "1. Add DC read_file workaround to CLAUDE.md hot cache. 2. At session start, parse known findings and skip re-diagnosis. 3. Encode fallback patterns so Alfred uses scripts from cycle 1.",
+  "status": "OPEN"
+}
