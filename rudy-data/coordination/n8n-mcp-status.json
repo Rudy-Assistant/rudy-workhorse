@@ -1,0 +1,17 @@
+{
+  "n8n_installed": false,
+  "claude_config_exists": true,
+  "n8n_already_configured": false,
+  "env_vars_set": false,
+  "actions_taken": [],
+  "actions_needed": [
+    "Install the n8n binary",
+    "Set N8N_API_URL and N8N_API_KEY environment variables",
+    "Add n8n-mcp to claude_desktop_config.json"
+  ],
+  "config_merge_ready": false,
+  "proposed_config_merge": null,
+  "analyzed_at": "2026-03-31T00:20:24",
+  "analyzed_by": "Robin (qwen2.5:7b via Ollama)",
+  "lg_number": "LG-033"
+}

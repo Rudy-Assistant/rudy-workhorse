@@ -28,7 +28,7 @@ Christopher M. Cimino (ccimino2@gmail.com). Attorney — California State Bar #2
 | **Local IP** | 192.168.7.25 |
 | **Python** | 3.12 (WSL) / C:\Python312\python.exe (Windows) |
 | **Node** | v24.14.1 |
-| **Local AI** | Ollama v0.18.3 (phi3:mini) |
+| **Local AI** | Ollama v0.18.3 (qwen2.5:7b, deepseek-r1:8b) |
 
 → Full specs, auto-recovery, resilience stack, WSL tools: `memory/context/machine-oracle.md`
 

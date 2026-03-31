@@ -21,7 +21,7 @@
         "subprocess",
         "time"
       ],
-      "docstring": "Admin Helper — run commands with elevated privileges.",
+      "docstring": "Admin Helper \u00e2\u20ac\u201d run commands with elevated privileges.",
       "last_modified": "2026-03-31T00:53:10.117308+00:00",
       "size_bytes": 2890
     },
@@ -39,7 +39,7 @@
         "time",
         "traceback"
       ],
-      "docstring": "Base Agent — common infrastructure for all Workhorse agents.",
+      "docstring": "Base Agent \u00e2\u20ac\u201d common infrastructure for all Workhorse agents.",
       "last_modified": "2026-03-31T01:02:40.250611+00:00",
       "size_bytes": 7592
     },
@@ -59,7 +59,7 @@
         "time",
         "typing"
       ],
-      "docstring": "Lucius Findings Tracker — Persistent cross-session finding management.",
+      "docstring": "Lucius Findings Tracker \u00e2\u20ac\u201d Persistent cross-session finding management.",
       "last_modified": "2026-03-31T01:02:40.250611+00:00",
       "size_bytes": 18026
     },
@@ -78,7 +78,7 @@
         "sys",
         "typing"
       ],
-      "docstring": "Lucius Fox — The Batcave's Librarian, Gatekeeper, and Quality Conscience.",
+      "docstring": "Lucius Fox \u00e2\u20ac\u201d The Batcave's Librarian, Gatekeeper, and Quality Conscience.",
       "last_modified": "2026-03-31T01:02:40.251611+00:00",
       "size_bytes": 77416
     },
@@ -102,7 +102,7 @@
         "urllib",
         "yaml"
       ],
-      "docstring": "Lucius Gate – Session governance with circuit breakers and degraded-mode fallbacks.",
+      "docstring": "Lucius Gate \u00e2\u20ac\u201c Session governance with circuit breakers and degraded-mode fallbacks.",
       "last_modified": "2026-03-31T01:02:40.252611+00:00",
       "size_bytes": 37979
     },
@@ -122,7 +122,7 @@
         "typing",
         "yaml"
       ],
-      "docstring": "Lucius Registry — Phase 2: Living Registry (ADR-004 v2.0)",
+      "docstring": "Lucius Registry \u00e2\u20ac\u201d Phase 2: Living Registry (ADR-004 v2.0)",
       "last_modified": "2026-03-31T01:02:40.252611+00:00",
       "size_bytes": 27413
     },
@@ -137,7 +137,7 @@
         "pathlib",
         "typing"
       ],
-      "docstring": "Lucius Scorer — Phase 3: Capability Maximization (ADR-004 v2.0)",
+      "docstring": "Lucius Scorer \u00e2\u20ac\u201d Phase 3: Capability Maximization (ADR-004 v2.0)",
       "last_modified": "2026-03-31T01:02:40.253611+00:00",
       "size_bytes": 15832
     },
@@ -155,7 +155,7 @@
         "time",
         "typing"
       ],
-      "docstring": "Lucius Waste Detection — Phase 3: Stale artifacts, orphaned code, duplicates.",
+      "docstring": "Lucius Waste Detection \u00e2\u20ac\u201d Phase 3: Stale artifacts, orphaned code, duplicates.",
       "last_modified": "2026-03-31T01:02:40.253611+00:00",
       "size_bytes": 9811
     },
@@ -169,7 +169,7 @@
         "subprocess",
         "sys"
       ],
-      "docstring": "OperationsMonitor — System Maintenance & Cleanup Agent.",
+      "docstring": "OperationsMonitor \u00e2\u20ac\u201d System Maintenance & Cleanup Agent.",
       "last_modified": "2026-03-31T00:53:10.118308+00:00",
       "size_bytes": 6395
     },
@@ -188,7 +188,7 @@
         "trafilatura",
         "urllib"
       ],
-      "docstring": "ResearchIntel — Intelligence & Learning Agent.",
+      "docstring": "ResearchIntel \u00e2\u20ac\u201d Intelligence & Learning Agent.",
       "last_modified": "2026-03-31T00:53:10.118308+00:00",
       "size_bytes": 39265
     },
@@ -210,7 +210,7 @@
         "time",
         "urllib"
       ],
-      "docstring": "Robin Bridge — Polls alfred-skills/docs/robin-tasks/ for pending tasks from Alfred.",
+      "docstring": "Robin Bridge \u00e2\u20ac\u201d Polls alfred-skills/docs/robin-tasks/ for pending tasks from Alfred.",
       "last_modified": "2026-03-31T00:53:10.118308+00:00",
       "size_bytes": 17785
     },
@@ -252,7 +252,7 @@
         "time",
         "typing"
       ],
-      "docstring": "Robin Sentinel — The Batcave's Immune System + Night Shift Operator",
+      "docstring": "Robin Sentinel \u00e2\u20ac\u201d The Batcave's Immune System + Night Shift Operator",
       "last_modified": "2026-03-31T00:53:10.119308+00:00",
       "size_bytes": 32060
     },
@@ -269,7 +269,7 @@
         "rudy",
         "sys"
       ],
-      "docstring": "Unified Agent Runner — bridges scheduled tasks, command runner, and Cowork to the sub-agent system.",
+      "docstring": "Unified Agent Runner \u00e2\u20ac\u201d bridges scheduled tasks, command runner, and Cowork to the sub-agent system.",
       "last_modified": "2026-03-31T00:53:10.119308+00:00",
       "size_bytes": 7233
     },
@@ -287,7 +287,7 @@
         "rudy",
         "subprocess"
       ],
-      "docstring": "SecurityAgent — Defensive Intelligence & Threat Detection.",
+      "docstring": "SecurityAgent \u00e2\u20ac\u201d Defensive Intelligence & Threat Detection.",
       "last_modified": "2026-03-31T00:53:10.119308+00:00",
       "size_bytes": 21890
     },
@@ -305,7 +305,7 @@
         "time",
         "urllib"
       ],
-      "docstring": "Sentinel — The Trickle Agent.",
+      "docstring": "Sentinel \u00e2\u20ac\u201d The Trickle Agent.",
       "last_modified": "2026-03-31T01:02:40.254611+00:00",
       "size_bytes": 50427
     },
@@ -321,7 +321,7 @@
         "sys",
         "tabulate"
       ],
-      "docstring": "SystemMaster — Machine Health & Recovery Agent.",
+      "docstring": "SystemMaster \u00e2\u20ac\u201d Machine Health & Recovery Agent.",
       "last_modified": "2026-03-31T00:53:10.120308+00:00",
       "size_bytes": 10225
     },
@@ -334,7 +334,7 @@
         "rudy",
         "sys"
       ],
-      "docstring": "TaskMaster — Work Execution & Coordination Agent.",
+      "docstring": "TaskMaster \u00e2\u20ac\u201d Work Execution & Coordination Agent.",
       "last_modified": "2026-03-31T00:53:10.120308+00:00",
       "size_bytes": 5768
     },
@@ -352,7 +352,7 @@
         "time",
         "uvicorn"
       ],
-      "docstring": "Rudy API Server — Webhook receiver and REST API for inbound automation.",
+      "docstring": "Rudy API Server \u00e2\u20ac\u201d Webhook receiver and REST API for inbound automation.",
       "last_modified": "2026-03-31T00:53:10.120308+00:00",
       "size_bytes": 10240
     },
@@ -376,7 +376,7 @@
         "torch",
         "typing"
       ],
-      "docstring": "Digital Avatar — Face swap, talking-head video, and digital presenter creation.",
+      "docstring": "Digital Avatar \u00e2\u20ac\u201d Face swap, talking-head video, and digital presenter creation.",
       "last_modified": "2026-03-31T00:53:10.120308+00:00",
       "size_bytes": 21060
     },
@@ -412,7 +412,7 @@
         "sys",
         "time"
       ],
-      "docstring": "Rudy Auth Fix — Playwright-based Google Account Checker",
+      "docstring": "Rudy Auth Fix \u00e2\u20ac\u201d Playwright-based Google Account Checker",
       "last_modified": "2026-03-31T00:53:10.120308+00:00",
       "size_bytes": 14345
     },
@@ -429,7 +429,7 @@
         "sys",
         "time"
       ],
-      "docstring": "Rudy Command Runner — Cowork-to-Windows Bridge",
+      "docstring": "Rudy Command Runner \u00e2\u20ac\u201d Cowork-to-Windows Bridge",
       "last_modified": "2026-03-31T00:53:10.120308+00:00",
       "size_bytes": 5462
     },
@@ -453,7 +453,7 @@
         "time",
         "traceback"
       ],
-      "docstring": "Rudy — Gmail API Listener (IMAP-free alternative)",
+      "docstring": "Rudy \u00e2\u20ac\u201d Gmail API Listener (IMAP-free alternative)",
       "last_modified": "2026-03-31T00:53:10.120308+00:00",
       "size_bytes": 15341
     },
@@ -477,7 +477,7 @@
         "time",
         "traceback"
       ],
-      "docstring": "Rudy — Family Assistant Email Listener v2.0",
+      "docstring": "Rudy \u00e2\u20ac\u201d Family Assistant Email Listener v2.0",
       "last_modified": "2026-03-31T00:53:10.120308+00:00",
       "size_bytes": 24433
     },
@@ -514,7 +514,7 @@
         "smtplib",
         "typing"
       ],
-      "docstring": "Multi-Provider Email Backend — Resilient email for Rudy.",
+      "docstring": "Multi-Provider Email Backend \u00e2\u20ac\u201d Resilient email for Rudy.",
       "last_modified": "2026-03-31T00:53:10.121308+00:00",
       "size_bytes": 13454
     },
@@ -577,7 +577,7 @@
         "typing",
         "yfinance"
       ],
-      "docstring": "Financial Intelligence Module — Market data, portfolio tracking, economic alerts.",
+      "docstring": "Financial Intelligence Module \u00e2\u20ac\u201d Market data, portfolio tracking, economic alerts.",
       "last_modified": "2026-03-31T00:53:10.121308+00:00",
       "size_bytes": 12243
     },
@@ -596,7 +596,7 @@
         "sys",
         "typing"
       ],
-      "docstring": "Find My — iCloud location monitoring for family safety.",
+      "docstring": "Find My \u00e2\u20ac\u201d iCloud location monitoring for family safety.",
       "last_modified": "2026-03-31T00:53:10.122308+00:00",
       "size_bytes": 27142
     },
@@ -617,7 +617,7 @@
         "time",
         "typing"
       ],
-      "docstring": "Human Behavior Simulation — Natural interaction patterns for browser automation.",
+      "docstring": "Human Behavior Simulation \u00e2\u20ac\u201d Natural interaction patterns for browser automation.",
       "last_modified": "2026-03-31T00:53:10.122308+00:00",
       "size_bytes": 50369
     },
@@ -653,7 +653,7 @@
         "rudy_suno",
         "sys"
       ],
-      "docstring": "Rudy Suno Quick Generate — Drop-in script for the command runner.",
+      "docstring": "Rudy Suno Quick Generate \u00e2\u20ac\u201d Drop-in script for the command runner.",
       "last_modified": "2026-03-31T00:53:10.122308+00:00",
       "size_bytes": 1442
     },
@@ -669,7 +669,7 @@
         "rudy",
         "sys"
       ],
-      "docstring": "Rudy Suno Integration — AI Music Generation for The Workhorse",
+      "docstring": "Rudy Suno Integration \u00e2\u20ac\u201d AI Music Generation for The Workhorse",
       "last_modified": "2026-03-31T00:53:10.122308+00:00",
       "size_bytes": 11854
     },
@@ -685,7 +685,7 @@
         "rudy",
         "subprocess"
       ],
-      "docstring": "Intruder Profiler — Counter-espionage device intelligence for high-threat networks.",
+      "docstring": "Intruder Profiler \u00e2\u20ac\u201d Counter-espionage device intelligence for high-threat networks.",
       "last_modified": "2026-03-31T00:53:10.122308+00:00",
       "size_bytes": 18852
     },
@@ -705,7 +705,7 @@
         "time",
         "typing"
       ],
-      "docstring": "Knowledge Base Engine — Semantic search over all Rudy data.",
+      "docstring": "Knowledge Base Engine \u00e2\u20ac\u201d Semantic search over all Rudy data.",
       "last_modified": "2026-03-31T00:53:10.122308+00:00",
       "size_bytes": 13120
     },
@@ -725,7 +725,7 @@
         "typing",
         "urllib"
       ],
-      "docstring": "Local AI Engine — Offline intelligence for The Workhorse.",
+      "docstring": "Local AI Engine \u00e2\u20ac\u201d Offline intelligence for The Workhorse.",
       "last_modified": "2026-03-31T00:53:10.123308+00:00",
       "size_bytes": 24772
     },
@@ -739,7 +739,7 @@
         "pathlib",
         "rudy"
       ],
-      "docstring": "Movement Feed — Real-time activity and movement timeline from network presence data.",
+      "docstring": "Movement Feed \u00e2\u20ac\u201d Real-time activity and movement timeline from network presence data.",
       "last_modified": "2026-03-31T00:53:10.123308+00:00",
       "size_bytes": 15605
     },
@@ -759,7 +759,7 @@
         "socket",
         "subprocess"
       ],
-      "docstring": "Network Defense Module — Defensive countermeasures for The Workhorse.",
+      "docstring": "Network Defense Module \u00e2\u20ac\u201d Defensive countermeasures for The Workhorse.",
       "last_modified": "2026-03-31T00:53:10.123308+00:00",
       "size_bytes": 28196
     },
@@ -779,7 +779,7 @@
         "textblob",
         "typing"
       ],
-      "docstring": "NLP Module — Natural language processing for command understanding,",
+      "docstring": "NLP Module \u00e2\u20ac\u201d Natural language processing for command understanding,",
       "last_modified": "2026-03-31T00:53:10.123308+00:00",
       "size_bytes": 9624
     },
@@ -797,7 +797,7 @@
         "sys",
         "typing"
       ],
-      "docstring": "Obsolescence Monitor — Periodic capability audit, tool freshness checks,",
+      "docstring": "Obsolescence Monitor \u00e2\u20ac\u201d Periodic capability audit, tool freshness checks,",
       "last_modified": "2026-03-31T00:53:10.123308+00:00",
       "size_bytes": 19718
     },
@@ -821,7 +821,7 @@
         "striprtf",
         "typing"
       ],
-      "docstring": "OCR & Document Intelligence — Extract text from images, PDFs, documents.",
+      "docstring": "OCR & Document Intelligence \u00e2\u20ac\u201d Extract text from images, PDFs, documents.",
       "last_modified": "2026-03-31T00:53:10.123308+00:00",
       "size_bytes": 10315
     },
@@ -839,7 +839,7 @@
         "time",
         "typing"
       ],
-      "docstring": "Offline Operations Controller — Autonomous operation during internet outages.",
+      "docstring": "Offline Operations Controller \u00e2\u20ac\u201d Autonomous operation during internet outages.",
       "last_modified": "2026-03-31T00:53:10.123308+00:00",
       "size_bytes": 15110
     },
@@ -873,7 +873,7 @@
         "time",
         "typing"
       ],
-      "docstring": "Phone Check — Professional-grade mobile device security scanning.",
+      "docstring": "Phone Check \u00e2\u20ac\u201d Professional-grade mobile device security scanning.",
       "last_modified": "2026-03-31T00:53:10.124308+00:00",
       "size_bytes": 63211
     },
@@ -895,7 +895,7 @@
         "time",
         "typing"
       ],
-      "docstring": "Photo Intelligence — EXIF metadata analysis, GPS extraction, timeline",
+      "docstring": "Photo Intelligence \u00e2\u20ac\u201d EXIF metadata analysis, GPS extraction, timeline",
       "last_modified": "2026-03-31T00:53:10.124308+00:00",
       "size_bytes": 27267
     },
@@ -913,7 +913,7 @@
         "subprocess",
         "time"
       ],
-      "docstring": "WiFi Presence Monitor — tracks devices on the local network.",
+      "docstring": "WiFi Presence Monitor \u00e2\u20ac\u201d tracks devices on the local network.",
       "last_modified": "2026-03-31T00:53:10.124308+00:00",
       "size_bytes": 14106
     },
@@ -929,7 +929,7 @@
         "pathlib",
         "rudy"
       ],
-      "docstring": "Presence Analytics Engine — Device identification and ownership inference",
+      "docstring": "Presence Analytics Engine \u00e2\u20ac\u201d Device identification and ownership inference",
       "last_modified": "2026-03-31T00:53:10.125308+00:00",
       "size_bytes": 37421
     },
@@ -989,7 +989,7 @@
         "os",
         "rudy"
       ],
-      "docstring": "Robin Agent Loader — feature-flag switch between v1 (manual loop) and v2 (LangGraph).",
+      "docstring": "Robin Agent Loader \u00e2\u20ac\u201d feature-flag switch between v1 (manual loop) and v2 (LangGraph).",
       "last_modified": "2026-03-31T00:53:10.125308+00:00",
       "size_bytes": 1141
     },
@@ -1050,7 +1050,7 @@
       "path": "rudy/robin_cowork_launcher.py",
       "lines": 20,
       "imports": [],
-      "docstring": "DISCARDED (2026-03-29) — Per Lucius Build Process Audit.",
+      "docstring": "DISCARDED (2026-03-29) \u00e2\u20ac\u201d Per Lucius Build Process Audit.",
       "last_modified": "2026-03-31T00:53:10.126308+00:00",
       "size_bytes": 610
     },
@@ -1082,7 +1082,7 @@
         "sys",
         "time"
       ],
-      "docstring": "Robin Liveness Protocol — Heartbeat, status, and auto-recovery.",
+      "docstring": "Robin Liveness Protocol \u00e2\u20ac\u201d Heartbeat, status, and auto-recovery.",
       "last_modified": "2026-03-31T00:53:10.127308+00:00",
       "size_bytes": 11326
     },
@@ -1175,7 +1175,7 @@
         "typing",
         "uuid"
       ],
-      "docstring": "Robin Task Queue — Extended Absence Operating Framework.",
+      "docstring": "Robin Task Queue \u00e2\u20ac\u201d Extended Absence Operating Framework.",
       "last_modified": "2026-03-31T01:02:40.254611+00:00",
       "size_bytes": 27174,
       "description": " Session 29: added health_check, security_scan, shell task types."
@@ -1207,7 +1207,7 @@
         "time",
         "typing"
       ],
-      "docstring": "Surveillance — Video camera integration for security monitoring.",
+      "docstring": "Surveillance \u00e2\u20ac\u201d Video camera integration for security monitoring.",
       "last_modified": "2026-03-31T00:53:10.131308+00:00",
       "size_bytes": 21279
     },
@@ -1264,7 +1264,7 @@
         "typing",
         "urllib"
       ],
-      "docstring": "Notion Client for Robin — Read/write access to the Bat Family's shared knowledge.",
+      "docstring": "Notion Client for Robin \u00e2\u20ac\u201d Read/write access to the Bat Family's shared knowledge.",
       "last_modified": "2026-03-31T00:53:10.132308+00:00",
       "size_bytes": 10030
     },
@@ -1280,7 +1280,7 @@
         "smtplib",
         "sys"
       ],
-      "docstring": "Rudy Complete Setup — Run this after enabling IMAP in Gmail settings.",
+      "docstring": "Rudy Complete Setup \u00e2\u20ac\u201d Run this after enabling IMAP in Gmail settings.",
       "last_modified": "2026-03-31T00:53:10.132308+00:00",
       "size_bytes": 2717
     },
@@ -1324,7 +1324,7 @@
         "subprocess",
         "time"
       ],
-      "docstring": "Travel Mode — Portable network intelligence for The Workhorse.",
+      "docstring": "Travel Mode \u00e2\u20ac\u201d Portable network intelligence for The Workhorse.",
       "last_modified": "2026-03-31T00:53:10.133308+00:00",
       "size_bytes": 26998
     },
@@ -1345,7 +1345,7 @@
         "time",
         "typing"
       ],
-      "docstring": "USB Quarantine — Full quarantine protocol for unknown devices.",
+      "docstring": "USB Quarantine \u00e2\u20ac\u201d Full quarantine protocol for unknown devices.",
       "last_modified": "2026-03-31T00:53:10.133308+00:00",
       "size_bytes": 41974
     },
@@ -1364,7 +1364,7 @@
         "typing",
         "whisper"
       ],
-      "docstring": "Voice & Audio Module — Text-to-speech, speech-to-text, audio processing.",
+      "docstring": "Voice & Audio Module \u00e2\u20ac\u201d Text-to-speech, speech-to-text, audio processing.",
       "last_modified": "2026-03-31T00:53:10.133308+00:00",
       "size_bytes": 9606
     },
@@ -1390,7 +1390,7 @@
         "time",
         "typing"
       ],
-      "docstring": "Voice Clone — Voice cloning, custom character voices, and memorial voice recreation.",
+      "docstring": "Voice Clone \u00e2\u20ac\u201d Voice cloning, custom character voices, and memorial voice recreation.",
       "last_modified": "2026-03-31T00:53:10.133308+00:00",
       "size_bytes": 24534
     },
@@ -1416,7 +1416,7 @@
         "urllib",
         "whois"
       ],
-      "docstring": "Web Intelligence Module — Smart web scraping, article extraction,",
+      "docstring": "Web Intelligence Module \u00e2\u20ac\u201d Smart web scraping, article extraction,",
       "last_modified": "2026-03-31T00:53:10.133308+00:00",
       "size_bytes": 14459
     },
@@ -1430,7 +1430,7 @@
         "pathlib",
         "rudy"
       ],
-      "docstring": "Wellness Monitor — Family safety through network presence intelligence.",
+      "docstring": "Wellness Monitor \u00e2\u20ac\u201d Family safety through network presence intelligence.",
       "last_modified": "2026-03-31T00:53:10.133308+00:00",
       "size_bytes": 14863
     },
@@ -1438,7 +1438,7 @@
       "path": "rudy/workflows/__init__.py",
       "lines": 7,
       "imports": [],
-      "docstring": "rudy.workflows — Composable operational workflows.",
+      "docstring": "rudy.workflows \u00e2\u20ac\u201d Composable operational workflows.",
       "last_modified": "2026-03-31T00:53:10.133308+00:00",
       "size_bytes": 196
     },
@@ -1454,7 +1454,7 @@
         "rudy",
         "sys"
       ],
-      "docstring": "Automated Handoff Protocol — Continuity loop between Alfred sessions.",
+      "docstring": "Automated Handoff Protocol \u00e2\u20ac\u201d Continuity loop between Alfred sessions.",
       "last_modified": "2026-03-31T01:02:40.268611+00:00",
       "size_bytes": 22903
     },
@@ -1470,7 +1470,7 @@
         "subprocess",
         "sys"
       ],
-      "docstring": "rudy.workflows.pr_review — Lucius-gated PR review workflow.",
+      "docstring": "rudy.workflows.pr_review \u00e2\u20ac\u201d Lucius-gated PR review workflow.",
       "last_modified": "2026-03-31T00:53:10.134308+00:00",
       "size_bytes": 6403
     },
@@ -1498,7 +1498,7 @@
         "rudy",
         "sys"
       ],
-      "docstring": "Run all agents sequentially — for manual invocation or diagnostics.",
+      "docstring": "Run all agents sequentially \u00e2\u20ac\u201d for manual invocation or diagnostics.",
       "last_modified": "2026-03-31T00:53:10.134308+00:00",
       "size_bytes": 438
     },
@@ -1598,7 +1598,7 @@
         "sys",
         "urllib"
       ],
-      "docstring": "Lucius Fox CI — Batcave-specific PR checks.",
+      "docstring": "Lucius Fox CI \u00e2\u20ac\u201d Batcave-specific PR checks.",
       "last_modified": "2026-03-31T00:53:10.134308+00:00",
       "size_bytes": 8982
     },
@@ -1626,7 +1626,7 @@
         "sys",
         "time"
       ],
-      "docstring": "Rudy Auth Fix — Playwright-based Google Account Checker",
+      "docstring": "Rudy Auth Fix \u00e2\u20ac\u201d Playwright-based Google Account Checker",
       "last_modified": "2026-03-31T00:53:10.134308+00:00",
       "size_bytes": 14383
     },
@@ -1643,7 +1643,7 @@
         "smtplib",
         "sys"
       ],
-      "docstring": "Rudy Complete Setup — Run this after enabling IMAP in Gmail settings.",
+      "docstring": "Rudy Complete Setup \u00e2\u20ac\u201d Run this after enabling IMAP in Gmail settings.",
       "last_modified": "2026-03-31T00:53:10.135308+00:00",
       "size_bytes": 2812
     },
@@ -1687,7 +1687,7 @@
         "time",
         "traceback"
       ],
-      "docstring": "Rudy — Gmail API Listener (IMAP-free alternative)",
+      "docstring": "Rudy \u00e2\u20ac\u201d Gmail API Listener (IMAP-free alternative)",
       "last_modified": "2026-03-31T00:53:10.135308+00:00",
       "size_bytes": 15397
     },
@@ -1720,7 +1720,7 @@
         "rudy_suno",
         "sys"
       ],
-      "docstring": "Rudy Suno Quick Generate — Drop-in script for the command runner.",
+      "docstring": "Rudy Suno Quick Generate \u00e2\u20ac\u201d Drop-in script for the command runner.",
       "last_modified": "2026-03-31T00:53:10.135308+00:00",
       "size_bytes": 1442
     },
@@ -1738,7 +1738,7 @@
         "sys",
         "time"
       ],
-      "docstring": "Rudy Suno Integration — AI Music Generation for The Workhorse",
+      "docstring": "Rudy Suno Integration \u00e2\u20ac\u201d AI Music Generation for The Workhorse",
       "last_modified": "2026-03-31T00:53:10.135308+00:00",
       "size_bytes": 11998
     },
@@ -1750,7 +1750,7 @@
         "rudy",
         "sys"
       ],
-      "docstring": "Run a full Lucius Fox audit. Portable — uses rudy.paths for all paths.",
+      "docstring": "Run a full Lucius Fox audit. Portable \u00e2\u20ac\u201d uses rudy.paths for all paths.",
       "last_modified": "2026-03-31T00:53:10.135308+00:00",
       "size_bytes": 388
     },
@@ -1762,7 +1762,7 @@
         "rudy",
         "sys"
       ],
-      "docstring": "Run a WiFi presence scan — can be called standalone or by agents.",
+      "docstring": "Run a WiFi presence scan \u00e2\u20ac\u201d can be called standalone or by agents.",
       "last_modified": "2026-03-31T00:53:10.136308+00:00",
       "size_bytes": 227
     },
@@ -1774,7 +1774,7 @@
         "rudy",
         "sys"
       ],
-      "docstring": "Invoker for SecurityAgent — called by Task Scheduler every 30 min.",
+      "docstring": "Invoker for SecurityAgent \u00e2\u20ac\u201d called by Task Scheduler every 30 min.",
       "last_modified": "2026-03-31T00:53:10.136308+00:00",
       "size_bytes": 272
     },
@@ -1786,7 +1786,7 @@
         "rudy",
         "sys"
       ],
-      "docstring": "Invoker for Sentinel agent — called by Task Scheduler every 15 min.",
+      "docstring": "Invoker for Sentinel agent \u00e2\u20ac\u201d called by Task Scheduler every 15 min.",
       "last_modified": "2026-03-31T00:53:10.136308+00:00",
       "size_bytes": 246
     },
@@ -1804,7 +1804,7 @@
         "time",
         "urllib"
       ],
-      "docstring": "Weekly hosts file blocklist update — refreshes DNS-level threat blocking.",
+      "docstring": "Weekly hosts file blocklist update \u00e2\u20ac\u201d refreshes DNS-level threat blocking.",
       "last_modified": "2026-03-31T00:53:10.136308+00:00",
       "size_bytes": 1884
     },
@@ -1836,7 +1836,7 @@
         "sys",
         "time"
       ],
-      "docstring": "The Workhorse — Scheduled Maintenance",
+      "docstring": "The Workhorse \u00e2\u20ac\u201d Scheduled Maintenance",
       "last_modified": "2026-03-31T00:53:10.136308+00:00",
       "size_bytes": 8100
     },
@@ -1897,7 +1897,7 @@
         "sys",
         "time"
       ],
-      "docstring": "The Workhorse — Watchdog Service",
+      "docstring": "The Workhorse \u00e2\u20ac\u201d Watchdog Service",
       "last_modified": "2026-03-31T00:53:10.137308+00:00",
       "size_bytes": 11313
     },
@@ -1925,6 +1925,49 @@
         "rudy.paths"
       ],
       "status": "active"
+    },
+    {
+      "path": "rudy/alfred_robin_protocol.py",
+      "type": "protocol",
+      "lines": 660,
+      "description": "Alfred-Robin collaboration protocol. Timed absence + indefinite handoff modes. CLI: timed|indefinite|resume|progress|status. Integrates DirectiveTracker, AlfredMailbox, alfred_delegate.",
+      "session": 30,
+      "dependencies": [
+        "rudy.directive_tracker",
+        "rudy.robin_alfred_protocol",
+        "rudy.alfred_delegate",
+        "rudy.paths"
+      ],
+      "status": "active",
+      "lg_number": "LG-031"
+    },
+    {
+      "path": "rudy/robin_chat_console.py",
+      "type": "interface",
+      "lines": 542,
+      "description": "Robin terminal REPL with ANSI colors, Ollama streaming, 20-message context window. Slash commands: /status, /health, /directive, /delegate, /bridge, /inbox, /journal, /logs.",
+      "session": 30,
+      "dependencies": [
+        "ollama",
+        "rudy.paths",
+        "robin-secrets.json"
+      ],
+      "status": "active",
+      "lg_number": "LG-032"
+    },
+    {
+      "path": "scripts/install-tier1-skills.py",
+      "type": "utility",
+      "lines": 202,
+      "description": "Tier 1 skill installer. Installs 12 skills (5 Obsidian + 7 UI/UX Pro Max) to .claude/skills/. Idempotent, checks for existing installs.",
+      "session": 30,
+      "dependencies": [
+        "subprocess",
+        "json",
+        "pathlib"
+      ],
+      "status": "active",
+      "lg_number": "LG-033"
     }
   ],
   "agents": [

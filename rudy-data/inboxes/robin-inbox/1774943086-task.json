@@ -1,0 +1,15 @@
+{
+  "id": "1774943086-task",
+  "from": "alfred",
+  "to": "robin",
+  "type": "task",
+  "priority": "medium",
+  "timestamp": "2026-03-31T00:44:46",
+  "payload": {
+    "title": "Verify n8n-mcp installation and system health",
+    "description": "1. Verify n8n-mcp is installed: run 'npm list -g n8n-mcp' and confirm version. 2. Check if n8n server is installed: run 'npm list -g n8n'. 3. Verify Ollama models are responding: send test prompt to qwen2.5:7b. 4. Run ruff check on rudy/ package to confirm ruff is working. 5. Report findings back to alfred-inbox.",
+    "context": "Session 31 Robin training exercise. Alfred installed n8n-mcp (v2.42.3) and is installing n8n server. Ruff was already at v0.15.8 but Robin couldn't find it (PATH issue). Confirm everything works from Robin's environment.",
+    "expected_output": "JSON report with verification results for each check"
+  },
+  "status": "pending"
+}
