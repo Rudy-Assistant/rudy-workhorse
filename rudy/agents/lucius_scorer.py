@@ -65,8 +65,12 @@ RUBRIC = {
                 "description": "recommend_skills() was called with task context",
             },
             "skills_invoked_ratio": {
-                "points": 15,
+                "points": 10,
                 "description": "Ratio of recommended skills that were actually used",
+            },
+            "robin_delegation": {
+                "points": 5,
+                "description": "Local I/O tasks delegated to Robin when online (HARD RULE S32)",
             },
         },
     },
