@@ -165,6 +165,9 @@ def empty_evidence() -> dict:
         "skills_recommended": [],
         "skills_invoked": [],
         "skills_check_called": False,
+        "robin_delegations_count": 0,
+        "alfred_local_io_count": 0,
+        "robin_online": False,
 
         # Handoff quality
         "handoff_written": False,
@@ -226,28 +229,68 @@ def _score_start_protocol(evidence: dict) -> tuple[float, list[str]]:
 
 
 def _score_skills_utilization(evidence: dict) -> tuple[float, list[str]]:
-    """Score skills utilization. Returns (score, notes)."""
+    """Score skills utilization. Returns (score, notes).
+
+    Criteria:
+        skills_recommended (5 pts): recommend_skills() was called
+        skills_invoked_ratio (10 pts): ratio of recommended skills used
+        robin_delegation (5 pts): local I/O delegated to Robin (HARD RULE S32)
+    """
     score = 0.0
     notes = []
 
+    # Criterion: skills_recommended (5 pts)
     if evidence.get("skills_check_called"):
         score += 5
     else:
         notes.append("recommend_skills() not called (-5)")
 
+    # Criterion: skills_invoked_ratio (10 pts)
     recommended = evidence.get("skills_recommended", [])
     invoked = evidence.get("skills_invoked", [])
 
     if recommended:
         ratio = len(set(invoked) & set(recommended)) / len(recommended)
-        skill_score = ratio * 15
+        skill_score = ratio * 10  # Fixed: was 15, rubric says 10
         score += skill_score
         if ratio < 0.5:
             unused = set(recommended) - set(invoked)
             notes.append(f"Skills recommended but not used: {', '.join(unused)}")
     else:
         # If no skills were recommended, give full credit (nothing to miss)
-        score += 15
+        score += 10
+
+    # Criterion: robin_delegation (5 pts) -- HARD RULE Session 32
+    # Score based on whether local I/O tasks were delegated to Robin
+    robin_delegations = evidence.get("robin_delegations_count", 0)
+    local_io_by_alfred = evidence.get("alfred_local_io_count", 0)
+    robin_online = evidence.get("robin_online", False)
+
+    if not robin_online:
+        # Robin offline -- no penalty for Alfred doing local I/O
+        score += 5
+    elif robin_delegations > 0 and local_io_by_alfred == 0:
+        # Perfect: all local work delegated
+        score += 5
+    elif robin_delegations > 0:
+        # Partial: some delegated, some not
+        total_local = robin_delegations + local_io_by_alfred
+        delegation_ratio = robin_delegations / total_local if total_local else 0
+        delegation_pts = delegation_ratio * 5
+        score += delegation_pts
+        if delegation_ratio < 0.8:
+            notes.append(
+                f"Robin delegation ratio {delegation_ratio:.0%} "
+                f"({robin_delegations} delegated, {local_io_by_alfred} Alfred-local) (-{5 - delegation_pts:.1f})"
+            )
+    elif local_io_by_alfred > 0:
+        # Bad: Alfred did local I/O without delegating to Robin
+        notes.append(
+            f"Alfred ran {local_io_by_alfred} local I/O tasks without delegating to Robin (-5)"
+        )
+    else:
+        # No local I/O at all -- no penalty
+        score += 5
 
     return score, notes
 
