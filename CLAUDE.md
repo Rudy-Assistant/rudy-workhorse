@@ -51,7 +51,7 @@ Christopher M. Cimino (ccimino2@gmail.com). Attorney — California State Bar #2
 **MCP Connectors (Cowork):** Gmail ✅ | Google Calendar ✅ | Chrome ✅ | Canva ✅ | Notion ✅ | Google Drive ✅
 **MCP Servers (CLI):** Context7 | Sequential Thinking | Playwright | GitHub ✓
 **Plugins:** Engineering | Productivity | Operations | Legal | Plugin Management
-**Key Skills:** docx, pptx, xlsx, pdf, schedule, skill-creator + 30+ plugin skills
+**Key Skills:** docx, pptx, xlsx, pdf, schedule, skill-creator + 44+ plugin skills
 
 → Full capability index, CLI reference, modules table: `docs/lucius-registry.md`, `registry.json`
 → Installed packages: `memory/context/installed-packages.md`
