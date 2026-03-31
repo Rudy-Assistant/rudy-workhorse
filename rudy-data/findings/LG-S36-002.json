@@ -1,0 +1,10 @@
+{
+  "id": "LG-S36-002",
+  "severity": "MED",
+  "title": "Watchdog tasks pointed to wrong paths",
+  "description": "RobinWatchdog and Robin Liveness tasks pointed to C:\\Users\\ccimi\\Desktop\\rudy-workhorse instead of C:\\Users\\ccimi\\rudy-workhorse. This is why bridge_runner stayed dead for 7+ hours — the watchdogs couldn't find their scripts.",
+  "session": 36,
+  "status": "MITIGATED",
+  "fix": "Created new BridgeWatchdog task at correct path (every 5 min). Old tasks still point to wrong paths but are now redundant.",
+  "timestamp": "2026-03-31T17:30:00Z"
+}

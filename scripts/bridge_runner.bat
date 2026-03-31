@@ -8,6 +8,9 @@ REM This prevents running stale code from main when work is on a feature branch.
 
 cd /d C:\Users\ccimi\rudy-workhorse
 
+REM Session 36 fix (LG-S33-003): ensure git/node/python in PATH
+set "PATH=C:\Program Files\Git\cmd;C:\Program Files\nodejs;C:\Python312;%PATH%"
+
 REM Log current branch for diagnostics
 "C:\Program Files\Git\cmd\git.exe" branch --show-current > C:\Users\ccimi\rudy-data\logs\bridge-branch.log 2>&1
 echo Started at %DATE% %TIME% on branch: >> C:\Users\ccimi\rudy-data\logs\bridge-branch.log

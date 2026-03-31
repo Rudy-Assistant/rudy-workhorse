@@ -138,6 +138,16 @@ GIT_EXE = find_exe("git", (
     r"C:\Program Files (x86)\Git\cmd\git.exe",
 ))
 
+NODE_EXE = find_exe("node", (
+    r"C:\Program Files\nodejs\node.exe",
+    r"C:\nvm4w\nodejs\node.exe",
+))
+
+NPM_CMD = find_exe("npm", (
+    r"C:\Program Files\nodejs\npm.cmd",
+    r"C:\nvm4w\nodejs\npm.cmd",
+))
+
 # Claude desktop app candidate paths (used by robin_wake_alfred.py)
 CLAUDE_APP_GLOBS = [
     str(HOME / "AppData" / "Local" / "AnthropicClaude" / "app-*" / "claude.exe"),

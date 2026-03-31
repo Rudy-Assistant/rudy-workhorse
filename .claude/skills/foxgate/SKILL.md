@@ -12,14 +12,15 @@ you MUST run the pre-work review gate below.
 
 Run this checklist automatically:
 
-1. **Read CLAUDE.md** — confirm HARD RULES are loaded (especially #2, #3, #6)
-2. **Read last session's score** from CLAUDE.md "Last Session Score" section
+1. **Check Robin liveness** — read bridge-heartbeat.json. If stale (>5 min) or missing, START bridge_runner IMMEDIATELY. Do NOT proceed until Robin is confirmed online. Kill any stale bridge PIDs first (LG-S34-002).
+2. **Read CLAUDE.md** — confirm HARD RULES are loaded (especially #2, #3, #6)
+3. **Read last session's score** from CLAUDE.md "Last Session Score" section
    - If score < 70: announce specific deductions and commit to avoiding them
-3. **Run session_start_gate()** with expected_branch parameter
-4. **Load registry.json** — cache the full capability manifest in working memory
-5. **Load Robin skills** — list scripts/*.py that Robin can execute
-6. **Load Sentinel signals** — check rudy-data/coordination/lucius-signals.json
-7. **Count open findings** — announce count and any CRITICAL/HIGH items
+4. **Run session_start_gate()** with expected_branch parameter
+5. **Load registry.json** — cache the full capability manifest in working memory
+6. **Load Robin skills** — list scripts/*.py that Robin can execute
+7. **Load Sentinel signals** — check rudy-data/coordination/lucius-signals.json
+8. **Count open findings** — announce count and any CRITICAL/HIGH items
 
 ## Step 2: Pre-Work Review (run for EACH priority)
 
