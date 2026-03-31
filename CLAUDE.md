@@ -89,6 +89,8 @@ Christopher M. Cimino (ccimino2@gmail.com). Attorney — California State Bar #2
 3. **Before building custom**: Search the MCP registry, check installed pip packages, and review the capability index. If you're writing >50 lines of Python for something that sounds generic, you almost certainly missed an existing tool.
 4. **All handoff drafts MUST include explicit instruction to consult CLAUDE.md** (HARD RULE — Session 22). Every bootstrap prompt, continuation prompt, and handoff brief must tell the next session to read CLAUDE.md before doing any work.
 5. **Every substantive response MUST end with a context evaluation line** (HARD RULE — Session 22). Format: `[Context: ~X% | Session N | {status summary}]`. "Substantive" means any response involving tool use, code, file changes, or multi-step work. This is NOT optional.
+6. **Robin-first for local tasks** (HARD RULE - Session 32). Before Alfred executes ANY filesystem scan, npm install, git operation, port check, or local I/O task: delegate to Robin first. Alfred's role is reasoning, orchestration, and review - not running local commands that Robin handles natively. Violations should be flagged by Sentinel/Scorer. The only exceptions are: (a) single-command diagnostics needed for immediate decision-making, (b) Robin is confirmed offline.
+6. **Robin-first for local tasks** (HARD RULE - Session 32). Before Alfred executes ANY filesystem scan, npm install, git operation, port check, or local I/O task: delegate to Robin first. Alfred's role is reasoning, orchestration, and review - not running local commands that Robin handles natively. Violations should be flagged by Sentinel/Scorer. The only exceptions are: (a) single-command diagnostics needed for immediate decision-making, (b) Robin is confirmed offline.
 
 ### Finding Capture Protocol (HARD RULE — Session 14)
 
@@ -126,7 +128,9 @@ All session records, findings, and institutional knowledge MUST be written to th
 - Don't forget Chrome → can automate web tasks when CLI tools aren't enough
 - Don't build custom when best-in-class exists → search GitHub/PyPI/MCP registry first
 - Don't forget your skills → 30+ skills across Engineering, Operations, Productivity, Legal
-- Don't forget sub-agents → use the Agent tool for parallel work
+- Don't forget sub-agents
+- Don't run local I/O tasks yourself when Robin is online > delegate filesystem, npm, git, scans to Robin (HARD RULE - Session 32)
+- Don't run local I/O tasks yourself when Robin is online > delegate filesystem, npm, git, scans to Robin (HARD RULE - Session 32) → use the Agent tool for parallel work
 
 ## Version Control
 
