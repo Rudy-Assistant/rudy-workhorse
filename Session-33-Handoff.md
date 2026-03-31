@@ -1,9 +1,9 @@
-# Session 32 Handoff (CORRECTED)
+﻿# Session 33 Handoff — Executable Robin Task Loop
 
-**From**: Alfred (Session 32)
+**From**: Alfred (Session 32, continuation)
 **Date**: 2026-03-31
 **Repo**: `Rudy-Assistant/rudy-workhorse` (cloned at `C:\Users\ccimi\rudy-workhorse`)
-**Oracle HEAD**: `3f77b32` (main, PR #64) / `7eb2149` (PR #65 merged remotely)
+**RUDY_DATA**: `C:\Users\ccimi\rudy-data` (NOT under repo root)
 
 ---
 
@@ -11,64 +11,192 @@
 
 ---
 
-## CRITICAL PATH DISCOVERY
+## LIVE DELEGATION PROOF (Session 32 Continuation)
 
-**RUDY_DATA = `C:\Users\ccimi\rudy-data`** (NOT under repo root!)
+Two delegations were sent through the broker and processed by Robin live:
 
-Session 32 wasted significant time writing inbox files to the WRONG directory
-(`C:\Users\ccimi\rudy-workhorse\rudy-data\`). Robin's actual data lives at
-`C:\Users\ccimi\rudy-data\`. Always use `from rudy.paths import RUDY_DATA`.
+```
+02:48:58 Processing delegation del-batman-demo: [health_check] Live demo for Batman
+02:49:00 Result sent to o3py4q20 (success=True, 0.2s)
 
-## Robin Status: OPERATIONAL
+02:49:37 Processing delegation del-batman-shell: [shell] Git status check
+02:49:40 Result sent to o3py4q20 (success=False, 0.9s)
+```
 
-Robin's bridge_runner (PID 14552) has been running continuously:
-- Broker: localhost:7899 (healthy, 4 peers)
-- Bridge polls every 10s, heartbeat every 30s
-- Successfully executed health_check (2.0s) and security_scan (3.1s)
-- Delegation path: `alfred_delegate.py` -> broker -> bridge_runner -> taskqueue
+The health_check path is proven. Shell tasks need command quoting fixes for Windows paths.
 
-**Correct delegation**: `python rudy/alfred_delegate.py <task_type>`
-Supported types: health_check, security_scan, shell --command "..."
+---
 
-## PRs Merged
+## ROBIN EXECUTABLE TASK LOOP
 
-### PR #64 - Robin-First Delegation Hard Rule (SHA: 3f77b32)
-- CLAUDE.md Hard Rule #6: delegate local I/O to Robin first
-- lucius_scorer.py: robin_delegation criterion (5 pts)
-- Finding LG-S32-001 documented
+Robin: execute these tasks IN ORDER using the broker delegation path. Each task
+is a `send-message` to Robin via `http://localhost:7899/send-message`. Alfred
+(or the next session) sends; Robin's bridge_runner picks up and executes.
 
-### PR #65 - Session 33 Handoff (SHA: 7eb2149)
-- (Superseded by this corrected handoff)
+### Task 1: Delete robin_inbox_executor.py (Build-vs-Buy violation)
 
-## Findings
+```powershell
+# Robin or Alfred executes directly — this is a filesystem delete
+Remove-Item "C:\Users\ccimi\rudy-workhorse\rudy\robin_inbox_executor.py" -ErrorAction SilentlyContinue
+# Verify
+Test-Path "C:\Users\ccimi\rudy-workhorse\rudy\robin_inbox_executor.py"  # Should be False
+```
 
-| ID | Severity | Title |
-|----|----------|-------|
-| LG-S32-001 | MEDIUM | Alfred running local I/O instead of delegating to Robin |
-| LG-S32-002 | HIGH | Built robin_inbox_executor.py instead of using existing infra |
-| LG-S32-003 | HIGH | Lucius gate bypassed - pre_commit_check not run before PR |
-| LG-S32-004 | CRITICAL | RUDY_DATA path mismatch caused all inbox file failures |
+**Why**: Finding LG-S32-002. This file duplicates existing bridge infrastructure.
 
-## Infrastructure
+### Task 2: Fix n8n PATH for cmd.exe
 
-- BridgeRunner: Running (PID 14552, registered as cusg3zab)
-- RobinContinuous: WorkingDirectory fixed to C:\Users\ccimi\rudy-workhorse
-- Indefinite collaboration protocol: engaged (168h budget)
-- Lucius gate: PASSED (degraded: Brave Search)
-- Vault: Sessions 27-32 written
+```powershell
+# Requires elevated terminal
+$nodePath = "C:\Program Files\nodejs"
+$currentPath = [System.Environment]::GetEnvironmentVariable("PATH", "Machine")
+if ($currentPath -notlike "*$nodePath*") {
+    [System.Environment]::SetEnvironmentVariable("PATH", "$currentPath;$nodePath", "Machine")
+    Write-Output "Added nodejs to SYSTEM PATH"
+} else {
+    Write-Output "nodejs already in SYSTEM PATH"
+}
+```
 
-## PENDING
+Then:
+```powershell
+npm install -g n8n
+n8n start  # http://localhost:5678 — complete setup wizard
+# Settings > API > Create API Key
+[System.Environment]::SetEnvironmentVariable('N8N_API_KEY', '<key>', 'User')
+```
 
-1. **n8n install**: Failed 2x. Root cause: cmd.exe child processes can't find node.exe. Fix: add nodejs to SYSTEM PATH via `setx /M`. Delegated to Robin.
-2. **Lucius governance improvements**: pre_commit_check enforcement, Build-vs-Buy gate automation
-3. **claude-mem evaluation**: Persistent memory plugin - deferred to next session
-4. **Codex adversarial review**: Cross-model code review - deferred to next session
-5. **Delete robin_inbox_executor.py**: Redundant code written in violation of Build-vs-Buy
-6. **Registry audit + agnix validation**: Delegate via broker, not filesystem inbox
+### Task 3: Registry Audit (delegate via broker)
 
-## Lessons Learned
+Alfred sends to Robin:
+```json
+{
+  "type": "delegate",
+  "id": "del-registry-audit",
+  "sender": "alfred",
+  "task": {
+    "type": "shell",
+    "title": "Audit registry.json — verify 116 modules active",
+    "command": "C:\\Python312\\python.exe -c \"import json; r=json.load(open(r'C:\\Users\\ccimi\\rudy-workhorse\\registry.json')); print(f'Total: {len(r.get(chr(109)+chr(111)+chr(100)+chr(117)+chr(108)+chr(101)+chr(115),[]))} modules'); [print(f'  {m[chr(110)+chr(97)+chr(109)+chr(101)]}') for m in r.get(chr(109)+chr(111)+chr(100)+chr(117)+chr(108)+chr(101)+chr(115),[])]\"",
+    "priority": 30,
+    "status": "pending"
+  }
+}
+```
 
-1. **Always use `rudy.paths`** - never hardcode or assume directory locations
-2. **Broker delegation works** - `alfred_delegate.py` is the correct Robin communication path
-3. **Filesystem inbox is disconnected** - robin-inbox/ is NOT automatically polled for execution
-4. **Lucius needs enforcement, not just guidelines** - gates must be mandatory, not optional
+### Task 4: Agnix Validation (delegate via broker)
+
+```json
+{
+  "type": "delegate",
+  "id": "del-agnix-validate",
+  "sender": "alfred",
+  "task": {
+    "type": "shell",
+    "title": "Run agnix on CLAUDE.md and skill files",
+    "command": "cd C:\\Users\\ccimi\\rudy-workhorse && npx agnix .",
+    "priority": 40,
+    "status": "pending"
+  }
+}
+```
+
+### Task 5: Security Scan (delegate via broker)
+
+```json
+{
+  "type": "delegate",
+  "id": "del-security-sweep",
+  "sender": "alfred",
+  "task": {
+    "type": "security_scan",
+    "title": "Trail of Bits security sweep on rudy/ package",
+    "description": "Use installed Trail of Bits skills to audit rudy/ for vulnerabilities",
+    "priority": 30,
+    "status": "pending"
+  }
+}
+```
+
+### Task 6: Verify RobinContinuous Scheduled Task
+
+```powershell
+Get-ScheduledTask -TaskPath "\Batcave\" | Format-Table TaskName, State, LastRunTime, LastTaskResult
+# Verify RobinContinuous shows LastTaskResult = 0 and correct WorkingDirectory
+(Get-ScheduledTask -TaskPath "\Batcave\" -TaskName "RobinContinuous").Actions | Format-List
+```
+
+---
+
+## DELEGATION PROTOCOL REFERENCE
+
+### How to send a task to Robin from PowerShell:
+
+```powershell
+# 1. Register Alfred (once per session)
+$regBody = '{"pid":99999,"cwd":"C:\\Users\\ccimi\\rudy-workhorse","git_root":"C:\\Users\\ccimi\\rudy-workhorse","summary":"Alfred Session 33"}'
+$reg = Invoke-RestMethod -Uri 'http://localhost:7899/register' -Method Post -ContentType 'application/json' -Body $regBody
+$alfredId = $reg.id
+
+# 2. Get Robin's peer ID from heartbeat
+$hb = Get-Content "C:\Users\ccimi\rudy-data\bridge-heartbeat.json" -Raw | ConvertFrom-Json
+$robinId = $hb.robin_id
+
+# 3. Send delegation
+$msg = '{"type":"delegate","id":"del-xxx","sender":"alfred","task":{"type":"health_check","title":"Test","priority":50,"status":"pending"}}'
+$sendBody = @{from_id=$alfredId; to_id=$robinId; text=$msg} | ConvertTo-Json -Compress
+Invoke-RestMethod -Uri 'http://localhost:7899/send-message' -Method Post -ContentType 'application/json' -Body $sendBody
+
+# 4. Check results in bridge log
+Get-Content "C:\Users\ccimi\rudy-data\logs\bridge-runner.log" -Tail 10
+```
+
+### How to send via Python (preferred for complex tasks):
+
+```python
+import sys; sys.path.insert(0, r'C:\Users\ccimi\rudy-workhorse')
+from rudy.alfred_delegate import delegate_and_wait, delegate_fire_and_forget
+
+# Fire and forget
+del_id = delegate_fire_and_forget("health_check", "Quick health check")
+
+# Or wait for result (blocks up to 60s)
+result = delegate_and_wait("health_check", "Health check with result")
+print(result)  # {"success": True, "output": "...", ...}
+
+# Shell command
+result = delegate_and_wait("shell", "Run git status", command="git status")
+```
+
+---
+
+## CRITICAL PATHS
+
+| Item | Path |
+|------|------|
+| RUDY_DATA | `C:\Users\ccimi\rudy-data` |
+| Repo | `C:\Users\ccimi\rudy-workhorse` |
+| Bridge log | `C:\Users\ccimi\rudy-data\logs\bridge-runner.log` |
+| Heartbeat | `C:\Users\ccimi\rudy-data\bridge-heartbeat.json` |
+| Robin taskqueue | `C:\Users\ccimi\rudy-data\robin-taskqueue\active.json` |
+| Git | `C:\Program Files\Git\cmd\git.exe` |
+| Python | `C:\Python312\python.exe` |
+| Node | `C:\Program Files\nodejs\node.exe` |
+| Broker | `http://localhost:7899` |
+| Ollama | `http://localhost:11434` |
+
+## FINDINGS (Open)
+
+| ID | Severity | Title | Status |
+|----|----------|-------|--------|
+| LG-S32-001 | MEDIUM | Alfred ran local I/O instead of delegating to Robin | Fixed — Hard Rule #6 |
+| LG-S32-002 | HIGH | Built robin_inbox_executor.py (Build-vs-Buy violation) | **OPEN — delete file** |
+| LG-S32-003 | HIGH | Lucius gate bypassed — pre_commit_check not enforced | OPEN |
+| LG-S32-004 | CRITICAL | RUDY_DATA path mismatch caused inbox failures | Fixed — documented |
+
+## DEFERRED (Lower Priority)
+
+- claude-mem evaluation (persistent memory plugin)
+- Codex adversarial review setup (cross-model code review)
+- Lucius pre-commit hook enforcement
+- Vault backfill verification (Sessions 27-32 written, need verification)
