@@ -439,7 +439,8 @@ def execute_task(task: dict) -> tuple[bool, str]:
             ("uptime", "net statistics workstation | findstr Statistics"),
         ]
         results = []
-        for name, cmd in commands:            try:
+        for name, cmd in commands:
+            try:
                 r = subprocess.run(
                     cmd, capture_output=True, text=True, shell=True,  # nosec B602
                     timeout=30, encoding="utf-8", errors="replace",
@@ -463,7 +464,8 @@ def execute_task(task: dict) -> tuple[bool, str]:
                 r = subprocess.run(
                     cmd, capture_output=True, text=True, shell=True,  # nosec B602
                     timeout=30, encoding="utf-8", errors="replace",
-                )                out = r.stdout.strip()
+                )
+                out = r.stdout.strip()
                 if name == "ports":
                     lines = out.split("\n")
                     out = f"{len(lines)} listening ports\n" + "\n".join(lines[:20])
@@ -487,7 +489,8 @@ def execute_task(task: dict) -> tuple[bool, str]:
                 cmd, capture_output=True, text=True, shell=True,  # nosec B602
                 timeout=task.get("estimated_minutes", 5) * 60,
                 cwd=str(RUDY_ROOT), encoding="utf-8", errors="replace",
-            )            output = (r.stdout or "") + (r.stderr or "")
+            )
+            output = (r.stdout or "") + (r.stderr or "")
             return r.returncode == 0, output[-3000:]
         except subprocess.TimeoutExpired:
             return False, "TIMEOUT"
