@@ -12,7 +12,7 @@
 | **Lucius Fox Agent** | `rudy/agents/lucius_fox.py` | 1,141 | ACTIVE — 4 mandates, 9 modes | Session 16 (ADR-005 Mandate 4) |
 | **Lucius Gate** | `rudy/agents/lucius_gate.py` | 1,024 | ACTIVE — Phase 1C complete, circuit breakers | Session 21 (PR #40) |
 | **MCP Tier Config** | `rudy/agents/lucius_mcp_tiers.yml` | 48 | ACTIVE — per-MCP timeouts calibrated from Oracle baselines | Session 21 |
-| **Network Security** | `rudy/agents/lucius_network_security.py` | 531 | DEPRECATED — pending migration to sentinel.py | Pre-Session 11 |
+| **Network Security** | ~~`rudy/agents/lucius_network_security.py`~~ | 531 | REMOVED — Session 23 (robin_taskqueue updated to use lucius_fox hygiene_check) | Pre-Session 11 |
 | **Audit Runner** | `scripts/run_lucius_audit.py` | 13 | ACTIVE — thin wrapper | Session 15 |
 | **Schedule Script** | `scripts/schedule_lucius_task.ps1` | 32 | UNVERIFIED — needs confirmation it runs | Session 15 |
 | **PR Review CI** | `scripts/ci/lucius_pr_review.py` | 305 | ACTIVE — GitHub Actions gate (lucius-review.yml) | Session 15 |
@@ -207,11 +207,11 @@
 | LA-001 | GitHub PAT renewal | ✅ DONE — renewed, expires 2026-06-26 | 11→22 |
 | LA-002 | Merge robin-logging-nightwatch to main | ✅ DONE — merged | 11→22 |
 | LA-003 | Implement lucius:skills-check | 🔨 IN PROGRESS | 22 |
-| LA-004 | Implement lucius:plan | OPEN | — |
+| LA-004 | Implement lucius:plan | ✅ DONE | Session 23 |
 | LA-005 | Implement lucius:reconcile | OPEN | — |
-| LA-006 | Wire Sentinel→Lucius integration | OPEN (Phase 2 candidate) | — |
-| LA-007 | Activate lucius-review.yml as required check | OPEN | — |
-| LA-008 | Remove lucius_network_security.py (deprecated) | OPEN | — |
+| LA-006 | Wire Sentinel→Lucius integration | ✅ DONE | Session 23 |
+| LA-007 | Activate lucius-review.yml as required check | OPEN (needs admin PAT) | GitHub issue filed, Session 23 |
+| LA-008 | Remove lucius_network_security.py (deprecated) | ✅ DONE | Session 23 |
 | LA-009 | Clean up stale remote branches | 🔨 IN PROGRESS | 22 |
 
 ## Known Duplication (tracked)

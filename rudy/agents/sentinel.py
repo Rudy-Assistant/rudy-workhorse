@@ -757,6 +757,34 @@ class Sentinel(AgentBase):
                     lines.append(f"  {summary}")
             lines.append("")
 
+            # Lucius Gate — governance pre-flight (ADR-004, Session 23)
+            try:
+                from rudy.agents.lucius_gate import session_start_gate
+                gate_result = session_start_gate(
+                    session_number=state.get("session_number", 0),
+                    check_timeout_sec=5.0,
+                )
+                gate_icon = "✅" if gate_result.passed else "⚠️" if gate_result.degraded else "❌"
+                lines.append("## Governance Gate (Lucius)")
+                lines.append(f"- {gate_icon} **Status**: {gate_result.summary()}")
+                # Detail any non-PASS checks
+                for check in gate_result.checks:
+                    if check.state.value != "PASS":
+                        c_icon = "⚠️" if check.state.value == "DEGRADED" else "❌"
+                        lines.append(f"  - {c_icon} {check.name}: {check.state.value} — {check.message}")
+                if gate_result.metrics:
+                    lines.append(f"- Gate completed in {gate_result.metrics.total_elapsed_sec:.1f}s")
+                lines.append("")
+                self._observe("lucius_gate", f"Session gate: {gate_result.summary()}")
+            except ImportError:
+                lines.append("## Governance Gate (Lucius)")
+                lines.append("- ❓ lucius_gate not available (import failed)")
+                lines.append("")
+            except Exception as e:
+                lines.append("## Governance Gate (Lucius)")
+                lines.append(f"- ⚠️ Gate check failed: {e}")
+                lines.append("")
+
             # Pending work
             lines.append("## Pending Work")
             queue_file = LOGS_DIR / "task-queue.json"

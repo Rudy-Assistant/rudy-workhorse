@@ -322,7 +322,7 @@ def execute_task(task: dict) -> tuple[bool, str]:
     # Type-specific executors
     if task_type == "audit":
         return _execute_command(
-            [PYTHON, "-m", "rudy.agents.lucius_network_security"],
+            [PYTHON, "-m", "rudy.agents.lucius_fox", "hygiene_check"],
             timeout=120
         )
 
