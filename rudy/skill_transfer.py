@@ -32,7 +32,6 @@ import json
 import logging
 import os
 from rudy.paths import REPO_ROOT, RUDY_DATA
-import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 

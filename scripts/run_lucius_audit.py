@@ -37,7 +37,7 @@ def main():
             session_number=args.session,
             task_description=args.task,
         ))
-        print(f"\nFeedback loop result:")
+        print("\nFeedback loop result:")
         print(f"  Severity tier: {result['severity_tier']}")
         print(f"  Action: {result['action']}")
         print(f"  Directives generated: {result['directives_count']}")

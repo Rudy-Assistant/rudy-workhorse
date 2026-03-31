@@ -324,7 +324,6 @@ def write_directives(
             pass
 
     # Merge: replace existing directives with same id, append new ones
-    existing_ids = {d["id"] for d in existing.get("directives", [])}
     merged = [d for d in existing.get("directives", []) if d["id"] not in
               {nd["id"] for nd in directives}]
     merged.extend(directives)
