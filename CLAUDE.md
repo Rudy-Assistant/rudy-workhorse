@@ -113,18 +113,18 @@ All session records, findings, and institutional knowledge MUST be written to th
 
 ## Last Session Score
 
-Session 39: 89/100 (B) [ADR-009 rubric, first use]
-  Base deductions (-11):
-    -2: Process — DC read_file hit + wrong rudy-data path before checking rudy.paths
-    -2: Tool Reuse — DC metadata bug hit once before switching to mount
-    -5: Delegation Quality — merged PR #74 solo (-1), slight instruction ambiguity (-1), no Colab/HF stretch task (-2), Robin output not yet verified (-1)
-    -2: System Enrichment — no Colab/HF milestone progress (focused on Robin revival)
-    0: Finding Discipline — 3 findings logged, triaged, actioned
-    0: Documentation — vault record, CLAUDE.md, handoff all done
-    0: Self-Scoring Integrity — arithmetic verified: 100-11=89
-  Multiplier: x1.0 (Standard) — Robin engaged, Lucius integrated, system enriched
-  Findings: LG-S39-001 (path split), LG-S39-002 (autonomy bug, FIXED), LG-S39-003 (n8n shim)
-  Previous: Session 38: 66/100 (D) [Batman-corrected]
+Session 40: 86/100 (B) [ADR-009 rubric, second use]
+  Base deductions (-14):
+    -4: Process - DC read_file bug hit (-2), no session-briefing check (-2)
+    -2: Tool Reuse - DC metadata bug before switching to Get-Content (-2)
+    -4: Delegation Quality - instruction clarity (-1), growth structure (-1), follow-through (-2)
+    -3: System Enrichment - no new reusable artifact (-2), offset for permanent fix (-1 net)
+    0: Finding Discipline - LG-S40-001 discovered, diagnosed, fixed, filed
+    -1: Documentation - CLAUDE.md update pending at score time (-1)
+    0: Self-Scoring Integrity - arithmetic: 4+2+4+3+0+1+0=14, 100-14=86
+  Multiplier: x1.0 (Standard) - Robin engaged (5 msgs, 2 acks), Lucius integrated
+  Findings: LG-S40-001 (inbox dual bug, FIXED)
+  Previous: Session 39: 89/100 (B), Session 38: 66/100 (D)
 
 ## Known Workarounds (Hot)
 
@@ -166,17 +166,16 @@ Session 39: 89/100 (B) [ADR-009 rubric, first use]
 | **gh CLI** | v2.88.1, authenticated as Rudy-Assistant |
 | **PAT** | Classic PAT (ghp_), expires 2026-06-27 |
 
-## Current Sprint (Session 39)
+## Current Sprint (Session 40)
 
-1. ✅ P0: Robin check-in — confirmed alive (PID 30100), diagnosed 0 inbox msgs processed (autonomy bug)
-2. ✅ P0: Delegated 4 tasks to Robin (PR #74 merge, n8n reinstall, vault ADR gen, vault protocol gen)
-3. ✅ P1: Merged PR #74 (squash merge to main), integrated Lucius ADR-009 + ADR-010
-4. ✅ Fix: Robin autonomy bug — added run_with_report() to RobinAgentV2 (was AttributeError since S38)
-5. ✅ P3: Vault ADR-007 Phase 2 — 5 Architecture notes (ADR-004 through ADR-008) + 3 Protocol notes
-6. ✅ P4: Restarted Robin bridge_runner (PID 17984) with autonomy fix applied
-7. ⚠️ P2: n8n still broken (MODULE_NOT_FOUND) — delegated clean reinstall to Robin
-8. PR #75: feature/s39-batcave-improvements (autonomy fix + vault Phase 2)
-
+1. P0: Robin check-in - alive (PID 17984), 0 inbox msgs (protocol bug LG-S40-001)
+2. P0-FIX: Diagnosed + fixed Robin inbox dual bug (wrong schema + wrong path)
+3. P0: Delegated 4 tasks via proper AlfredMailbox protocol (lint, n8n, HF, scorer)
+4. Robin confirmed processing: 5 msgs processed, 2 task_acks received
+5. Reviewed Lucius S39 governance package (ADR-009/010/011, 8 vault artifacts)
+6. Vault: Finding LG-S40-001, Session-40.md, Handoff, CLAUDE.md updated
+7. PR #75: OPEN (lint CI failed, delegated ruff --fix to Robin)
+8. n8n: delegated clean reinstall to Robin
 ## Lucius Gate — Session Governance (ADR-004 v2.1)
 
 **Core module:** `rudy/agents/lucius_gate.py`
