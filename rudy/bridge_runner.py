@@ -5,8 +5,8 @@ Windows Scheduled Task or service. Auto-registers Robin with the broker,
 polls for delegations, and writes heartbeat for external monitoring.
 
 Usage:
-    C:\Python312\python.exe C:\Users\ccimi\rudy-workhorse\rudy\bridge_runner.py
-    C:\Python312\python.exe C:\Users\ccimi\rudy-workhorse\rudy\bridge_runner.py --interval 15
+    C:\\Python312\\python.exe rudy\\bridge_runner.py
+    C:\\Python312\\python.exe rudy\\bridge_runner.py --interval 15
 
 Lucius Gate: LG-029 - No new dependencies. Uses existing modules.
 """
@@ -24,9 +24,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from rudy.peers_delegation import register_peer
 from rudy.peers_taskqueue_bridge import poll_loop
+from rudy.paths import RUDY_DATA, REPO_ROOT
 
 # === Configuration ===
-DATA_DIR = Path(r"C:\Users\ccimi\rudy-data")
+DATA_DIR = RUDY_DATA
 LOG_DIR = DATA_DIR / "logs"
 LOG_FILE = LOG_DIR / "bridge-runner.log"
 HEARTBEAT_FILE = DATA_DIR / "bridge-heartbeat.json"
@@ -98,7 +99,8 @@ def main():
 
     setup_logging()
     log.info("=" * 60)
-    log.info("Bridge Runner starting (PID %d, interval %ds)", os.getpid(), args.interval)
+    log.info("Bridge Runner starting (PID %d, interval %ds)",
+             os.getpid(), args.interval)
     # Graceful shutdown
     signal.signal(signal.SIGINT, _signal_handler)
     signal.signal(signal.SIGTERM, _signal_handler)
@@ -106,7 +108,7 @@ def main():
     # Register Robin with the broker
     robin_id = register_peer(
         pid=os.getpid(),
-        cwd=r"C:\Users\ccimi\rudy-workhorse",
+        cwd=str(REPO_ROOT),
         summary="Robin Bridge Runner (scheduled task)",
     )
     log.info("Registered as peer: %s", robin_id)
@@ -126,6 +128,7 @@ def main():
         sys.exit(1)
     finally:
         log.info("Bridge Runner stopped")
+
 
 if __name__ == "__main__":
     main()
