@@ -1490,7 +1490,6 @@ class LuciusFox(AgentBase):
         for f in files:
             fp = Path(f)
             name = fp.name
-            parts = fp.parts
 
             if "agents/" in f or "agents\\" in f:
                 agent_modules.add(name)

@@ -522,7 +522,7 @@ class Sentinel(AgentBase):
             if path.exists():
                 try:
                     current_hash = hashlib.md5(
-                        path.read_bytes()
+                        path.read_bytes(), usedforsecurity=False
                     ).hexdigest()[:12]
                     prev_hash = prev_hashes.get(name)
                     if prev_hash and current_hash != prev_hash:

@@ -267,7 +267,7 @@ def main():
 
     elif args.command == "report":
         result = full_waste_scan(session=args.session, file_findings=False)
-        print(f"\n=== Lucius Waste Report ===\n")
+        print("\n=== Lucius Waste Report ===\n")
         print(f"Stale artifacts ({result['stats']['stale_count']}):")
         for s in result["stale_artifacts"][:15]:
             print(f"  {s['days_stale']:3d}d  {s['path']}")
