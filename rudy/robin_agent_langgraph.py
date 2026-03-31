@@ -773,6 +773,39 @@ class RobinAgentV2:
         logger.info(result.to_summary())
         return result
 
+    def run_with_report(self, task: str, context: Optional[dict] = None) -> dict:
+        """Run a task and return a serializable dict report.
+
+        Backward-compatible wrapper around run() that returns a plain dict
+        instead of an AgentResult dataclass. Used by AutonomyEngine and
+        other callers that expect .get() semantics.
+
+        Session 39 fix: RobinAgentV2 was missing this method, causing
+        autonomy engine to fail with AttributeError since S38.
+        """
+        result = self.run(task, context)
+        report = {
+            "task": result.task,
+            "success": result.success,
+            "final_answer": result.final_answer,
+            "summary": result.final_answer[:200] if result.final_answer else "",
+            "total_steps": result.total_steps,
+            "total_tool_calls": result.total_tool_calls,
+            "total_duration_ms": result.total_duration_ms,
+            "error": result.error,
+            "steps": [
+                {
+                    "step": getattr(s, "step", i),
+                    "thought": getattr(s, "thought", ""),
+                    "action": getattr(s, "action", ""),
+                    "result": getattr(s, "result", "")[:500]
+                    if getattr(s, "result", "") else "",
+                }
+                for i, s in enumerate(result.steps)
+            ],
+        }
+        return report
+
 # ---------------------------------------------------------------------------
 # Convenience: backward-compatible alias
 # ---------------------------------------------------------------------------
@@ -861,3 +894,4 @@ if __name__ == "__main__":
     print("All structural tests complete.")
     print("To test with live Ollama + MCP, use robin_main.py integration.")
     print("=" * 60)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
