@@ -31,7 +31,7 @@ Integration:
 import json
 import logging
 import os
-import shutil
+from rudy.paths import REPO_ROOT, RUDY_DATA
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -39,11 +39,11 @@ log = logging.getLogger("skill_transfer")
 
 # Paths
 REPO_ROOT = Path(os.environ.get(
-    "RUDY_REPO", r"C:\Users\ccimi\rudy-workhorse"
+    "RUDY_REPO", str(REPO_ROOT)
 ))
 SKILLS_DIR = REPO_ROOT / ".claude" / "skills"
 RUDY_DATA = Path(os.environ.get(
-    "RUDY_DATA", r"C:\Users\ccimi\rudy-data"
+    "RUDY_DATA", str(RUDY_DATA)
 ))
 TRANSFER_DIR = RUDY_DATA / "skill-transfer"
 PENDING_DIR = TRANSFER_DIR / "pending"

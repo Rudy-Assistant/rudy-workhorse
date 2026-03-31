@@ -74,6 +74,9 @@ HANDOFFS_DIR = RUDY_DATA / "handoffs"
 # BatcaveVault: local Obsidian memory vault (gitignored, per-Oracle)
 BATCAVE_VAULT = REPO_ROOT / "vault"
 
+# OpenSpace skill evolution engine
+OPENSPACE_DIR = HOME / "OpenSpace"
+
 # Vault Handoffs: canonical handoff location inside Obsidian (most-used folder)
 VAULT_HANDOFFS = BATCAVE_VAULT / "Handoffs"
 

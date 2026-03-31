@@ -22,14 +22,12 @@ Usage:
 Lucius Gate: LG-028 - No new dependencies. Uses existing modules.
 """
 
-import json
 import logging
 import os
 import sys
 import time
-from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from rudy.paths import REPO_ROOT
 
 # Ensure rudy is importable
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -43,10 +41,7 @@ from rudy.peers_delegation import (
 )
 from rudy.robin_taskqueue import (
     make_task,
-    add_task,
     execute_task,
-    complete_task,
-    load_queue,
 )
 
 log = logging.getLogger("peers.bridge")
@@ -324,7 +319,7 @@ def main():
             # Auto-register
             robin_id = register_peer(
                 pid=os.getpid(),
-                cwd=r"C:\Users\ccimi\rudy-workhorse",
+                cwd=str(REPO_ROOT),
                 summary="Robin Bridge (poll loop)",
             )
             print(f"Auto-registered as {robin_id}")
@@ -336,7 +331,7 @@ def main():
         if not args.robin_id:
             robin_id = register_peer(
                 pid=os.getpid(),
-                cwd=r"C:\Users\ccimi\rudy-workhorse",
+                cwd=str(REPO_ROOT),
                 summary="Robin Bridge (one-shot)",
             )
         else:

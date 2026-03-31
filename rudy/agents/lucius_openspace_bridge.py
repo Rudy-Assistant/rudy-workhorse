@@ -178,7 +178,8 @@ async def record_lucius_score(
         dict with status, task_id, and any evolution suggestions.
     """
     import os
-    os.environ.setdefault("OPENSPACE_WORKSPACE", r"C:\Users\ccimi\OpenSpace")
+    from rudy.paths import OPENSPACE_DIR
+    os.environ.setdefault("OPENSPACE_WORKSPACE", str(OPENSPACE_DIR))
 
     from openspace.skill_engine.types import ExecutionAnalysis
     from openspace.skill_engine.store import SkillStore
@@ -213,6 +214,174 @@ async def record_lucius_score(
         "grade": score_result.get("grade", "?"),
         "evolution_suggestions": len(analysis.evolution_suggestions),
         "skill_judgments": len(analysis.skill_judgments),
+    }
+
+
+
+
+# ---------------------------------------------------------------------------
+# ADR-008: Severity Tiering + Directive Generation
+# ---------------------------------------------------------------------------
+
+SEVERITY_TIERS = {
+    "critical": {"range": (0, 49), "action": "immediate_intervention"},
+    "warning":  {"range": (50, 69), "action": "targeted_fix"},
+    "advisory": {"range": (70, 84), "action": "gentle_nudge"},
+    "healthy":  {"range": (85, 100), "action": "reinforce"},
+}
+
+
+def classify_severity(total_score: int) -> str:
+    """Classify a session score into ADR-008 severity tier."""
+    for tier, spec in SEVERITY_TIERS.items():
+        lo, hi = spec["range"]
+        if lo <= total_score <= hi:
+            return tier
+    return "advisory"
+
+
+def generate_directives(
+    score_result: Dict[str, Any],
+    session_number: int = 0,
+) -> List[Dict[str, Any]]:
+    """Generate Lucius directives based on session score and dimension analysis.
+
+    Returns a list of directive dicts for lucius-directives.json.
+    """
+    total_score = score_result.get("total_score", 0)
+    dimensions = score_result.get("dimensions", {})
+    tier = classify_severity(total_score)
+    action = SEVERITY_TIERS.get(tier, {}).get("action", "gentle_nudge")
+    now = datetime.now(timezone.utc).isoformat()
+
+    directives = []
+
+    # Generate directives for weak dimensions (< 50% of max)
+    for name, d in dimensions.items():
+        pct = d.get("pct", 0)
+        if pct < 50:
+            directives.append({
+                "id": f"LG-S{session_number}-{name[:4].upper()}",
+                "type": action,
+                "severity": tier,
+                "dimension": name,
+                "score_pct": pct,
+                "directive": f"Improve {name} (scored {d.get('score', 0)}/{d.get('max', 0)}). "
+                             f"This dimension is below 50% threshold.",
+                "session": session_number,
+                "created_at": now,
+                "status": "active",
+            })
+
+    # Global directive based on tier
+    if tier == "critical":
+        directives.append({
+            "id": f"LG-S{session_number}-CRIT",
+            "type": "immediate_intervention",
+            "severity": "critical",
+            "dimension": "overall",
+            "score_pct": total_score,
+            "directive": f"Session {session_number} scored {total_score}/100. "
+                         f"Mandatory process review required before next session.",
+            "session": session_number,
+            "created_at": now,
+            "status": "active",
+        })
+    elif tier == "warning":
+        directives.append({
+            "id": f"LG-S{session_number}-WARN",
+            "type": "targeted_fix",
+            "severity": "warning",
+            "dimension": "overall",
+            "score_pct": total_score,
+            "directive": f"Session {session_number} scored {total_score}/100. "
+                         f"Targeted improvements needed in weak dimensions.",
+            "session": session_number,
+            "created_at": now,
+            "status": "active",
+        })
+
+    return directives
+
+
+def write_directives(
+    directives: List[Dict[str, Any]],
+    directives_path: Optional[str] = None,
+) -> str:
+    """Write directives to lucius-directives.json coordination file.
+
+    Merges new directives with existing ones (deduplicates by id).
+    """
+    if directives_path is None:
+        from rudy.paths import RUDY_DATA
+        directives_path = str(Path(RUDY_DATA) / "coordination" / "lucius-directives.json")
+
+    existing = {"directives": [], "severity_tiers": SEVERITY_TIERS}
+    if Path(directives_path).exists():
+        try:
+            existing = json.loads(Path(directives_path).read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            pass
+
+    # Merge: replace existing directives with same id, append new ones
+    merged = [d for d in existing.get("directives", []) if d["id"] not in
+              {nd["id"] for nd in directives}]
+    merged.extend(directives)
+
+    existing["directives"] = merged
+    existing["last_updated"] = datetime.now(timezone.utc).isoformat()
+    existing["source"] = "lucius_openspace_bridge"
+
+    Path(directives_path).write_text(
+        json.dumps(existing, indent=2, default=str), encoding="utf-8"
+    )
+    log.info("Wrote %d directives to %s", len(directives), directives_path)
+    return directives_path
+
+
+async def full_feedback_loop(
+    score_result: Dict[str, Any],
+    skill_ids_used: Optional[List[str]] = None,
+    task_description: str = "",
+    session_number: int = 0,
+    db_path: Optional[str] = None,
+    directives_path: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Complete ADR-008 feedback loop: score -> OpenSpace -> directives.
+
+    This is the single entry point that activates the full loop:
+    1. Convert Lucius score to OpenSpace ExecutionAnalysis
+    2. Persist to SkillStore (triggers evolution engine)
+    3. Generate severity-tiered directives
+    4. Write directives to coordination file
+    """
+    # Step 1-2: Record to OpenSpace
+    try:
+        record_result = await record_lucius_score(
+            score_result=score_result,
+            skill_ids_used=skill_ids_used,
+            task_description=task_description,
+            session_number=session_number,
+            db_path=db_path,
+        )
+    except Exception as e:
+        log.warning("OpenSpace recording failed (degraded mode): %s", e)
+        record_result = {"status": "degraded", "error": str(e)}
+
+    # Step 3: Generate directives
+    directives = generate_directives(score_result, session_number)
+
+    # Step 4: Write directives
+    written_path = write_directives(directives, directives_path)
+
+    tier = classify_severity(score_result.get("total_score", 0))
+
+    return {
+        "openspace": record_result,
+        "directives_count": len(directives),
+        "directives_path": written_path,
+        "severity_tier": tier,
+        "action": SEVERITY_TIERS.get(tier, {}).get("action", "unknown"),
     }
 
 
