@@ -1123,6 +1123,22 @@ def pre_commit_check(
         criticality=MCPTier.CRITICAL,
     ))
 
+
+    # Optional: Codex rollback safety gate (ADR-006, P5-S36)
+    # Non-blocking — skips gracefully if OPENAI_API_KEY not set
+    try:
+        from rudy.agents.codex_rollback_gate import gate_check as codex_gate_check
+        codex_result = codex_gate_check()
+        checks.append(GateCheck(
+            name="codex_rollback_safety",
+            passed=codex_result,
+            message="Codex rollback review" if codex_result else "Codex flagged safety issues",
+            elapsed_sec=0.0,
+            criticality=MCPTier.OPTIONAL,
+        ))
+    except Exception:
+        pass  # Non-blocking — codex gate is advisory only
+
     return _build_gate_result(
         gate_name="pre_commit",
         checks=checks,
