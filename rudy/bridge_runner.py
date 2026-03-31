@@ -42,6 +42,7 @@ HEARTBEAT_INTERVAL = 30  # write heartbeat every N seconds
 INBOX_CHECK_EVERY = 3        # Check inbox every 3 cycles (~30s)
 STRUGGLE_CHECK_EVERY = 6     # Detect Alfred struggle every 6 cycles (~60s)
 AUTONOMY_CHECK_EVERY = 30    # Run AutonomyEngine every 30 cycles (~5min)
+WAKE_CHECK_EVERY = 60        # Check if Alfred needs waking every 60 cycles (~10min)
 
 log = logging.getLogger("bridge.runner")
 
@@ -299,6 +300,7 @@ def main():
     last_heartbeat = time.time()
     total_autonomy_runs = 0
     total_inbox_msgs = 0
+    total_wakes = 0
 
     try:
         while True:
@@ -344,6 +346,20 @@ def main():
                                  result.get("mode"), result.get("action"))
                 except Exception as e:
                     log.error("Autonomy tick error: %s", e)
+
+            # --- Phase 5: Wake Alfred check (every WAKE_CHECK_EVERY) ---
+            if not args.no_autonomy and iteration % WAKE_CHECK_EVERY == 0:
+                try:
+                    from rudy.robin_wake_alfred import wake_alfred
+                    wake_result = wake_alfred()
+                    if wake_result.get("woke"):
+                        log.info("Woke Alfred: %s (methods: %s)",
+                                 wake_result.get("reason", ""),
+                                 wake_result.get("methods_tried", []))
+                except ImportError:
+                    pass  # wake module not yet available
+                except Exception as e:
+                    log.error("Wake check error: %s", e)
 
             # --- Heartbeat refresh ---
             if time.time() - last_heartbeat >= HEARTBEAT_INTERVAL:
