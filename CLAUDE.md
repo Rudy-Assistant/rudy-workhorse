@@ -113,12 +113,13 @@ All session records, findings, and institutional knowledge MUST be written to th
 
 ## Last Session Score
 
-Session 38: 92/100 (A-)
+Session 38: 87/100 (B+)
   -2: n8n startup blocked (LG-S38-002, delegated to Robin)
-  -1: P5 partial (Sessions 27-36 backfilled, 13-26 deferred)
+  -3: Under-delegation to Robin (missed 4+ delegation opportunities: P5 backfill, lint fix, audit execution, CI monitoring)
+  -3: Compounding cost of Robin under-utilization (delays proxy/heir training, Colab/HF compute path)
+  -2: Missing Context Evaluation + handoff prompt (FoxGate Step 4 protocol violation)
   -2: DC read_file workaround cycles (known bug, cost time early)
-  -2: Git CLI quoting struggles before establishing helper script pattern
-  -1: CLAUDE.md sprint section still stale
+  -1: Git CLI quoting struggles before establishing helper script pattern
 
 ## Known Workarounds (Hot)
 
