@@ -25,5 +25,18 @@
       "last_modified": "2026-03-31T00:53:10.117308+00:00",
       "size_bytes": 2890
     }
-  ]
+  ],
+  "agents": [
+    {
+      "path": "rudy/agents/__init__.py",
+      "module": "Base Agent",
+      "lines": 200
+    }
+  ],
+  "stats": {
+    "total_lines": 9847,
+    "total_agents": 5,
+    "total_skills": 12,
+    "total_mcps": 3
+  }
 }
