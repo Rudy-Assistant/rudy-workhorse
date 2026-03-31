@@ -37,6 +37,7 @@ LOG_FILE = LOG_DIR / "bridge-runner.log"
 HEARTBEAT_FILE = DATA_DIR / "bridge-heartbeat.json"
 DEFAULT_INTERVAL = 10  # seconds
 HEARTBEAT_INTERVAL = 30  # write heartbeat every N seconds
+LOCK_FILE = DATA_DIR / "bridge-runner.lock"
 
 # Autonomy cadence (in poll cycles, not seconds)
 INBOX_CHECK_EVERY = 3        # Check inbox every 3 cycles (~30s)
@@ -94,7 +95,60 @@ def check_health():
 
 def _signal_handler(signum, _frame):
     log.info("Received signal %d, shutting down...", signum)
+    _release_lock()
     sys.exit(0)
+
+
+def _is_process_alive(pid):
+    """Check if a process with given PID is still running."""
+    try:
+        import ctypes
+        kernel32 = ctypes.windll.kernel32
+        PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+        handle = kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
+        if handle:
+            kernel32.CloseHandle(handle)
+            return True
+        return False
+    except Exception:
+        # Fallback: use os.kill with signal 0
+        try:
+            os.kill(pid, 0)
+            return True
+        except OSError:
+            return False
+
+
+def _acquire_lock():
+    """Acquire a PID lockfile. Returns True if lock acquired, False if another instance is running."""
+    if LOCK_FILE.exists():
+        try:
+            lock_data = json.loads(LOCK_FILE.read_text(encoding="utf-8"))
+            old_pid = lock_data.get("pid", 0)
+            if old_pid and _is_process_alive(old_pid):
+                return False  # Another instance is genuinely running
+            else:
+                log.info("Stale lock from PID %d (dead), taking over", old_pid)
+        except (json.JSONDecodeError, OSError):
+            log.warning("Corrupt lock file, overwriting")
+
+    # Write our lock
+    LOCK_FILE.write_text(json.dumps({
+        "pid": os.getpid(),
+        "started": datetime.now().isoformat(),
+    }, indent=2), encoding="utf-8")
+    return True
+
+
+def _release_lock():
+    """Release the PID lockfile on exit."""
+    try:
+        if LOCK_FILE.exists():
+            lock_data = json.loads(LOCK_FILE.read_text(encoding="utf-8"))
+            if lock_data.get("pid") == os.getpid():
+                LOCK_FILE.unlink()
+    except Exception:
+        pass
 
 
 # =========================================================================
@@ -270,6 +324,13 @@ def main():
         sys.exit(0 if ok else 1)
 
     setup_logging()
+
+    # Singleton enforcement: only one bridge_runner at a time
+    if not _acquire_lock():
+        log.warning("Another bridge_runner is already running (lock: %s). Exiting.", LOCK_FILE)
+        print("ALREADY_RUNNING: Another bridge_runner instance holds the lock. Exiting.")
+        sys.exit(0)
+
     log.info("=" * 60)
     log.info("Bridge + Autonomy Runner starting (PID %d, interval %ds, autonomy=%s)",
              os.getpid(), args.interval, not args.no_autonomy)
@@ -375,6 +436,7 @@ def main():
         log.error("Fatal error: %s", e, exc_info=True)
         sys.exit(1)
     finally:
+        _release_lock()
         log.info("Bridge + Autonomy Runner stopped after %d iterations "
                  "(autonomy_runs=%d, inbox_msgs=%d)",
                  iteration, total_autonomy_runs, total_inbox_msgs)

@@ -1247,6 +1247,143 @@ class SentinelObserver:
                     f"Declining: last {len(scores)} scores = {scores}"
                 )
 
+        # 3. waste_detected: check latest score for low skills_utilization
+        #    Indicates custom code written when existing tools could handle it.
+        score_file = Path(os.environ.get(
+            "RUDY_DATA", str(DESKTOP / "rudy-data")
+        )) / "coordination" / "alfred-status.json"
+        if score_file.exists():
+            try:
+                with open(score_file, "r", encoding="utf-8") as f:
+                    status_data = json.load(f)
+                last_action = status_data.get("last_action", "")
+                # Check for waste indicators in status
+                if "custom" in last_action.lower() and "existing" not in last_action.lower():
+                    self._emit_lucius_signal(
+                        "waste_detected",
+                        f"Possible custom code when tool exists: {last_action[:100]}"
+                    )
+            except Exception:
+                pass
+
+        # Also check for large temp script accumulation in rudy-data/
+        temp_scripts = list(Path(os.environ.get(
+            "RUDY_DATA", str(DESKTOP / "rudy-data")
+        )).glob("temp_*.py"))
+        if len(temp_scripts) > 10:
+            self._emit_lucius_signal(
+                "waste_detected",
+                f"{len(temp_scripts)} temp scripts in rudy-data/ — "
+                f"indicates excessive throwaway code. Clean up and "
+                f"consider converting repeated patterns to Robin skills."
+            )
+
+        # 4. delegation_violation: check coordination files for Alfred
+        #    doing local I/O when Robin was online.
+        coord_dir = Path(os.environ.get(
+            "RUDY_DATA", str(DESKTOP / "rudy-data")
+        )) / "coordination"
+        robin_status_file = coord_dir / "robin-status.json"
+        if robin_status_file.exists():
+            try:
+                with open(robin_status_file, "r", encoding="utf-8") as f:
+                    robin_data = json.load(f)
+                robin_state = robin_data.get("state", "offline")
+                if robin_state == "online":
+                    # Robin is online — check if Alfred is doing local work
+                    # by looking at friction log for recent Alfred-local events
+                    friction_file = coord_dir / "friction-log.json"
+                    if friction_file.exists():
+                        try:
+                            with open(friction_file, "r", encoding="utf-8") as f:
+                                friction = json.load(f)
+                            violations = [
+                                e for e in friction.get("entries", [])
+                                if e.get("type") == "delegation_bypass"
+                            ]
+                            if violations:
+                                self._emit_lucius_signal(
+                                    "delegation_violation",
+                                    f"{len(violations)} delegation bypass(es) "
+                                    f"while Robin online. Latest: "
+                                    f"{violations[-1].get('detail', '?')[:80]}"
+                                )
+                        except Exception:
+                            pass
+            except Exception:
+                pass
+
+        # 5. tool_amnesia: check if registry.json was consulted recently
+        #    by checking its last-read timestamp vs session start.
+        registry_path = Path(os.environ.get(
+            "RUDY_WORKHORSE", str(DESKTOP / "rudy-workhorse")
+        )) / "registry.json"
+        if registry_path.exists():
+            try:
+                reg_mtime = registry_path.stat().st_mtime
+                from datetime import datetime, timedelta
+                reg_age_hours = (
+                    datetime.now().timestamp() - reg_mtime
+                ) / 3600
+                if reg_age_hours > 48:
+                    self._emit_lucius_signal(
+                        "tool_amnesia",
+                        f"registry.json not updated in {reg_age_hours:.0f}h. "
+                        f"Run lucius audit to refresh capability manifest."
+                    )
+            except Exception:
+                pass
+
+        # 6. drift_alert: check for environment/config drift
+        #    - Stale coordination files (>24h without update)
+        #    - Missing expected files
+        #    - Process count anomalies
+        expected_coord_files = [
+            "alfred-status.json",
+            "robin-status.json",
+            "session-branch.json",
+        ]
+        for fname in expected_coord_files:
+            fpath = coord_dir / fname
+            if not fpath.exists():
+                self._emit_lucius_signal(
+                    "drift_alert",
+                    f"Expected coordination file missing: {fname}"
+                )
+            else:
+                try:
+                    age_hours = (
+                        datetime.now().timestamp() - fpath.stat().st_mtime
+                    ) / 3600
+                    if age_hours > 24:
+                        self._emit_lucius_signal(
+                            "drift_alert",
+                            f"{fname} stale ({age_hours:.0f}h old). "
+                            f"Coordination layer may be inactive."
+                        )
+                except Exception:
+                    pass
+
+        # Check for runaway process count (LG-S37-001)
+        try:
+            import subprocess
+            r = subprocess.run(
+                ["tasklist", "/fo", "CSV", "/nh"],
+                capture_output=True, text=True, timeout=10,
+            )
+            node_count = r.stdout.lower().count('"node.exe"')
+            python_count = r.stdout.lower().count('"python.exe"')
+            total = node_count + python_count
+            if total > 30:
+                self._emit_lucius_signal(
+                    "drift_alert",
+                    f"Process sprawl: {node_count} node + {python_count} python "
+                    f"= {total} total. Expected <20. "
+                    f"Investigate bridge_runner child reaping (LG-S37-001)."
+                )
+        except Exception:
+            pass
+
     def get_priority_boost(self, area):
         """Return priority boost for an area based on recent observations."""
         recent = [o for o in self.observations[-50:] if o.get("category") == area]
