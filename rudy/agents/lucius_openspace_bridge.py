@@ -95,8 +95,8 @@ def lucius_to_execution_analysis(
     # Build per-skill judgments
     skill_judgments = []
     if skill_ids_used:
-        skills_invoked = set(evidence.get("skills_invoked", []))
-        skills_recommended = set(evidence.get("skills_recommended", []))
+        _skills_invoked = set(evidence.get("skills_invoked", []))
+        _skills_recommended = set(evidence.get("skills_recommended", []))
         skills_utilization_pct = dimensions.get("skills_utilization", {}).get("pct", 0)
 
         for skill_id in skill_ids_used:
