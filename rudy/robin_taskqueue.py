@@ -431,6 +431,69 @@ def execute_task(task: dict) -> tuple[bool, str]:
         )
         return _execute_python(code, timeout=30)
 
+    elif task_type == "health_check":
+        # System health check: CPU, RAM, disk, uptime
+        commands = [
+            ("cpu_ram", "wmic cpu get LoadPercentage /value & wmic OS get FreePhysicalMemory,TotalVisibleMemorySize /value"),
+            ("disk", "wmic logicaldisk get Size,FreeSpace,Caption /value"),
+            ("uptime", "net statistics workstation | findstr Statistics"),
+        ]
+        results = []
+        for name, cmd in commands:            try:
+                r = subprocess.run(
+                    cmd, capture_output=True, text=True, shell=True,  # nosec B602
+                    timeout=30, encoding="utf-8", errors="replace",
+                )
+                results.append(f"--- {name} ---\n{r.stdout.strip()}")
+            except Exception as e:
+                results.append(f"--- {name} --- ERROR: {e}")
+        output = "\n".join(results)
+        return True, output[-3000:]
+
+    elif task_type == "security_scan":
+        # Security sweep: Defender, firewall, open ports
+        commands = [
+            ("defender", 'powershell -Command "Get-MpComputerStatus | Select-Object AntivirusEnabled,RealTimeProtectionEnabled,AntivirusSignatureLastUpdated | Format-List"'),
+            ("firewall", "netsh advfirewall show allprofiles state"),
+            ("ports", "netstat -an | findstr LISTENING"),
+        ]
+        results = []
+        for name, cmd in commands:
+            try:
+                r = subprocess.run(
+                    cmd, capture_output=True, text=True, shell=True,  # nosec B602
+                    timeout=30, encoding="utf-8", errors="replace",
+                )                out = r.stdout.strip()
+                if name == "ports":
+                    lines = out.split("\n")
+                    out = f"{len(lines)} listening ports\n" + "\n".join(lines[:20])
+                results.append(f"--- {name} ---\n{out}")
+            except Exception as e:
+                results.append(f"--- {name} --- ERROR: {e}")
+        output = "\n".join(results)
+        return True, output[-3000:]
+
+    elif task_type == "shell":
+        # Execute shell command (string or list) from delegation
+        cmd = task.get("command")
+        if isinstance(cmd, list):
+            return _execute_command(cmd, timeout=task.get("estimated_minutes", 5) * 60)
+        if not cmd:
+            cmd = task.get("metadata", {}).get("command")
+        if not cmd:
+            return False, "shell task missing 'command' field"
+        try:
+            r = subprocess.run(
+                cmd, capture_output=True, text=True, shell=True,  # nosec B602
+                timeout=task.get("estimated_minutes", 5) * 60,
+                cwd=str(RUDY_ROOT), encoding="utf-8", errors="replace",
+            )            output = (r.stdout or "") + (r.stderr or "")
+            return r.returncode == 0, output[-3000:]
+        except subprocess.TimeoutExpired:
+            return False, "TIMEOUT"
+        except Exception as e:
+            return False, str(e)
+
     else:
         return False, f"Unknown task type: {task_type}"
 
