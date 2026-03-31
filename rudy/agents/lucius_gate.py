@@ -902,18 +902,105 @@ def _build_gate_result(
     )
 
 
+
+def _check_branch_verification(expected_branch: Optional[str] = None) -> GateCheck:
+    """Verify working copy is on the expected git branch.
+
+    ADR-004 v2.1 — Session 35 patch (LG-S34-005).
+    Branch confusion caused hours of dead autonomy in Session 34.
+
+    If expected_branch is None, reads from:
+        1. rudy-data/coordination/session-branch.json ({"branch": "..."})
+        2. Falls back to PASS with a warning (no expectation set)
+
+    Returns FAIL if on the wrong branch (blocks the session).
+    """
+    import subprocess  # noqa: C3
+
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            capture_output=True, text=True, timeout=5,
+            cwd=str(Path(__file__).resolve().parent.parent.parent),
+        )
+        if result.returncode != 0:
+            return GateCheck(
+                name="branch_verification",
+                passed=None,
+                detail=f"git rev-parse failed: {result.stderr.strip()}",
+                state=GateCheckState.DEGRADED,
+            )
+        actual_branch = result.stdout.strip()
+    except FileNotFoundError:
+        return GateCheck(
+            name="branch_verification",
+            passed=None,
+            detail="git not found in PATH",
+            state=GateCheckState.DEGRADED,
+        )
+    except Exception as e:
+        return GateCheck(
+            name="branch_verification",
+            passed=None,
+            detail=f"branch check error: {type(e).__name__}: {e}",
+            state=GateCheckState.DEGRADED,
+        )
+
+    # Resolve expected branch
+    if expected_branch is None:
+        try:
+            from rudy.paths import RUDY_DATA  # noqa: C3
+            session_branch_file = RUDY_DATA / "coordination" / "session-branch.json"
+            if session_branch_file.is_file():
+                import json as _json
+                data = _json.loads(session_branch_file.read_text(encoding="utf-8"))
+                expected_branch = data.get("branch")
+        except Exception:
+            pass
+
+    if expected_branch is None:
+        return GateCheck(
+            name="branch_verification",
+            passed=True,
+            detail=f"On branch '{actual_branch}' (no expectation set — WARN)",
+        )
+
+    if actual_branch != expected_branch:
+        log.error(
+            "BRANCH MISMATCH: expected '%s', got '%s' — SESSION BLOCKED",
+            expected_branch, actual_branch,
+        )
+        return GateCheck(
+            name="branch_verification",
+            passed=False,
+            detail=(
+                f"BRANCH MISMATCH: expected '{expected_branch}', "
+                f"actual '{actual_branch}'. "
+                f"Run: git checkout {expected_branch}"
+            ),
+        )
+
+    return GateCheck(
+        name="branch_verification",
+        passed=True,
+        detail=f"On expected branch '{actual_branch}'",
+    )
+
+
 def session_start_gate(
     session_number: int = 0,
     mcp_tiers_path: Optional[str] = None,
     check_timeout_sec: float = DEFAULT_CHECK_TIMEOUT_SEC,
     task_description: str = "",
+    expected_branch: Optional[str] = None,
 ) -> GateResult:
     """Run all pre-session checks. Called when a new session begins.
 
     Checks:
         1. Repo root is detectable
-        2. Vault is accessible
-        3. MCP connections (per tier)
+        2. Branch verification (LG-S34-005 — blocks on mismatch)
+        3. Vault is accessible
+        4. MCP connections (per tier)
 
     If task_description is provided, also runs skills_check() and
     includes recommendations in the GateResult.
@@ -929,6 +1016,13 @@ def session_start_gate(
     checks.append(run_check(
         fn=_check_repo_root,
         name="repo_root",
+        timeout_sec=check_timeout_sec,
+        criticality=MCPTier.CRITICAL,
+    ))
+    # Branch verification (LG-S34-005: Session 35 patch)
+    checks.append(run_check(
+        fn=lambda: _check_branch_verification(expected_branch),
+        name="branch_verification",
         timeout_sec=check_timeout_sec,
         criticality=MCPTier.CRITICAL,
     ))
