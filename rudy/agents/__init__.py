@@ -71,8 +71,9 @@ class AgentBase:
         self.log.info(f"=== {self.name} v{self.version} starting ===")
         try:
             self.status["status"] = "running"
-            self.run(**kwargs)
+            result = self.run(**kwargs)
             self.status["status"] = "healthy"
+            return result
         except Exception as e:
             self.status["status"] = "error"
             self.status["critical_alerts"].append(str(e))
