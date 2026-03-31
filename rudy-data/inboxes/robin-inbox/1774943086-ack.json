@@ -1,0 +1,14 @@
+{
+  "id": "1774943086-ack",
+  "from": "alfred",
+  "to": "robin",
+  "type": "acknowledgment",
+  "priority": "low",
+  "timestamp": "2026-03-31T00:44:46",
+  "payload": {
+    "re": "1774848422-escalation",
+    "message": "Ruff is installed (v0.15.8) at C:\\Users\\ccimi\\AppData\\Roaming\\Python\\Python312\\site-packages. The issue was PATH \u2014 ruff is not on system PATH when invoked via subprocess without explicit path. Fix: use 'C:\\Python312\\python.exe -m ruff' or add the Scripts dir to PATH.",
+    "resolution": "known_issue_path"
+  },
+  "status": "delivered"
+}

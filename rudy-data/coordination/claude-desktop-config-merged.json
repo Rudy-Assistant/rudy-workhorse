@@ -1,0 +1,57 @@
+{
+  "mcpServers": {
+    "brave-search": {
+      "command": "node",
+      "args": [
+        "C:\\Users\\ccimi\\AppData\\Roaming\\npm\\node_modules\\@modelcontextprotocol\\server-brave-search\\dist\\index.js"
+      ],
+      "env": {
+        "BRAVE_API_KEY": "REDACTED"
+      }
+    },
+    "github": {
+      "command": "node",
+      "args": [
+        "C:\\Users\\ccimi\\AppData\\Roaming\\npm\\node_modules\\@modelcontextprotocol\\server-github\\dist\\index.js"
+      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "REDACTED"
+      }
+    },
+    "obsidian": {
+      "command": "node",
+      "args": [
+        "C:\\Users\\ccimi\\AppData\\Roaming\\npm\\node_modules\\mcp-obsidian\\dist\\index.js"
+      ],
+      "env": {
+        "OBSIDIAN_VAULT_PATH": "C:\\Users\\ccimi\\Desktop\\rudy-workhorse\\vault"
+      }
+    },
+    "n8n-mcp": {
+      "command": "npx",
+      "args": [
+        "n8n-mcp"
+      ],
+      "env": {
+        "MCP_MODE": "stdio",
+        "LOG_LEVEL": "error",
+        "DISABLE_CONSOLE_OUTPUT": "true",
+        "N8N_API_URL": "<YOUR_N8N_URL>",
+        "N8N_API_KEY": "<YOUR_N8N_API_KEY>"
+      }
+    }
+  },
+  "preferences": {
+    "chromeExtension": {
+      "pairedDeviceId": "94bf4380-fc09-41f4-aa19-c02485b9452f",
+      "pairedDeviceName": "Chrome"
+    },
+    "allowAllBrowserActions": true,
+    "coworkScheduledTasksEnabled": true,
+    "ccdScheduledTasksEnabled": true,
+    "sidebarMode": "task",
+    "bypassPermissionsModeEnabled": true,
+    "coworkWebSearchEnabled": true,
+    "keepAwakeEnabled": true
+  }
+}
