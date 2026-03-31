@@ -1,0 +1,10 @@
+{
+  "id": "LG-S36-001",
+  "severity": "HIGH",
+  "title": "FoxGate missing Robin liveness check",
+  "description": "FoxGate Step 1 checked registry, skills, and signals but did not verify Robin was online. Alfred proceeded through audit without noticing Robin was dead for 7+ hours. Batman had to intervene.",
+  "session": 36,
+  "status": "FIXED",
+  "fix": "Added Robin liveness as Step 1 Item 1 in FoxGate SKILL.md. Must check bridge-heartbeat.json freshness before any other audit step.",
+  "timestamp": "2026-03-31T17:20:00Z"
+}

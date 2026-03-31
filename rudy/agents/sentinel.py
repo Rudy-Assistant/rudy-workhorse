@@ -34,6 +34,7 @@ Session Guardian (ADR-001, 2026-03-27):
   triggers handoff: saves state to disk, generates continuation prompt.
 """
 import json
+import os
 
 import subprocess
 import time
@@ -1107,6 +1108,7 @@ class SentinelObserver:
         self._observe_environment()
         self._observe_coordination()
         self._observe_code_quality()
+        self._observe_lucius_governance()
         self._save()
         return self.observations[-10:]  # Return recent
 
@@ -1159,6 +1161,91 @@ class SentinelObserver:
                         break  # One per file is enough
             except Exception:
                 pass
+
+
+    # --- Lucius Signal Types (ADR-006 Section 2, P2-S36) ---
+
+    LUCIUS_SIGNALS_FILE = Path(os.environ.get(
+        "RUDY_DATA", str(DESKTOP / "rudy-data")
+    )) / "coordination" / "lucius-signals.json"
+    LUCIUS_SIGNAL_TYPES = {
+        "waste_detected", "delegation_violation", "tool_amnesia",
+        "score_trend", "finding_stale", "drift_alert",
+    }
+    MAX_LUCIUS_SIGNALS = 50
+
+    def _emit_lucius_signal(self, signal_type: str, detail: str):
+        """Write a Lucius-relevant signal to lucius-signals.json.
+
+        FoxGate reads this file at session start to inform pre-work gates.
+        """
+        if signal_type not in self.LUCIUS_SIGNAL_TYPES:
+            return
+        signals = self._load_lucius_signals()
+        signals.append({
+            "type": signal_type,
+            "detail": detail,
+            "timestamp": datetime.now().isoformat(),
+        })
+        # Keep only recent signals
+        if len(signals) > self.MAX_LUCIUS_SIGNALS:
+            signals = signals[-self.MAX_LUCIUS_SIGNALS:]
+        self.LUCIUS_SIGNALS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        with open(self.LUCIUS_SIGNALS_FILE, "w", encoding="utf-8") as f:
+            json.dump({"signals": signals}, f, indent=2, ensure_ascii=False)
+
+    def _load_lucius_signals(self) -> list:
+        """Load existing Lucius signals."""
+        if self.LUCIUS_SIGNALS_FILE.exists():
+            try:
+                with open(self.LUCIUS_SIGNALS_FILE, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                return data.get("signals", [])
+            except Exception:
+                return []
+        return []
+
+    def _observe_lucius_governance(self):
+        """Check for Lucius-relevant signals: stale findings, score trends."""
+        # 1. finding_stale: check findings dir for items open 3+ sessions
+        findings_dir = Path(os.environ.get(
+            "RUDY_DATA", str(DESKTOP / "rudy-data")
+        )) / "findings"
+        if findings_dir.exists():
+            for fp in findings_dir.glob("*.json"):
+                try:
+                    with open(fp, "r", encoding="utf-8") as f:
+                        finding = json.load(f)
+                    status = finding.get("status", "OPEN")
+                    if status in ("OPEN", "RECURRING"):
+                        fid = finding.get("id", fp.stem)
+                        self._emit_lucius_signal(
+                            "finding_stale",
+                            f"{fid} ({finding.get('severity', '?')}): {status}"
+                        )
+                except Exception:
+                    pass
+
+        # 2. score_trend: check last handoff scores
+        handoffs_dir = Path(os.environ.get(
+            "RUDY_DATA", str(DESKTOP / "rudy-data")
+        )) / "handoffs"
+        if handoffs_dir.exists():
+            scores = []
+            for hp in sorted(handoffs_dir.glob("session-*-handoff.json"))[-3:]:
+                try:
+                    with open(hp, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                    score = data.get("compliance_score")
+                    if score is not None:
+                        scores.append(score)
+                except Exception:
+                    pass
+            if len(scores) >= 2 and all(s < 70 for s in scores[-2:]):
+                self._emit_lucius_signal(
+                    "score_trend",
+                    f"Declining: last {len(scores)} scores = {scores}"
+                )
 
     def get_priority_boost(self, area):
         """Return priority boost for an area based on recent observations."""

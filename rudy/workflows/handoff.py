@@ -156,6 +156,53 @@ class HandoffWriter:
         except Exception as e:
             log.error(f"Scorer crashed: {e}")
 
+
+    def _update_claude_md_score(self):
+        """Write session score to CLAUDE.md 'Last Session Score' section.
+
+        ADR-006 / P1-S36: Closes the reinforcement loop. Only the most recent
+        session score is kept — replaces previous content entirely.
+        """
+        claude_md = REPO_ROOT / "CLAUDE.md"
+        if not claude_md.exists():
+            log.warning("CLAUDE.md not found at %s", claude_md)
+            return
+
+        try:
+            text = claude_md.read_text(encoding="utf-8")
+        except OSError as e:
+            log.error("Failed to read CLAUDE.md: %s", e)
+            return
+
+        # Build concise score line (just headline + deductions)
+        if self.score_report:
+            sr = self.score_report
+            score_line = (
+                f"Session {self.session_number}: "
+                f"{sr['total_score']}/100 ({sr['grade']})"
+            )
+        else:
+            score_line = (
+                f"Session {self.session_number}: "
+                f"{self.compliance_score}/100"
+            )
+
+        # Replace everything between "## Last Session Score" and the next "##"
+        pattern = r"(## Last Session Score\n)\n?.*?(?=\n## |\Z)"
+        replacement = r"\1\n" + score_line + "\n"
+        new_text, count = re.subn(pattern, replacement, text, count=1, flags=re.DOTALL)
+
+        if count == 0:
+            log.warning("'## Last Session Score' section not found in CLAUDE.md")
+            return
+
+        try:
+            claude_md.write_text(new_text, encoding="utf-8")
+            log.info("Updated CLAUDE.md score: %s", score_line)
+        except OSError as e:
+            log.error("Failed to write CLAUDE.md: %s", e)
+
+
     def generate_markdown(self) -> str:
         """Generate the handoff markdown document.
 
@@ -488,6 +535,9 @@ class HandoffWriter:
 
         # Phase 3: Run scorer if evidence is available
         self._run_scorer()
+
+        # ADR-006 P1-S36: Update CLAUDE.md with session score
+        self._update_claude_md_score()
 
         content = self.generate_markdown()
         filename_md = f"session-{self.session_number:02d}-handoff.md"
