@@ -316,7 +316,7 @@ def main():
     if args.command == "status":
         import requests
         try:
-            r = requests.get(f"{BROKER_URL}/list-peers", timeout=3)
+            requests.get(f"{BROKER_URL}/list-peers", timeout=3)
             print(f"Broker: ONLINE at {BROKER_URL}")
         except Exception:
             print(f"Broker: OFFLINE at {BROKER_URL}")

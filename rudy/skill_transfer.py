@@ -7,7 +7,7 @@ Directory Structure:
         {skill-name}/
             SKILL.md          # OpenSpace-format skill definition
             .skill_id         # OpenSpace registry ID (auto-generated)
-    
+
     rudy-data/skill-transfer/ # Transfer staging area (local only)
         pending/              # Skills awaiting transfer
         completed/            # Transfer receipts
