@@ -1,0 +1,43 @@
+filters:
+  and:
+    - file.hasTag("finding")
+
+formulas:
+  sev_icon: 'if(severity == "critical", "🔴", if(severity == "high", "🟠", if(severity == "medium", "🟡", "🟢")))'
+  age_days: '(today() - file.ctime).days'
+  stale: 'if((today() - file.ctime).days > 14 && status == "open", "⚠️ STALE", "")'
+
+properties:
+  formula.sev_icon:
+    displayName: ""
+  formula.age_days:
+    displayName: "Age (days)"
+  formula.stale:
+    displayName: "Alert"
+
+views:
+  - type: table
+    name: "Open Findings"
+    filters:
+      and:
+        - 'status == "open"'
+    order:
+      - file.name
+      - formula.sev_icon
+      - severity
+      - session_found
+      - formula.age_days
+      - formula.stale
+    groupBy:
+      property: severity
+      direction: DESC
+
+  - type: table
+    name: "All Findings"
+    order:
+      - file.name
+      - formula.sev_icon
+      - severity
+      - status
+      - session_found
+      - session_resolved

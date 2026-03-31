@@ -1,0 +1,23 @@
+filters:
+  and:
+    - file.inFolder("Skill-Recs")
+
+formulas:
+  status_icon: 'if(status == "implemented", "✅", if(status == "in-progress", "🔨", "📋"))'
+
+properties:
+  formula.status_icon:
+    displayName: ""
+
+views:
+  - type: table
+    name: "Skill Recommendations"
+    order:
+      - file.name
+      - formula.status_icon
+      - status
+      - source_session
+      - priority
+    groupBy:
+      property: status
+      direction: ASC
