@@ -1,0 +1,36 @@
+{
+  "id": "P4-EVAL-S35",
+  "type": "evaluation",
+  "session": 35,
+  "title": "Codex Adversarial Review for Lucius Gate",
+  "tool": "openai/codex-plugin-cc",
+  "verdict": "VIABLE_WITH_CAVEATS",
+  "summary": "Codex plugin provides /codex:adversarial-review that pressure-tests code. Could serve as Lucius sub-gate, but integration requires Node.js subprocess wrapping.",
+  "capabilities": {
+    "review": "/codex:review (read-only analysis)",
+    "adversarial": "/codex:adversarial-review (steerable, accepts focus text)",
+    "rescue": "/codex:rescue (bug fixing delegation)",
+    "management": "/codex:status, /codex:result, /codex:cancel"
+  },
+  "attack_surfaces_mapped": {
+    "auth_boundaries": "Can focus adversarial review on auth code paths",
+    "data_loss_windows": "Can review backup/write patterns for gaps",
+    "rollback_safety": "BEST FIT: review rollback code, git operations, state mutations",
+    "race_conditions": "Can analyze concurrent access patterns",
+    "degraded_deps": "Can check dependency handling under failure",
+    "version_skew": "Can review version compatibility code",
+    "observability_gaps": "Can check logging/monitoring coverage"
+  },
+  "integration_plan": {
+    "approach": "Subprocess wrapper in Python calling Codex CLI",
+    "prerequisites": ["Codex CLI installed", "API key configured", "Node.js 18.18+"],
+    "prototype_target": "rollback_safety (most relevant to Batcave git operations)",
+    "estimated_effort": "2-3 hours for prototype gate"
+  },
+  "blockers": [
+    "Requires OpenAI API key (cost consideration)",
+    "Node.js dependency adds complexity",
+    "Codex CLI must be installed on Oracle"
+  ],
+  "recommendation": "Prototype rollback_safety gate in Session 36. Install Codex CLI, write thin Python wrapper, test on one PR diff. If successful, wire into pre_commit_check as optional gate."
+}
