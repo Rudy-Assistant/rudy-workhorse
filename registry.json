@@ -1159,7 +1159,7 @@
     },
     {
       "path": "rudy/robin_taskqueue.py",
-      "lines": 694,
+      "lines": 764,
       "imports": [
         "datetime",
         "json",
@@ -1177,7 +1177,8 @@
       ],
       "docstring": "Robin Task Queue — Extended Absence Operating Framework.",
       "last_modified": "2026-03-31T01:02:40.254611+00:00",
-      "size_bytes": 27174
+      "size_bytes": 27174,
+      "description": " Session 29: added health_check, security_scan, shell task types."
     },
     {
       "path": "rudy/sanitize.py",
@@ -1899,6 +1900,31 @@
       "docstring": "The Workhorse — Watchdog Service",
       "last_modified": "2026-03-31T00:53:10.137308+00:00",
       "size_bytes": 11313
+    },
+    {
+      "path": "oracle-git-ops.py",
+      "type": "utility",
+      "lines": 507,
+      "description": "Reliable Git/GitHub CLI for Cowork (Alfred) sessions. Solves Oracle tooling difficulties. 14 commands, gh api for PRs, JSON output to file.",
+      "session": 29,
+      "dependencies": [
+        "subprocess",
+        "json"
+      ],
+      "status": "active"
+    },
+    {
+      "path": "rudy/bridge_runner.py",
+      "type": "service",
+      "lines": 134,
+      "description": "Scheduled task entry point for peers-to-taskqueue bridge. Auto-registers Robin, heartbeat monitoring, graceful shutdown.",
+      "session": 29,
+      "dependencies": [
+        "rudy.peers_delegation",
+        "rudy.peers_taskqueue_bridge",
+        "rudy.paths"
+      ],
+      "status": "active"
     }
   ],
   "agents": [
@@ -2395,5 +2421,10 @@
     "total_mcps": 10,
     "total_scheduled_tasks": 11,
     "scan_duration_sec": 0.386
+  },
+  "summary": {
+    "total_modules": 113,
+    "total_lines": 44268,
+    "last_updated": "Session 29"
   }
 }
