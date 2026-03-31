@@ -1,0 +1,18 @@
+{
+  "finding_id": "LG-S32-001",
+  "session": 32,
+  "severity": "MEDIUM",
+  "category": "process_gap",
+  "title": "Alfred executing local I/O tasks instead of delegating to Robin",
+  "description": "Session 32 observed Alfred running filesystem scans, npm checks, git operations, and registry audits directly instead of delegating to Robin. Robin is specifically designed for local task execution. Alfred should reason and orchestrate, not execute local commands.",
+  "evidence": "Session 32 bootstrap: Alfred ran git log, git status, npm list, Python file reads, port checks - all before Batman corrected the behavior.",
+  "remediation": [
+    "CLAUDE.md Hard Rule #6 added: Robin-first for local tasks",
+    "Anti-pattern added to CLAUDE.md Anti-Patterns section",
+    "Lucius Scorer: robin_delegation criterion added under skills_utilization (5 pts)",
+    "Exception: single-command diagnostics for immediate decision-making, or Robin offline"
+  ],
+  "status": "FIXED",
+  "fixed_in_session": 32,
+  "timestamp": "2026-03-31T02:10:00Z"
+}
