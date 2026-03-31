@@ -111,6 +111,15 @@ Custom code is a **liability**, not an asset. Every line we write is a line we m
 
 All session records, findings, and institutional knowledge MUST be written to the **BatcaveVault** (`vault/`). HandoffWriter handles session records automatically. ADRs → `vault/Architecture/`. Protocols → `vault/Protocols/`. Sessions → `vault/Sessions/`. Never scatter records without also writing to the vault.
 
+## Last Session Score
+
+Session 35: 58/100 (F)
+  -15: Custom code without registry check (27 helper scripts, 0 registry lookups)
+  -10: Repeated broken tool calls (DC read_file called 5+ times despite known bug)
+  -8: Did not delegate to Robin (lint fix, pip install, temp cleanup, CI wait)
+  -5: No pre-work Lucius review for any priority
+  -4: Re-confirmed known errors from handoff instead of trusting institutional knowledge
+
 ## Known Workarounds (Hot)
 
 | Bug | Workaround |
