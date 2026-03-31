@@ -23,7 +23,7 @@ from pathlib import Path
 # Ensure rudy is importable
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from rudy.peers_delegation import register_peer
-from rudy.peers_taskqueue_bridge import poll_loop
+from rudy.peers_taskqueue_bridge import poll_once
 from rudy.paths import RUDY_DATA, REPO_ROOT
 
 # === Configuration ===
@@ -32,6 +32,7 @@ LOG_DIR = DATA_DIR / "logs"
 LOG_FILE = LOG_DIR / "bridge-runner.log"
 HEARTBEAT_FILE = DATA_DIR / "bridge-heartbeat.json"
 DEFAULT_INTERVAL = 10  # seconds
+HEARTBEAT_INTERVAL = 30  # write heartbeat every N seconds
 
 log = logging.getLogger("bridge.runner")
 
@@ -48,7 +49,7 @@ def setup_logging():
         ],
     )
 
-def write_heartbeat(robin_id):
+def write_heartbeat(robin_id, iterations=0):
     """Write heartbeat JSON for external health monitoring."""
     try:
         DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -57,6 +58,7 @@ def write_heartbeat(robin_id):
             "pid": os.getpid(),
             "robin_id": robin_id,
             "status": "running",
+            "iterations": iterations,
         }, indent=2), encoding="utf-8")
     except Exception as e:
         log.warning("Heartbeat write failed: %s", e)
@@ -72,7 +74,7 @@ def check_health():
         age = (datetime.now() - ts).total_seconds()
         if age > 120:
             return False, f"Stale heartbeat ({age:.0f}s)"
-        return True, f"OK (age={age:.0f}s, pid={data.get('pid')})"
+        return True, f"OK (age={age:.0f}s, pid={data.get('pid')}, iter={data.get('iterations',0)})"
     except Exception as e:
         return False, str(e)
 
@@ -114,20 +116,37 @@ def main():
     log.info("Registered as peer: %s", robin_id)
     write_heartbeat(robin_id)
 
-    # Run the poll loop
+    # Poll loop with periodic heartbeat (replaces peers_taskqueue_bridge.poll_loop
+    # so we can refresh the heartbeat file on every cycle)
+    iteration = 0
+    last_heartbeat = time.time()
     try:
-        poll_loop(
-            robin_peer_id=robin_id,
-            interval_seconds=args.interval,
-            max_iterations=args.max,
-        )
+        while True:
+            iteration += 1
+            if args.max and iteration > args.max:
+                break
+
+            try:
+                count = poll_once(robin_id)
+                if count:
+                    log.info("Processed %d delegation(s) in iteration %d",
+                             count, iteration)
+            except Exception as e:
+                log.error("Poll error: %s", e)
+
+            # Periodic heartbeat refresh
+            if time.time() - last_heartbeat >= HEARTBEAT_INTERVAL:
+                write_heartbeat(robin_id, iterations=iteration)
+                last_heartbeat = time.time()
+
+            time.sleep(args.interval)
     except KeyboardInterrupt:
         log.info("Interrupted, exiting")
     except Exception as e:
         log.error("Fatal error: %s", e, exc_info=True)
         sys.exit(1)
     finally:
-        log.info("Bridge Runner stopped")
+        log.info("Bridge Runner stopped after %d iterations", iteration)
 
 
 if __name__ == "__main__":
