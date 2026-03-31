@@ -522,7 +522,7 @@ class Sentinel(AgentBase):
             if path.exists():
                 try:
                     current_hash = hashlib.md5(
-                        path.read_bytes()
+                        path.read_bytes(), usedforsecurity=False
                     ).hexdigest()[:12]
                     prev_hash = prev_hashes.get(name)
                     if prev_hash and current_hash != prev_hash:
@@ -756,6 +756,68 @@ class Sentinel(AgentBase):
                 if summary:
                     lines.append(f"  {summary}")
             lines.append("")
+
+            # Lucius Gate — governance pre-flight (ADR-004, Session 23)
+            try:
+                from rudy.agents.lucius_gate import session_start_gate
+                gate_result = session_start_gate(
+                    session_number=state.get("session_number", 0),
+                    check_timeout_sec=5.0,
+                )
+                gate_icon = "✅" if gate_result.passed else "⚠️" if gate_result.degraded else "❌"
+                lines.append("## Governance Gate (Lucius)")
+                lines.append(f"- {gate_icon} **Status**: {gate_result.summary()}")
+                # Detail any non-PASS checks
+                for check in gate_result.checks:
+                    if check.state.value != "PASS":
+                        c_icon = "⚠️" if check.state.value == "DEGRADED" else "❌"
+                        lines.append(f"  - {c_icon} {check.name}: {check.state.value} — {check.message}")
+                if gate_result.metrics:
+                    lines.append(f"- Gate completed in {gate_result.metrics.total_elapsed_sec:.1f}s")
+                lines.append("")
+                self._observe("lucius_gate", f"Session gate: {gate_result.summary()}")
+            except ImportError:
+                lines.append("## Governance Gate (Lucius)")
+                lines.append("- ❓ lucius_gate not available (import failed)")
+                lines.append("")
+            except Exception as e:
+                lines.append("## Governance Gate (Lucius)")
+                lines.append(f"- ⚠️ Gate check failed: {e}")
+                lines.append("")
+
+            # Open Findings (Lucius Findings Tracker, Session 24)
+            try:
+                from rudy.agents.lucius_findings import format_findings_briefing, escalate_stale_findings
+                # Escalate stale findings at briefing time
+                session_num = state.get("session_number", 0)
+                escalated = escalate_stale_findings(session_num)
+                if escalated:
+                    self._observe("lucius_findings", f"{len(escalated)} findings escalated to HIGH")
+                lines.append(format_findings_briefing(max_findings=10))
+            except ImportError:
+                pass  # Findings tracker not yet deployed
+            except Exception as e:
+                lines.append(f"## Open Findings\n\n- ⚠️ Findings check failed: {e}\n")
+
+            # Registry Stats (Lucius Registry, Session 24)
+            try:
+                from rudy.agents.lucius_registry import build_registry
+                registry = build_registry()
+                stats = registry.get("stats", {})
+                lines.append("## Registry Stats")
+                lines.append(
+                    f"- {stats.get('total_files', '?')} files, "
+                    f"{stats.get('total_lines', 0):,} lines, "
+                    f"{stats.get('total_agents', '?')} agents, "
+                    f"{stats.get('total_skills', '?')} skills, "
+                    f"{stats.get('total_mcps', '?')} MCPs"
+                )
+                lines.append(f"- Registry scan: {stats.get('scan_duration_sec', '?')}s")
+                lines.append("")
+            except ImportError:
+                pass  # Registry not yet deployed
+            except Exception as e:
+                lines.append(f"## Registry Stats\n\n- ⚠️ Registry scan failed: {e}\n")
 
             # Pending work
             lines.append("## Pending Work")

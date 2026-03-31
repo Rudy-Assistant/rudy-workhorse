@@ -1,4 +1,4 @@
-﻿"""
+"""
 Lucius Gate â€” Session governance with circuit breakers and degraded-mode fallbacks.
 
 ADR-004 v2.1 Addendum (2026-03-30): Phase 1A deliverable.
@@ -99,6 +99,9 @@ class GateResult:
     metrics: Optional[GateMetrics] = None
     recommended_skills: List[str] = field(default_factory=list)
     open_findings: List[Dict[str, Any]] = field(default_factory=list)
+    recommendations: List[str] = field(default_factory=list)
+    compliance_score: Optional[float] = None  # Nuanced 0-100 from scorer (Phase 3)
+    score_report: Optional[Dict[str, Any]] = None  # Full score breakdown
 
     def summary(self) -> str:
         """Human-readable one-line summary."""
@@ -139,6 +142,9 @@ class GateResult:
             } if self.metrics else None,
             "recommended_skills": self.recommended_skills,
             "open_findings_count": len(self.open_findings),
+            "recommendations": self.recommendations,
+            "compliance_score": self.compliance_score,
+            "score_report": self.score_report,
         }
 
 
@@ -900,6 +906,7 @@ def session_start_gate(
     session_number: int = 0,
     mcp_tiers_path: Optional[str] = None,
     check_timeout_sec: float = DEFAULT_CHECK_TIMEOUT_SEC,
+    task_description: str = "",
 ) -> GateResult:
     """Run all pre-session checks. Called when a new session begins.
 
@@ -907,6 +914,9 @@ def session_start_gate(
         1. Repo root is detectable
         2. Vault is accessible
         3. MCP connections (per tier)
+
+    If task_description is provided, also runs skills_check() and
+    includes recommendations in the GateResult.
 
     Returns:
         GateResult with passed=True only if all CRITICAL checks pass.
@@ -949,6 +959,49 @@ def session_start_gate(
         session_number=session_number,
     )
 
+    # Recommend skills if task context provided (Phase 2, Session 24)
+    if task_description:
+        try:
+            from rudy.agents.lucius_fox import LuciusFox
+            lucius = LuciusFox()
+            skill_result = lucius._skills_check(task_description)
+            if isinstance(skill_result, dict):
+                for rec in skill_result.get("recommendations", []):
+                    result.recommended_skills.append(rec.get("name", str(rec)))
+                if result.recommended_skills:
+                    result.recommendations.append(
+                        f"Recommended skills for this task: "
+                        f"{', '.join(result.recommended_skills)}"
+                    )
+        except ImportError:
+            pass
+        except Exception as e:
+            log.warning(f"Skills recommendation failed: {e}")
+
+    # Load open findings for session awareness (Phase 2, Session 24)
+    try:
+        from rudy.agents.lucius_findings import get_open_findings, escalate_stale_findings
+        # Escalate stale findings
+        escalate_stale_findings(session_number)
+        # Load open findings into gate result
+        open_f = get_open_findings()
+        result.open_findings = open_f
+        if open_f:
+            critical = sum(1 for f in open_f if f.get("severity") == "CRITICAL")
+            high = sum(1 for f in open_f if f.get("severity") == "HIGH")
+            if critical:
+                result.recommendations.append(
+                    f"⚠️ {critical} CRITICAL findings require immediate attention"
+                )
+            if high:
+                result.recommendations.append(
+                    f"{high} HIGH findings pending resolution"
+                )
+    except ImportError:
+        pass
+    except Exception as e:
+        log.warning(f"Findings load failed: {e}")
+
     log.info(result.summary())
     return result
 
@@ -988,6 +1041,7 @@ def post_session_gate(
     session_number: int = 0,
     context_window_pct: Optional[float] = None,
     check_timeout_sec: float = DEFAULT_CHECK_TIMEOUT_SEC,
+    evidence: Optional[dict] = None,
 ) -> GateResult:
     """Run post-session checks before handoff. Called by HandoffWriter.
 
@@ -995,9 +1049,13 @@ def post_session_gate(
         1. context_window_pct was provided
         2. Vault is accessible (for writing handoff artifacts)
 
+    If evidence is provided, runs the Lucius Scorer for a nuanced
+    compliance score (0-100). Otherwise falls back to binary 100/0.
+
     Returns:
         GateResult. If the gate itself fails (DEGRADED), the caller
         should log and allow the handoff with compliance_score=0.
+        The result's recommendations list may contain the score report.
     """
     gate_start = time.perf_counter()
     checks: List[GateCheck] = []
@@ -1015,10 +1073,29 @@ def post_session_gate(
         criticality=MCPTier.IMPORTANT,
     ))
 
-    return _build_gate_result(
+    result = _build_gate_result(
         gate_name="post_session",
         checks=checks,
         mcp_tiers={},
         start_time=gate_start,
         session_number=session_number,
     )
+
+    # Nuanced scoring via Lucius Scorer (Phase 3, Session 24)
+    if evidence is not None:
+        try:
+            from rudy.agents.lucius_scorer import score_session, format_score_report
+            score_result = score_session(evidence)
+            result.compliance_score = score_result.get("total_score", 0)
+            result.score_report = score_result
+            result.recommendations.append(
+                f"Session score: {score_result['total_score']}/100 "
+                f"({score_result['grade']})"
+            )
+            log.info(f"Session scored: {score_result['summary']}")
+        except ImportError:
+            log.warning("lucius_scorer not available, using binary scoring")
+        except Exception as e:
+            log.warning(f"Scorer failed: {e}")
+
+    return result

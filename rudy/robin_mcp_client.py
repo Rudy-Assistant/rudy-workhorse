@@ -37,6 +37,71 @@ from typing import Any, Optional
 
 log = logging.getLogger("robin_mcp")
 
+
+# ---------------------------------------------------------------------------
+# CLIXML Parser — PowerShell error message extraction (Session 24)
+# ---------------------------------------------------------------------------
+
+def _strip_clixml(text: str) -> str:
+    """Strip PowerShell CLIXML wrappers from text, extracting clean messages.
+
+    PowerShell wraps error output in CLIXML format:
+        #< CLIXML
+        <Objs Version="1.1.0.1" ...>
+          <S S="Error">The actual error message_x000D__x000A_</S>
+        </Objs>
+
+    This function detects CLIXML and extracts the human-readable text,
+    replacing _x000D__x000A_ escapes with newlines.
+
+    If the text is not CLIXML, returns it unchanged.
+    """
+    if not text or "#< CLIXML" not in text:
+        return text
+
+    try:
+        import re
+        import xml.etree.ElementTree as ET
+
+        # Find the XML portion after the #< CLIXML header
+        clixml_start = text.index("#< CLIXML")
+        prefix = text[:clixml_start].strip()
+
+        xml_text = text[clixml_start:]
+        # Remove the #< CLIXML header line
+        xml_text = re.sub(r"^#<\s*CLIXML\s*[\r\n]*", "", xml_text).strip()
+
+        if not xml_text:
+            return prefix or text
+
+        # Parse the XML
+        root = ET.fromstring(xml_text)
+
+        # Extract text from <S> elements (PowerShell string objects)
+        messages = []
+        for s_elem in root.iter():
+            if s_elem.text:
+                clean = s_elem.text
+                # Replace PowerShell escape sequences
+                clean = clean.replace("_x000D__x000A_", "\n")
+                clean = clean.replace("_x000D_", "\r")
+                clean = clean.replace("_x000A_", "\n")
+                clean = clean.strip()
+                if clean:
+                    messages.append(clean)
+
+        if messages:
+            result = "\n".join(messages)
+            if prefix:
+                result = prefix + "\n" + result
+            return result
+
+    except Exception as e:
+        log.debug(f"CLIXML parse failed, returning raw text: {e}")
+
+    return text
+
+
 # ---------------------------------------------------------------------------
 # MCP Protocol Types
 # ---------------------------------------------------------------------------
@@ -225,6 +290,11 @@ class MCPServerConnection:
                 text_parts.append(json.dumps(part))
 
         combined = "\n".join(text_parts)
+
+        # CLIXML detection and parsing (Session 24 — CRITICAL audit finding)
+        # PowerShell wraps errors in CLIXML: "#< CLIXML\r\n<Objs ...>...</Objs>"
+        # Strip this to extract the clean error message.
+        combined = _strip_clixml(combined)
 
         return MCPToolResult(
             success=not is_error,

@@ -58,9 +58,15 @@ class HandoffWriter:
         self.next_priorities: list[str] = []
         self.hard_rules_notes: list[str] = []
         self.technical_notes: list[str] = []
+        self.critical_context: list[str] = []  # "what's actually broken and why"
+        self.unresolved_findings: list[dict] = []  # from lucius-findings.json
+        self.architecture_refs: list[str] = []  # ADR/doc references for design work
         self.context_estimate: str = "unknown"
         self.compliance_score: int = 100
+        self.score_report: dict | None = None  # from lucius_scorer
         self.gate_result = None
+        self.session_evidence: dict = {}  # for scorer
+        self.registry_stats: dict | None = None  # from registry.json
 
     def record_accomplishment(self, text: str):
         """Record a session accomplishment."""
@@ -94,22 +100,105 @@ class HandoffWriter:
         """Set context window utilization estimate (e.g. '~60% consumed')."""
         self.context_estimate = estimate
 
+    def add_critical_context(self, text: str):
+        """Add a 'what's broken and why it matters' note for the next session."""
+        self.critical_context.append(text)
+
+    def add_architecture_ref(self, doc_path: str):
+        """Reference an ADR or architecture doc relevant to the work."""
+        self.architecture_refs.append(doc_path)
+
+    def set_session_evidence(self, evidence: dict):
+        """Set evidence dict for the Lucius scorer."""
+        self.session_evidence = evidence
+
+    def load_open_findings(self):
+        """Auto-load unresolved findings from lucius-findings.json (C3 isolated)."""
+        try:
+            from rudy.paths import RUDY_DATA
+            findings_path = RUDY_DATA / "lucius-findings.json"
+            if findings_path.exists():
+                data = json.loads(findings_path.read_text(encoding="utf-8"))
+                findings_list = data if isinstance(data, list) else data.get("findings", [])
+                self.unresolved_findings = [
+                    f for f in findings_list
+                    if f.get("status", "open") != "resolved"
+                ]
+                log.info(f"Loaded {len(self.unresolved_findings)} open findings")
+        except Exception as e:
+            log.warning(f"Could not load findings: {e}")
+
+    def load_registry_stats(self):
+        """Auto-load registry stats from registry.json (C3 isolated)."""
+        try:
+            registry_path = REPO_ROOT / "registry.json"
+            if registry_path.exists():
+                data = json.loads(registry_path.read_text(encoding="utf-8"))
+                self.registry_stats = data.get("stats", {})
+                log.info(f"Loaded registry stats: {self.registry_stats}")
+        except Exception as e:
+            log.warning(f"Could not load registry stats: {e}")
+
+    def _run_scorer(self):
+        """Run Lucius scorer on session evidence (C3 isolated).
+
+        Call this before write() if you have evidence to score.
+        """
+        if not self.session_evidence:
+            return
+        try:
+            from rudy.agents.lucius_scorer import score_session
+            self.score_report = score_session(self.session_evidence)
+            self.compliance_score = int(self.score_report.get("total_score", 0))
+            log.info(f"Session scored: {self.score_report.get('summary', '?')}")
+        except ImportError as e:
+            log.warning(f"lucius_scorer import failed: {e}")
+        except Exception as e:
+            log.error(f"Scorer crashed: {e}")
+
     def generate_markdown(self) -> str:
-        """Generate the handoff markdown document."""
+        """Generate the handoff markdown document.
+
+        Batman-quality format: Critical Context first, then accomplishments,
+        explicit P0/P1/P2 priorities with enough context to act, architecture
+        refs, unresolved findings with IDs, scorer report, standing orders.
+        """
         lines = [
             f"# Session {self.session_number} Handoff Brief",
             "",
             f"**Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M')}",
             f"**Session started:** {self.started_at.strftime('%Y-%m-%d %H:%M')}",
             f"**Context estimate:** {self.context_estimate}",
-            "",
-            "---",
-            "",
         ]
+
+        # Compliance score summary
+        if self.score_report:
+            sr = self.score_report
+            lines.append(
+                f"**Compliance:** {sr['total_score']}/100 ({sr['grade']})"
+            )
+            weak = [
+                name for name, d in sr.get("dimensions", {}).items()
+                if d.get("pct", 100) < 50
+            ]
+            if weak:
+                lines.append(f"**Weak areas:** {', '.join(weak)}")
+        elif self.compliance_score is not None:
+            lines.append(f"**Compliance:** {self.compliance_score}/100")
+
+        lines.extend(["", "---", ""])
+
+        # Critical Context — "what's actually broken and why it matters"
+        if self.critical_context:
+            lines.append("## Critical Context")
+            lines.append("")
+            for ctx in self.critical_context:
+                lines.append(f"- {ctx}")
+            lines.append("")
 
         # Accomplishments
         if self.accomplishments:
-            lines.append("## Session Accomplishments")
+            lines.append("## What This Session Accomplished")
             lines.append("")
             for a in self.accomplishments:
                 lines.append(f"- {a}")
@@ -127,23 +216,53 @@ class HandoffWriter:
                 )
             lines.append("")
 
-        # Findings
-        if self.findings:
+        # Priorities — explicit P0/P1/P2
+        if self.next_priorities:
+            lines.append("## Priorities for Next Session")
+            lines.append("")
+            for p in self.next_priorities:
+                lines.append(f"- {p}")
+            lines.append("")
+
+        # Architecture references
+        if self.architecture_refs:
+            lines.append("## Architecture Documents (read if doing design work)")
+            lines.append("")
+            for ref in self.architecture_refs:
+                lines.append(f"- `{ref}`")
+            lines.append("")
+
+        # Unresolved findings from tracker
+        if self.unresolved_findings:
+            lines.append("## Unresolved Findings (from Lucius Tracker)")
+            lines.append("")
+            for finding in self.unresolved_findings:
+                fid = finding.get("id", "?")
+                severity = finding.get("severity", "?").upper()
+                desc = finding.get("description", finding.get("text", "?"))
+                lines.append(f"- **{fid}** [{severity}] {desc}")
+            lines.append("")
+        elif self.findings:
             lines.append("## Findings (Finding Capture Protocol)")
             lines.append("")
             for f in self.findings:
                 lines.append(f"- {f}")
             lines.append("")
 
-        # Priorities
-        if self.next_priorities:
-            lines.append("## Next Session Priorities")
+        # Registry stats
+        if self.registry_stats:
+            rs = self.registry_stats
+            lines.append("## Registry Snapshot")
             lines.append("")
-            for p in self.next_priorities:
-                lines.append(f"- {p}")
+            lines.append(
+                f"**{rs.get('total_lines', '?')} lines** across "
+                f"modules | {rs.get('total_agents', '?')} agents | "
+                f"{rs.get('total_skills', '?')} skills | "
+                f"{rs.get('total_mcps', '?')} MCPs"
+            )
             lines.append("")
 
-        # Hard rules
+        # Hard rules notes
         if self.hard_rules_notes:
             lines.append("## Hard Rules Notes")
             lines.append("")
@@ -159,6 +278,35 @@ class HandoffWriter:
                 lines.append(f"- {n}")
             lines.append("")
 
+        # Scorer detailed report
+        if self.score_report:
+            lines.append("## Session Compliance Score")
+            lines.append("")
+            lines.append(
+                f"**{self.score_report['total_score']}/100 "
+                f"({self.score_report['grade']})**"
+            )
+            lines.append("")
+            lines.append("| Dimension | Score | Notes |")
+            lines.append("|-----------|-------|-------|")
+            for dim, data in self.score_report.get("dimensions", {}).items():
+                notes_str = "; ".join(data.get("notes", [])[:2])
+                lines.append(
+                    f"| {dim} | {data['score']}/{data['max']} | {notes_str} |"
+                )
+            lines.append("")
+
+        # Standing orders reminder
+        lines.extend([
+            "## Standing Orders",
+            "",
+            '"Be productive until I return" means WORK CONTINUOUSLY. '
+            "Every response with tool use ends with "
+            "`[Context: ~X% | Session N | status]`. "
+            "Read CLAUDE.md for full system state.",
+            "",
+        ])
+
         # Bootstrap instructions
         lines.extend([
             "## Bootstrap Instructions",
@@ -167,9 +315,10 @@ class HandoffWriter:
             "",
             "```",
             f"You are Alfred — Chief of Staff to Batman (Chris Cimino). "
-            f"Clone Rudy-Assistant/rudy-workhorse and read CLAUDE.md first "
-            f"(HARD RULE — Session 22), then docs/SESSION-HANDOFF.md "
-            f"for full context. This is Session {self.session_number + 1}.",
+            f"Clone `Rudy-Assistant/rudy-workhorse` and **read `CLAUDE.md` first** "
+            f"(HARD RULE — Session 22), then `docs/SESSION-HANDOFF.md`. "
+            f"Read `docs/MISSION.md`. CLAUDE.md is a compact hot cache (~150 lines); "
+            f"deep context lives in `memory/`. This is Session {self.session_number + 1}.",
             "```",
             "",
             "---",
@@ -330,8 +479,15 @@ class HandoffWriter:
             )
 
 
+        # Auto-load enrichment data (C3 isolated — failures are non-fatal)
+        self.load_open_findings()
+        self.load_registry_stats()
+
         # Phase 1B: Run post-session gate
         self._run_post_session_gate()
+
+        # Phase 3: Run scorer if evidence is available
+        self._run_scorer()
 
         content = self.generate_markdown()
         filename_md = f"session-{self.session_number:02d}-handoff.md"
@@ -353,8 +509,13 @@ class HandoffWriter:
             "open_prs": self.open_prs,
             "findings": self.findings,
             "next_priorities": self.next_priorities,
+            "critical_context": self.critical_context,
+            "unresolved_findings_count": len(self.unresolved_findings),
+            "architecture_refs": self.architecture_refs,
             "handoff_file": str(filepath),
             "compliance_score": self.compliance_score,
+            "score_report": self.score_report,
+            "registry_stats": self.registry_stats,
             "gate_result": self.gate_result.to_dict() if self.gate_result else None,
         }
         sidecar_json = json.dumps(sidecar, indent=2, default=str)
@@ -499,7 +660,8 @@ class HandoffScanner:
             return (
                 "You are Alfred — Chief of Staff to Batman (Chris Cimino). "
                 "Clone Rudy-Assistant/rudy-workhorse and read CLAUDE.md first "
-                "(HARD RULE), then docs/SESSION-HANDOFF.md. "
+                "(HARD RULE), then docs/SESSION-HANDOFF.md. Read docs/MISSION.md. "
+                "CLAUDE.md is a compact hot cache; deep context in memory/. "
                 "No previous handoff found — start fresh."
             )
 
@@ -514,7 +676,9 @@ class HandoffScanner:
             "",
             "You are Alfred — Chief of Staff to Batman (Chris Cimino). "
             "Clone `Rudy-Assistant/rudy-workhorse` and **read `CLAUDE.md` first** "
-            "(HARD RULE — Session 22), then `docs/SESSION-HANDOFF.md`.",
+            "(HARD RULE — Session 22), then `docs/SESSION-HANDOFF.md`. "
+            "Read `docs/MISSION.md`. CLAUDE.md is a compact hot cache (~150 lines); "
+            "deep context lives in `memory/` directory.",
             "",
         ]
 
