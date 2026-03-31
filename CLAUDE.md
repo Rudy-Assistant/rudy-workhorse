@@ -113,12 +113,7 @@ All session records, findings, and institutional knowledge MUST be written to th
 
 ## Last Session Score
 
-Session 35: 58/100 (F)
-  -15: Custom code without registry check (27 helper scripts, 0 registry lookups)
-  -10: Repeated broken tool calls (DC read_file called 5+ times despite known bug)
-  -8: Did not delegate to Robin (lint fix, pip install, temp cleanup, CI wait)
-  -5: No pre-work Lucius review for any priority
-  -4: Re-confirmed known errors from handoff instead of trusting institutional knowledge
+Session 36: 88/100 (B)
 
 ## Known Workarounds (Hot)
 
