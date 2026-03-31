@@ -245,13 +245,12 @@ def wake_via_claude_app() -> bool:
     try:
         # Find Claude executable
         import glob
-        candidates = glob.glob(
-            r"C:\Users\ccimi\AppData\Local\AnthropicClaude\app-*\claude.exe"
-        )
-        if not candidates:
-            candidates = glob.glob(
-                r"C:\Users\ccimi\AppData\Local\Programs\claude-desktop\claude*.exe"
-            )
+        from rudy.paths import CLAUDE_APP_GLOBS
+        candidates = []
+        for pattern in CLAUDE_APP_GLOBS:
+            candidates = glob.glob(pattern)
+            if candidates:
+                break
         if candidates:
             exe = candidates[-1]  # Latest version
             subprocess.Popen([exe], creationflags=0x00000008)

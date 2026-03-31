@@ -293,7 +293,6 @@ class RobinMailbox:
         """
         import json
         from datetime import datetime
-        from pathlib import Path
         from rudy.paths import RUDY_DATA
 
         # Persist locally

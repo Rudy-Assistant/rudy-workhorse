@@ -300,7 +300,6 @@ def main():
     last_heartbeat = time.time()
     total_autonomy_runs = 0
     total_inbox_msgs = 0
-    total_wakes = 0
 
     try:
         while True:
