@@ -274,9 +274,53 @@ class LuciusFox(AgentBase):
     def _locate_artifact(self, query: str) -> dict:
         """Find files, docs, or agents matching a query string.
 
+        Uses the Lucius Registry (Phase 2) when available for fast lookups,
+        falling back to filesystem walk if the registry isn't built.
+
         Returns a dict of matches grouped by category.
         """
         self.log.info(f"Locating artifact: '{query}'")
+
+        # Try registry-backed search first (fast path: <0.1s)
+        try:
+            from rudy.agents.lucius_registry import query_registry
+            registry_results = query_registry(query)
+            if registry_results and "error" not in registry_results[0]:
+                # Convert registry results to legacy format + enhanced results
+                results = {
+                    "python_files": [],
+                    "docs": [],
+                    "scripts": [],
+                    "agents": [],
+                    "skills": [],
+                    "mcps": [],
+                    "scheduled_tasks": [],
+                    "registry_hits": registry_results,
+                }
+                for r in registry_results:
+                    if r["type"] == "module" and r.get("path", "").endswith(".py"):
+                        results["python_files"].append(r["path"])
+                    elif r["type"] == "agent":
+                        results["agents"].append({
+                            "name": r["name"],
+                            "status": r.get("status", "unknown"),
+                        })
+                    elif r["type"] == "skill":
+                        results["skills"].append(r["name"])
+                    elif r["type"] == "mcp":
+                        results["mcps"].append(r["name"])
+                    elif r["type"] == "scheduled_task":
+                        results["scheduled_tasks"].append(r["name"])
+                total = sum(
+                    len(v) for k, v in results.items()
+                    if k != "registry_hits" and isinstance(v, list)
+                )
+                self.action(f"Located {total} matches for '{query}' (via registry)")
+                return results
+        except ImportError:
+            pass  # Fall through to filesystem walk
+        except Exception as e:
+            self.log.warning(f"Registry query failed, falling back to filesystem: {e}")
         query_lower = query.lower()
         results = {"python_files": [], "docs": [], "scripts": [], "agents": []}
 

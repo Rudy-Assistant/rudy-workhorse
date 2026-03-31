@@ -785,6 +785,40 @@ class Sentinel(AgentBase):
                 lines.append(f"- ⚠️ Gate check failed: {e}")
                 lines.append("")
 
+            # Open Findings (Lucius Findings Tracker, Session 24)
+            try:
+                from rudy.agents.lucius_findings import format_findings_briefing, escalate_stale_findings
+                # Escalate stale findings at briefing time
+                session_num = state.get("session_number", 0)
+                escalated = escalate_stale_findings(session_num)
+                if escalated:
+                    self._observe("lucius_findings", f"{len(escalated)} findings escalated to HIGH")
+                lines.append(format_findings_briefing(max_findings=10))
+            except ImportError:
+                pass  # Findings tracker not yet deployed
+            except Exception as e:
+                lines.append(f"## Open Findings\n\n- ⚠️ Findings check failed: {e}\n")
+
+            # Registry Stats (Lucius Registry, Session 24)
+            try:
+                from rudy.agents.lucius_registry import build_registry
+                registry = build_registry()
+                stats = registry.get("stats", {})
+                lines.append("## Registry Stats")
+                lines.append(
+                    f"- {stats.get('total_files', '?')} files, "
+                    f"{stats.get('total_lines', 0):,} lines, "
+                    f"{stats.get('total_agents', '?')} agents, "
+                    f"{stats.get('total_skills', '?')} skills, "
+                    f"{stats.get('total_mcps', '?')} MCPs"
+                )
+                lines.append(f"- Registry scan: {stats.get('scan_duration_sec', '?')}s")
+                lines.append("")
+            except ImportError:
+                pass  # Registry not yet deployed
+            except Exception as e:
+                lines.append(f"## Registry Stats\n\n- ⚠️ Registry scan failed: {e}\n")
+
             # Pending work
             lines.append("## Pending Work")
             queue_file = LOGS_DIR / "task-queue.json"
