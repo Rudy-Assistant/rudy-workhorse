@@ -178,7 +178,8 @@ async def record_lucius_score(
         dict with status, task_id, and any evolution suggestions.
     """
     import os
-    os.environ.setdefault("OPENSPACE_WORKSPACE", r"C:\Users\ccimi\OpenSpace")
+    from rudy.paths import OPENSPACE_DIR
+    os.environ.setdefault("OPENSPACE_WORKSPACE", str(OPENSPACE_DIR))
 
     from openspace.skill_engine.types import ExecutionAnalysis
     from openspace.skill_engine.store import SkillStore

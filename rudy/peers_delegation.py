@@ -32,6 +32,7 @@ import logging
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
+from rudy.paths import REPO_ROOT
 
 log = logging.getLogger("peers.delegation")
 
@@ -310,7 +311,7 @@ def main():
 
     parser = argparse.ArgumentParser(description="Alfred ↔ Robin Delegation Protocol")
     parser.add_argument("command", choices=["status", "peers", "test-delegate", "test-parse"])
-    parser.add_argument("--cwd", default=r"C:\Users\ccimi\rudy-workhorse")
+    parser.add_argument("--cwd", default=str(REPO_ROOT))
     args = parser.parse_args()
 
     if args.command == "status":
