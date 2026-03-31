@@ -51,6 +51,31 @@ def get_current_diff(repo_path: str | None = None) -> str:
     return result.stdout
 
 
+
+
+def _load_api_key_fallback() -> str | None:
+    """Try robin-secrets.json and keyring for OPENAI_API_KEY."""
+    # 1. robin-secrets.json
+    secrets_path = Path.home() / "rudy-data" / "robin-secrets.json"
+    if secrets_path.exists():
+        try:
+            import json as _json
+            data = _json.loads(secrets_path.read_text(encoding="utf-8"))
+            key = data.get("OPENAI_API_KEY")
+            if key:
+                return key
+        except Exception:
+            pass
+    # 2. keyring
+    try:
+        import keyring
+        key = keyring.get_password("rudy-batcave", "OPENAI_API_KEY")
+        if key:
+            return key
+    except Exception:
+        pass
+    return None
+
 def review_diff(diff_text: str, model: str = "gpt-4o-mini") -> dict:
     """Review a diff for rollback safety issues.
 
@@ -65,6 +90,9 @@ def review_diff(diff_text: str, model: str = "gpt-4o-mini") -> dict:
         return {"safe": True, "findings": [], "model": model, "error": None}
 
     api_key = os.environ.get("OPENAI_API_KEY")
+    if not api_key:
+        # Fallback: check robin-secrets.json and keyring
+        api_key = _load_api_key_fallback()
     if not api_key:
         log.warning("OPENAI_API_KEY not set — rollback gate skipped")
         return {
