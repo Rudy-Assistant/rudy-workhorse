@@ -748,12 +748,28 @@ def run_continuous() -> None:
     while True:
         try:
             # Poll faster (60s) when a directive is active, normal (300s) otherwise
+            # LG-S44-001 FIX: Chunked sleep checks for new directives every 5s
+            # so Robin wakes immediately when Batman creates one mid-sleep.
             try:
                 from rudy.robin_autonomy import DirectiveTracker
-                poll_interval = 60 if DirectiveTracker().has_active_directive() else 300
+                _dt = DirectiveTracker()
+                poll_interval = 60 if _dt.has_active_directive() else 300
             except Exception:
+                _dt = None
                 poll_interval = 300
-            time.sleep(poll_interval)
+            _chunk = 5  # seconds between directive checks
+            _slept = 0
+            while _slept < poll_interval:
+                time.sleep(min(_chunk, poll_interval - _slept))
+                _slept += _chunk
+                # Wake immediately if a new directive appeared mid-sleep
+                if _dt and not _dt.has_active_directive():
+                    try:
+                        if DirectiveTracker().has_active_directive():
+                            log.info("Directive detected mid-sleep — waking early")
+                            break
+                    except Exception:
+                        pass
             cycle += 1
 
             # Quick health check every cycle

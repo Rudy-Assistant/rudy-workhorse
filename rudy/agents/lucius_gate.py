@@ -1192,7 +1192,7 @@ def post_session_gate(
     # Nuanced scoring via Lucius Scorer (Phase 3, Session 24)
     if evidence is not None:
         try:
-            from rudy.agents.lucius_scorer import score_session, format_score_report
+            from rudy.agents.lucius_scorer import score_session  # noqa: F811
             score_result = score_session(evidence)
             result.compliance_score = score_result.get("total_score", 0)
             result.score_report = score_result
