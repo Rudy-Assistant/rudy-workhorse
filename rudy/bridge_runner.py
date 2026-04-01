@@ -242,6 +242,133 @@ def _detect_and_offer_help():
         return False
 
 
+
+
+# =========================================================================
+# Session Loop Orchestrator (S47) -- Alfred/Lucius automated cycle
+# =========================================================================
+
+SESSION_LOOP_CHECK_EVERY = 18  # Check every 18 cycles (~3 min)
+
+def _check_session_loop():
+    """Orchestrate the Alfred/Lucius session loop.
+
+    Reads session-loop-config.json. If status is "running":
+    - Detects signal files (alfred-done, lucius-done)
+    - Writes the next session prompt to next-session-prompt.md
+    - Launches Claude app to start the next session
+    """
+    config_path = RUDY_DATA / "coordination" / "session-loop-config.json"
+    if not config_path.exists():
+        return None
+
+    try:
+        config = json.loads(config_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return None
+
+    if config.get("state", {}).get("status") != "running":
+        return None
+
+    state = config["state"]
+    signals = config.get("signals", {})
+    prompts = config.get("prompts", {})
+
+    alfred_done_path = RUDY_DATA.parent / signals.get("alfred_done", "")
+    lucius_done_path = RUDY_DATA.parent / signals.get("lucius_done", "")
+    halt_path = RUDY_DATA.parent / signals.get("halt", "")
+
+    # Check for halt
+    if halt_path.exists():
+        log.info("[SessionLoop] Halt signal detected. Stopping loop.")
+        state["status"] = "halted"
+        config_path.write_text(json.dumps(config, indent=2), encoding="utf-8")
+        return {"action": "halted"}
+
+    # Determine next action based on signals
+    alfred_done = alfred_done_path.exists()
+    lucius_done = lucius_done_path.exists()
+
+    if alfred_done and not lucius_done:
+        # Alfred finished, need to start Lucius
+        log.info("[SessionLoop] Alfred done signal found. Starting Lucius session.")
+        try:
+            signal = json.loads(alfred_done_path.read_text(encoding="utf-8"))
+            session_num = signal.get("session", "?")
+        except (json.JSONDecodeError, OSError):
+            session_num = "?"
+
+        # Write the Lucius prompt as next-session-prompt.md
+        lucius_template = RUDY_DATA.parent / prompts.get("lucius_template", "")
+        next_prompt = RUDY_DATA / "coordination" / "next-session-prompt.md"
+        if lucius_template.exists():
+            next_prompt.write_text(lucius_template.read_text(encoding="utf-8"), encoding="utf-8")
+            log.info("[SessionLoop] Wrote Lucius prompt to %s", next_prompt)
+
+        # Update state
+        state["current_agent"] = "lucius"
+        config_path.write_text(json.dumps(config, indent=2), encoding="utf-8")
+
+        # Launch Claude app
+        from rudy.robin_wake_alfred import wake_via_claude_app
+        launched = wake_via_claude_app()
+        log.info("[SessionLoop] Claude app launched for Lucius: %s", launched)
+        return {"action": "started_lucius", "session": session_num, "launched": launched}
+
+    elif lucius_done:
+        # Lucius finished, check grade and possibly start next Alfred
+        log.info("[SessionLoop] Lucius done signal found. Evaluating next iteration.")
+        try:
+            signal = json.loads(lucius_done_path.read_text(encoding="utf-8"))
+            grade = signal.get("grade", "?")
+        except (json.JSONDecodeError, OSError):
+            grade = "?"
+
+        halt_below = config.get("config", {}).get("halt_on_grade_below", "D-")
+        max_iter = config.get("config", {}).get("max_iterations", 5)
+
+        # Check halt conditions
+        grade_order = ["F", "D-", "D", "D+", "C-", "C", "C+", "B-", "B", "B+", "A-", "A", "A+"]
+        if grade in grade_order and halt_below in grade_order:
+            if grade_order.index(grade) < grade_order.index(halt_below):
+                log.info("[SessionLoop] Grade %s below threshold %s. Halting.", grade, halt_below)
+                state["status"] = "halted"
+                state["halt_reason"] = f"Grade {grade} below {halt_below}"
+                config_path.write_text(json.dumps(config, indent=2), encoding="utf-8")
+                return {"action": "halted", "reason": f"grade_{grade}"}
+
+        state["current_iteration"] = state.get("current_iteration", 0) + 1
+        if state["current_iteration"] >= max_iter:
+            log.info("[SessionLoop] Max iterations reached (%d). Halting.", max_iter)
+            state["status"] = "completed"
+            config_path.write_text(json.dumps(config, indent=2), encoding="utf-8")
+            return {"action": "completed", "iterations": state["current_iteration"]}
+
+        # Clean up signal files for next cycle
+        alfred_done_path.unlink(missing_ok=True)
+        lucius_done_path.unlink(missing_ok=True)
+
+        # Write Alfred prompt
+        alfred_template = RUDY_DATA.parent / prompts.get("alfred_template", "")
+        next_prompt = RUDY_DATA / "coordination" / "next-session-prompt.md"
+        if alfred_template.exists():
+            next_prompt.write_text(alfred_template.read_text(encoding="utf-8"), encoding="utf-8")
+            log.info("[SessionLoop] Wrote Alfred prompt to %s", next_prompt)
+
+        state["current_agent"] = "alfred"
+        state["last_completed_agent"] = "lucius"
+        config_path.write_text(json.dumps(config, indent=2), encoding="utf-8")
+
+        from rudy.robin_wake_alfred import wake_via_claude_app
+        launched = wake_via_claude_app()
+        log.info("[SessionLoop] Claude app launched for Alfred: %s", launched)
+        return {"action": "started_alfred", "iteration": state["current_iteration"], "launched": launched}
+
+    else:
+        # No signals yet -- waiting
+        return None
+
+
 def _run_autonomy_tick():
     """Run one cycle of the AutonomyEngine (decide + execute).
 
@@ -420,6 +547,15 @@ def main():
                     pass  # wake module not yet available
                 except Exception as e:
                     log.error("Wake check error: %s", e)
+
+            # --- Phase 6: Session loop orchestrator (every SESSION_LOOP_CHECK_EVERY) ---
+            if not args.no_autonomy and iteration % SESSION_LOOP_CHECK_EVERY == 0:
+                try:
+                    loop_result = _check_session_loop()
+                    if loop_result:
+                        log.info("[SessionLoop] Result: %s", loop_result.get("action"))
+                except Exception as e:
+                    log.error("[SessionLoop] Error: %s", e)
 
             # --- Heartbeat refresh ---
             if time.time() - last_heartbeat >= HEARTBEAT_INTERVAL:
