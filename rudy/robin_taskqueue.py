@@ -36,7 +36,6 @@ Lucius Gate: LG-005 — No new dependencies. Stdlib only. APPROVED, Lite Review.
 
 import json
 import os
-import re
 import logging
 import subprocess
 import sys
@@ -388,6 +387,14 @@ def execute_task(task: dict) -> tuple[bool, str]:
                 # Switch back to main even if nothing to stage
                 _execute_command([GIT_EXE, "checkout", "main"])
                 return False, "No files to stage"
+
+            # Check if there's actually anything staged to commit
+            ok_diff, diff_out = _execute_command([GIT_EXE, "diff", "--cached", "--stat"])
+            if ok_diff and not (diff_out or "").strip():
+                logger.info("Nothing staged after git add — no changes to commit")
+                _execute_command([GIT_EXE, "checkout", "main"])
+                return True, "No changes to commit (files unchanged)"
+
             success2, out2 = _execute_command([GIT_EXE, "commit", "-m", msg])
             success3, out3 = _execute_command([GIT_EXE, "push", "origin", nightwatch_branch])
 
@@ -397,39 +404,29 @@ def execute_task(task: dict) -> tuple[bool, str]:
         return False, f"Unknown git action: {action}"
 
     elif task_type == "code_quality":
-        # Run ruff linter if available
+        # Run ruff linter if available — use paths.PYTHON_EXE for correct env
+        try:
+            from rudy.paths import PYTHON_EXE as _py_exe
+        except ImportError:
+            _py_exe = PYTHON
         return _execute_command(
-            [PYTHON, "-m", "ruff", "check", str(RUDY_ROOT / "rudy"), "--output-format=text"],
+            [_py_exe, "-m", "ruff", "check", str(RUDY_ROOT / "rudy"), "--output-format=text"],
             timeout=60
         )
 
     elif task_type == "report":
-        # Generate a summary report of recent activity
-        code = (
-            f"import sys, json, pathlib, datetime; sys.path.insert(0, r'{RUDY_ROOT}'); "
-            f"reports = list(pathlib.Path(str(QUEUE_DIR / 'completed')).glob('*.json')); "
-            f"print(f'Completed tasks: {{len(reports)}}'); "
-            f"for r in sorted(reports)[-5:]: "
-            f"  d = json.loads(r.read_text()); "
-            f"  print(f\"  [{{d.get('type','?')}}] {{d.get('title','?')}} - {{d.get('status','?')}}\")"
-        )
-        return _execute_python(code, timeout=30)
+        # Generate a summary report of recent activity (standalone script)
+        script = RUDY_DATA / "nightwatch_activity_summary.py"
+        if script.exists():
+            return _execute_command([PYTHON, str(script)], timeout=30)
+        return False, "nightwatch_activity_summary.py not found in rudy-data/"
 
     elif task_type == "handoff":
-        # Check for Alfred handoff briefs with unfinished priorities
-        code = (
-            f"import sys; sys.path.insert(0, r'{RUDY_ROOT}'); "
-            f"from rudy.workflows.handoff import HandoffScanner; "
-            f"scanner = HandoffScanner(); "
-            f"latest = scanner.get_latest_handoff(); "
-            f"needs = scanner.needs_new_session(); "
-            f"print(f'Latest handoff: session {{latest.get(\"session_number\", \"none\") if latest else \"none\"}}'); "
-            f"print(f'Needs new session: {{needs}}'); "
-            f"if needs and latest: "
-            f"  prompt = scanner.format_bootstrap_prompt(latest); "
-            f"  print(f'Bootstrap prompt ready ({{len(prompt)}} chars)')"
-        )
-        return _execute_python(code, timeout=30)
+        # Check for Alfred handoff briefs (standalone script)
+        script = RUDY_DATA / "nightwatch_handoff_check.py"
+        if script.exists():
+            return _execute_command([PYTHON, str(script)], timeout=30)
+        return False, "nightwatch_handoff_check.py not found in rudy-data/"
 
     elif task_type == "health_check":
         # System health check: CPU, RAM, disk, uptime
