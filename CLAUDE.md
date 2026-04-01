@@ -138,6 +138,14 @@ Custom code is a **liability**, not an asset. Every line we write is a line we m
 
 All session records, findings, and institutional knowledge MUST be written to the **BatcaveVault** (`vault/`). HandoffWriter handles session records automatically. ADRs → `vault/Architecture/`. Protocols → `vault/Protocols/`. Sessions → `vault/Sessions/`. Never scatter records without also writing to the vault.
 
+### Handoff Location (HARD RULE — Session 53)
+
+**Canonical handoff path: `vault/Handoffs/Session-{N}-Handoff.md`**
+
+Write handoffs HERE and ONLY here. Do NOT write to repo root, `rudy-data/handoffs/`, or `vault/Sessions/`. One location, one format, no exceptions. The repo root `Session-XX-Handoff.md` pattern is DEPRECATED.
+
+
+
 ## Last Session Score
 
 Alfred Session 52: Pending /lucius-review. 2 skill invocations (engineering:debug, engineering:system-design).
