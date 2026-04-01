@@ -709,6 +709,11 @@ def main():
 
     setup_logging()
 
+    # LG-S37-002 fix: Write initial heartbeat immediately on startup
+    # so external health checks (FoxGate, Lucius) don't fail before
+    # register_peer completes. Uses "starting" status until fully up.
+    write_heartbeat("pending", iterations=0, autonomy_runs=0, inbox_msgs=0)
+
     # Singleton enforcement: only one bridge_runner at a time
     if not _acquire_lock():
         log.warning("Another bridge_runner is already running (lock: %s). Exiting.", LOCK_FILE)
