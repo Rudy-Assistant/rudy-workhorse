@@ -487,7 +487,23 @@ class RobinMailbox:
         elif has_directive:
             recommendation = "execute_directive"
         elif loop_status in ("running", "awaiting_alfred", "awaiting_lucius"):
-            recommendation = "session_loop_active"
+            # LF-S52-002: Check if the loop is actually PROGRESSING,
+            # not just stuck in an awaiting state. A loop that hasn't
+            # changed state in >60 min is stuck, not active.
+            loop_stale = False
+            try:
+                lc2 = _json.loads(loop_config_path.read_text(encoding="utf-8"))
+                launch_ts = lc2.get("state", {}).get("last_launch_ts", "")
+                if launch_ts:
+                    launch_age = (datetime.now() - datetime.fromisoformat(launch_ts)).total_seconds()
+                    if launch_age > 3600:  # >1hr since last loop activity
+                        loop_stale = True
+            except Exception:
+                pass
+            if loop_stale:
+                recommendation = "autonomous"  # Loop is stuck, Robin should act
+            else:
+                recommendation = "session_loop_active"
         elif staleness_tier >= 2:
             recommendation = "autonomous"
         else:
