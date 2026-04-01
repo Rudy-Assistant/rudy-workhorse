@@ -113,12 +113,7 @@ All session records, findings, and institutional knowledge MUST be written to th
 
 ## Last Session Score
 
-Alfred Session 43: Pending /lucius-review
-  Completed: Nightwatch validation + 5 regression fixes, working tree cleanup (166->0),
-  n8n MCP test, PR #79 (62 files, 484 ins). n8n auto-start script written.
-  Fixed: LG-S42-001, LG-S43-001, LG-S43-002, LG-S43-003. Filed: LG-S43-004, LG-S43-005
-  Previous: Alfred S42: pending, S41: 61/100 (D), S40: 86/100 (B), S39: 89/100 (B)
-  Lucius: S41: 88/100 (B), S40: 60/100 (D), S39: 79/100 (C)
+Alfred Session 43: Pending /lucius-review. See Session-43-Handoff.md and vault/Sessions/S43-Record.md for details.
 
   HARD RULE (S41): Skill invocation is mandatory and scored. Failure to invoke matching
   skills for each priority is a max deduction on Tool Reuse AND Process Compliance.
@@ -165,13 +160,7 @@ Alfred Session 43: Pending /lucius-review
 
 ## Current Sprint (Session 43)
 
-1. P0: Nightwatch validation — triggered manual cycle, 7/12 pass, 5 new failures found
-2. P0a: Fixed 5 nightwatch regressions in robin_taskqueue.py (ruff format, browse Unicode, logger sanitize, git stash+pop)
-3. P2: n8n MCP test — healthy, API works, MCP connector auth issue (LG-S43-004)
-4. P3: Working tree cleanup — 166 dirty files resolved via PR #79 (62 code files + .gitignore)
-5. P5: n8n auto-start script written (needs admin elevation)
-6. PR #79 pushed — feature/s43-accumulated-fixes (pending merge)
-7. Deferred: /session-score (S41/S42/S43), Robin stretch task
+PR #79 pending merge. 5 nightwatch fixes applied. n8n healthy. See Session-43-Handoff.md for S44 priorities.
 
 ## Lucius Gate — Session Governance (ADR-004 v2.1)
 
