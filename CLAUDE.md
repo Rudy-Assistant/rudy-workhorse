@@ -113,15 +113,14 @@ All session records, findings, and institutional knowledge MUST be written to th
 
 ## Last Session Score
 
-Session 41: Pending /lucius-review
-  Preliminary self-assessment (use /session-score in S42 for formal scoring):
-    Completed: PR #75 merged (main current), /session-score skill created,
-    Robin assessed (3/10), ADR-010 evaluated, 3 findings filed
-    Delegation: Robin unable (environmental blockers — ruff missing, n8n broken)
-    Exception applied: Robin-first rule waived per exception (b) confirmed unable
-    New artifact: /session-score skill (251 lines)
-    Findings: LG-S41-001 (FIXED), LG-S41-002 (OPEN), LG-S41-003 (OPEN)
-  Previous: Session 40: 86/100 (B), Session 39: 89/100 (B), Session 38: 66/100 (D)
+Alfred Session 42: Pending /lucius-review
+  Completed: n8n full setup, nightwatch 4/4 fixes, help_offer flood fix, PR #77 merged (5/5 CI)
+  Fixed: LG-S41-002, LG-S41-003. Filed: LG-S42-001, LG-S42-002
+  Previous: Alfred S41: 61/100 (D), Alfred S40: 86/100 (B), Alfred S39: 89/100 (B)
+  Lucius: S41: 88/100 (B), S40: 60/100 (D), S39: 79/100 (C)
+
+  HARD RULE (S41): Skill invocation is mandatory and scored. Failure to invoke matching
+  skills for each priority is a max deduction on Tool Reuse AND Process Compliance.
 
 ## Known Workarounds (Hot)
 
@@ -163,17 +162,16 @@ Session 41: Pending /lucius-review
 | **gh CLI** | v2.88.1, authenticated as Rudy-Assistant |
 | **PAT** | Classic PAT (ghp_), expires 2026-06-27 |
 
-## Current Sprint (Session 41)
+## Current Sprint (Session 42)
 
-1. P0: Reviewed Robin's 4 delegated tasks — all acked, none completed (environmental blockers)
-2. P1: Fixed null byte corruption in robin_agent_langgraph.py (LG-S41-001)
-3. P1: PR #75 merged — all 5 CI checks green, 62 files, 3002 insertions landed on main
-4. P2: n8n reinstall launched (background) — previous install broken (module not found)
-5. P3: Robin readiness assessed at 3/10 (up from 2/10) — ruff now installed
-6. P4: Created /session-score skill (251 lines, ADR-009 compliant)
-7. P5: ADR-010 Phase 2 — no concurrent trigger for S42
-8. Vault: Session-41.md, LG-S41-001.md, Handoff written
-9. Open: LG-S41-002 (Robin nightwatch failures), LG-S41-003 (help_offer flooding)
+1. P0: n8n fully operational — installed, owner account, API key, MCP config updated, test workflow deployed
+2. P1: Fixed Robin nightwatch 4/7 failures (LG-S41-002) — inline Python → scripts, git diff check, PYTHON_EXE fix
+3. P1: Fixed sentinel NightShift crash ('int' has no attr 'get') — process_all returns int not dict
+4. P2: Fixed help_offer flooding (LG-S41-003) — 4h cooldown, threshold 5→20, 148 stale files cleaned
+5. P3: PR #77 merged — 5/5 CI green, 3 files, 36 insertions
+6. Main updated to 4644af4
+7. Robin inbox: 17 stale tasks cleared by Chris, 148 help_offers cleared by Alfred
+8. Deferred: /session-score (S41/S42), Robin stretch task (await nightwatch validation)
 ## Lucius Gate — Session Governance (ADR-004 v2.1)
 
 **Core module:** `rudy/agents/lucius_gate.py`
