@@ -63,7 +63,7 @@ def create_app():
     try:
         from fastapi import FastAPI, HTTPException, Header, Request
         from fastapi.middleware.cors import CORSMiddleware
-        from fastapi.responses import JSONResponse
+        from fastapi.responses import JSONResponse  # noqa: F401
     except ImportError:
         raise RuntimeError("FastAPI not installed. Run: pip install fastapi uvicorn")
 

@@ -245,7 +245,7 @@ class GeoLocator:
         # Try geopy (Nominatim)
         try:
             from geopy.geocoders import Nominatim
-            from geopy.exc import GeocoderTimedOut
+            from geopy.exc import GeocoderTimedOut  # noqa: F401
             geolocator = Nominatim(user_agent="rudy-photo-intel")
             location = geolocator.reverse(f"{lat}, {lon}", timeout=10)
             if location:
@@ -733,19 +733,19 @@ class PhotoIntel:
         status = {"capabilities": []}
 
         try:
-            from PIL import Image
+            from PIL import Image  # noqa: F401
             status["capabilities"].append("exif_extraction")
         except ImportError:
             pass
 
         try:
-            from geopy.geocoders import Nominatim
+            from geopy.geocoders import Nominatim  # noqa: F401
             status["capabilities"].append("geocoding")
         except ImportError:
             pass
 
         try:
-            import imagehash
+            import imagehash  # noqa: F401
             status["capabilities"].append("perceptual_hashing")
         except ImportError:
             status["capabilities"].append("md5_duplicate_detection")

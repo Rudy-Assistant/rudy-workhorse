@@ -178,7 +178,7 @@ class FaceSwapEngine:
 
     def _check_insightface(self) -> bool:
         try:
-            import insightface
+            import insightface  # noqa: F401
             return True
         except ImportError:
             return False
@@ -272,7 +272,7 @@ class MoviePyCompositor:
 
     def _check(self) -> bool:
         try:
-            from moviepy.editor import ImageClip
+            from moviepy.editor import ImageClip  # noqa: F401
             return True
         except ImportError:
             return False

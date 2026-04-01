@@ -39,7 +39,7 @@ GMAIL_IMAP_IPS = ["142.250.4.108", "142.250.4.109", "74.125.200.108", "74.125.20
 def ensure_playwright():
     """Install playwright if needed."""
     try:
-        from playwright.sync_api import sync_playwright
+        from playwright.sync_api import sync_playwright  # noqa: F401
         return True
     except ImportError:
         print("[*] Installing Playwright...")

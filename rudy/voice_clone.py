@@ -209,7 +209,7 @@ class PocketTTSEngine:
 
     def _check_available(self) -> bool:
         try:
-            import pocket_tts
+            import pocket_tts  # noqa: F401
             return True
         except ImportError:
             return False
@@ -267,7 +267,7 @@ class CoquiTTSEngine:
 
     def _check_available(self) -> bool:
         try:
-            import TTS
+            import TTS  # noqa: F401
             return True
         except ImportError:
             return False
@@ -304,7 +304,7 @@ class OpenVoiceEngine:
 
     def _check_available(self) -> bool:
         try:
-            from openvoice import se_extractor
+            from openvoice import se_extractor  # noqa: F401
             return True
         except ImportError:
             return False
@@ -342,7 +342,7 @@ class BarkEngine:
 
     def _check_available(self) -> bool:
         try:
-            from bark import generate_audio, SAMPLE_RATE
+            from bark import generate_audio, SAMPLE_RATE  # noqa: F401
             return True
         except ImportError:
             return False

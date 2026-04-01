@@ -19,7 +19,7 @@ except ImportError:
     HAS_PSUTIL = False
 
 try:
-    from tabulate import tabulate
+    from tabulate import tabulate  # noqa: F401
     HAS_TABULATE = True
 except ImportError:
     HAS_TABULATE = False
