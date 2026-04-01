@@ -179,8 +179,14 @@ def _check_inbox():
                 try:
                     from rudy.robin_taskqueue import add_task
                     _pri_map = {"critical": 10, "high": 20, "medium": 30, "low": 40}
+                    # Determine task type: use explicit type if given,
+                    # default to "agent" (Ollama) if no command, "shell" if command present
+                    _task_type = payload.get("type")
+                    _has_cmd = bool(payload.get("command"))
+                    if not _task_type:
+                        _task_type = "shell" if _has_cmd else "agent"
                     add_task({
-                        "type": payload.get("type", "shell"),
+                        "type": _task_type,
                         "title": payload.get("title", payload.get("task", "Alfred task")),
                         "description": payload.get("description", payload.get("details", "")),
                         "command": payload.get("command"),

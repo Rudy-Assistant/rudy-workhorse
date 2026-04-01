@@ -95,11 +95,15 @@ For UI tasks, follow this loop:
   5. Repeat until done
 
 TOOL SELECTION GUIDE (CRITICAL):
-- To READ FILES: Use windows-mcp.Shell with Get-Content or type command
-  NEVER use Snapshot to read files. Snapshot shows the screen, not file contents.
-- To RUN SCRIPTS: Use windows-mcp.Shell with python or PowerShell commands
+- Shell runs PowerShell (NOT cmd.exe). Use PowerShell syntax always.
+- To READ FILES: Get-Content 'path\to\file.txt'
+- To LIST FILES: Get-ChildItem 'path' -Filter *.py
+- To COUNT FILES: (Get-ChildItem 'path' -Filter *.py).Count
+- To RUN SCRIPTS: & C:\\Python312\\python.exe script.py
+- To CHECK PROCESSES: Get-Process | Where-Object {$_.Name -like '*pattern*'}
 - To SEE THE SCREEN: Use windows-mcp.Snapshot (only for UI/visual tasks)
-- To SEARCH THE WEB: Use brave-search
+- To SEARCH THE WEB: Use brave-search.brave_web_search
+- NEVER use CMD commands like: find, type, dir. Use PowerShell equivalents.
 
 DIRECTIVE TASKS FROM ALFRED:
 When you receive a directive with numbered steps, follow them EXACTLY in order.
@@ -109,12 +113,15 @@ Do NOT substitute Snapshot when Shell is indicated.
 RULES:
 1. ACT FIRST, explain later. Execute the tool call, don't just describe it.
 2. After each tool result, analyze it, then decide the next step.
-3. If something fails, try a different approach -- don't give up on step 1.
+3. If something fails, try a DIFFERENT approach. NEVER repeat the same command.
+   Change the command syntax, use a different tool, or try PowerShell alternatives.
 4. For complex tasks, break them into steps and execute one at a time.
 5. Never expose secrets, tokens, or passwords.
 6. For destructive actions (delete, format, uninstall), state what you plan
    to do and why, then proceed unless the task is ambiguous.
 7. When done, give a concise summary of what you did and the result.
+8. Shell is PowerShell. If a command fails, rewrite it in PowerShell syntax.
+   Example: instead of "dir /b *.py | find /c /v" use "(Get-ChildItem *.py).Count"
 
 TO USE A TOOL, you MUST wrap the JSON in <tool_call> tags like this:
 
@@ -125,9 +132,9 @@ TO USE A TOOL, you MUST wrap the JSON in <tool_call> tags like this:
 CRITICAL FORMAT RULES:
 You MUST use <tool_call> tags with valid JSON. Here are concrete examples:
 
-EXAMPLE 1 - Running a shell command (MOST COMMON):
+EXAMPLE 1 - Running a shell command (MOST COMMON - uses PowerShell):
 <tool_call>
-{"tool": "windows-mcp.Shell", "args": {"command": "Get-Content C:\\path\to\file.txt"}}
+{"tool": "windows-mcp.Shell", "args": {"command": "Get-ChildItem C:\\Users\\ccimi\\rudy-workhorse\\rudy -Filter *.py | Measure-Object | Select-Object -ExpandProperty Count"}}
 </tool_call>
 
 EXAMPLE 2 - Running a Python script:
@@ -507,6 +514,21 @@ class RobinAgent:
                     tool_result=result_msg,
                     duration_ms=exec_duration,
                 ))
+
+                # Detect repeated failed tool calls -- nudge model to try differently
+                if not result.success and step_num > 1:
+                    prev_calls = [s for s in steps if s.action == "tool_call" 
+                                  and s.tool_name == tool_name]
+                    if len(prev_calls) >= 2:
+                        # Same tool failed 2+ times -- inject correction nudge
+                        result_msg += (
+                            "\n\nWARNING: This exact tool call has FAILED multiple times. "
+                            "You MUST try a COMPLETELY DIFFERENT approach. "
+                            "If using Shell, rewrite the command in PowerShell syntax. "
+                            "Examples: use Get-ChildItem instead of dir, "
+                            "Get-Content instead of type, Measure-Object instead of find /c. "
+                            "Do NOT repeat the same command."
+                        )
 
                 # Add to conversation
                 messages.append({"role": "assistant", "content": response})
