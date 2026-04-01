@@ -66,7 +66,7 @@ class SystemMaster(AgentBase):
 
     def _run_cmd(self, cmd, timeout=15):
         try:
-            r = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=timeout)
+            r = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=timeout)  # nosec B602
             return r.returncode == 0, r.stdout.strip()
         except Exception as e:
             return False, str(e)

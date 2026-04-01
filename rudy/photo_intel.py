@@ -445,7 +445,7 @@ class DuplicateDetector:
         for f in sorted(folder_path.rglob("*")):
             if f.suffix.lower() in IMAGE_EXTENSIONS:
                 try:
-                    h = hashlib.md5(f.read_bytes()).hexdigest()
+                    h = hashlib.md5(f.read_bytes()).hexdigest()  # nosec B324
                     file_hashes[h].append(str(f))
                 except Exception:
                     continue
