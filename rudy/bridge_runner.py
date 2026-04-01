@@ -324,7 +324,6 @@ def _check_session_loop():
             score = signal.get("score", 0)
         except (json.JSONDecodeError, OSError):
             grade = "?"
-            score = 0
 
         halt_below = config.get("config", {}).get("halt_on_grade_below", "D-")
         max_iter = config.get("config", {}).get("max_iterations", 5)
