@@ -347,9 +347,15 @@ If the task is research, use brave-search to find information.
 Do NOT ask for clarification. Do your best with the information given.
 If you cannot complete the task, explain specifically what blocked you."""
 
-        # Connect MCP servers
+        # Connect MCP servers (exclude Windows-MCP visual tools for agent tasks)
+        # LF-S53-001: qwen2.5:7b defaults to Snapshot and describes screenshots
+        # instead of executing tasks. Shell (Desktop Commander) is safe.
         registry = MCPServerRegistry(secrets)
-        registry.connect_all()
+        # Connect only non-visual MCP servers for agent tasks
+        for server_name in list(registry._configs.keys()):
+            if server_name == "windows-mcp":
+                continue  # Skip visual tools (Snapshot, Click, Type)
+            registry.connect(server_name)
 
         try:
             agent = RobinAgent(
