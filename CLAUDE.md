@@ -140,10 +140,21 @@ All session records, findings, and institutional knowledge MUST be written to th
 
 ## Last Session Score
 
-Alfred Session 43: Pending /lucius-review. See Session-43-Handoff.md and vault/Sessions/S43-Record.md for details.
+Alfred Session 45: Pending /lucius-review. 100% skill invocation (6/6).
+Previous: S44: 79/C (D-streak broken). Full history in vault/Scores/.
 
-  HARD RULE (S41): Skill invocation is mandatory and scored. Failure to invoke matching
-  skills for each priority is a max deduction on Tool Reuse AND Process Compliance.
+### SKILL INVOCATION GATE (HARD RULE — S41, reinforced S44)
+
+**BEFORE starting work on ANY priority, you MUST:**
+1. Identify matching skill(s) from available_skills
+2. INVOKE the skill via the Skill tool
+3. State: "Skill invoked: [name] for [priority]"
+
+**If no matching skill exists:** State: "No matching skill for [priority]. Checked: [list]"
+
+**Failure to invoke = automatic -15 on D2 (Tool Reuse) + -5 on D1 (Process Compliance).**
+
+Three consecutive D-grades (S41-S43) resulted from skipping this step. This is NOT optional.
 
 ## Known Workarounds (Hot)
 
@@ -185,9 +196,11 @@ Alfred Session 43: Pending /lucius-review. See Session-43-Handoff.md and vault/S
 | **gh CLI** | v2.88.1, authenticated as Rudy-Assistant |
 | **PAT** | Classic PAT (ghp_), expires 2026-06-27 |
 
-## Current Sprint (Session 43)
+## Current Sprint (Session 45)
 
-PR #79 pending merge. 5 nightwatch fixes applied. n8n healthy. See Session-43-Handoff.md for S44 priorities.
+PRs #83-86 merged (F401 cleanup, cooldown removal, ADR-012 comms paths). Nightwatch 15/15.
+n8n-mcp v2.44.0 installed (server restart pending). ADR-012 inter-agent comms implemented.
+Robin sentinel restart pending (watchdog code pickup). See Session-45-Handoff.md for S46 priorities.
 
 ## Lucius Gate — Session Governance (ADR-004 v2.1)
 
