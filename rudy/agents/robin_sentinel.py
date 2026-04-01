@@ -748,12 +748,44 @@ def run_continuous() -> None:
     while True:
         try:
             # Poll faster (60s) when a directive is active, normal (300s) otherwise
+            # LG-S44-001 FIX: Watchdog-based directive detection — zero latency.
+            # A file watcher monitors active-directive.json for writes. If Batman
+            # creates a directive mid-sleep, the Event fires and Robin wakes instantly.
             try:
-                from rudy.robin_autonomy import DirectiveTracker
+                from rudy.robin_autonomy import DirectiveTracker, COORD_DIR
                 poll_interval = 60 if DirectiveTracker().has_active_directive() else 300
             except Exception:
+                COORD_DIR = None
                 poll_interval = 300
-            time.sleep(poll_interval)
+            _woke_early = False
+            try:
+                if COORD_DIR is not None:
+                    import threading
+                    from watchdog.observers import Observer
+                    from watchdog.events import FileSystemEventHandler
+
+                    class _DirectiveHandler(FileSystemEventHandler):
+                        def __init__(self, event):
+                            self._event = event
+                        def on_modified(self, event):
+                            if "active-directive" in str(event.src_path):
+                                log.info("Directive file changed — waking early")
+                                self._event.set()
+
+                    _wake = threading.Event()
+                    _obs = Observer()
+                    _obs.schedule(_DirectiveHandler(_wake), str(COORD_DIR), recursive=False)
+                    _obs.start()
+                    _woke_early = _wake.wait(timeout=poll_interval)
+                    _obs.stop()
+                    _obs.join(timeout=2)
+                else:
+                    time.sleep(poll_interval)
+            except ImportError:
+                log.debug("watchdog not installed — falling back to timed sleep")
+                time.sleep(poll_interval)
+            except Exception:
+                time.sleep(poll_interval)
             cycle += 1
 
             # Quick health check every cycle
