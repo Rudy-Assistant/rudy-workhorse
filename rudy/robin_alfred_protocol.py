@@ -202,7 +202,7 @@ class RobinMailbox:
                             with open(fpath, "w") as fh:
                                 json.dump(raw, fh, indent=2)
                         return  # Done
-                elif isinstance(raw, dict) and raw.get("id") == msg_id:
+                elif isinstance(raw, dict) and (raw.get("id") == msg_id or raw.get("batch_id") == msg_id):
                     # Single-message file
                     raw["status"] = "read"
                     raw["read_at"] = datetime.now().isoformat()
