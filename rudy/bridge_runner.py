@@ -44,6 +44,7 @@ INBOX_CHECK_EVERY = 3        # Check inbox every 3 cycles (~30s)
 STRUGGLE_CHECK_EVERY = 6     # Detect Alfred struggle every 6 cycles (~60s)
 AUTONOMY_CHECK_EVERY = 30    # Run AutonomyEngine every 30 cycles (~5min)
 WAKE_CHECK_EVERY = 60        # Check if Alfred needs waking every 60 cycles (~10min)
+TASKQUEUE_PROCESS_EVERY = 6  # Process one queued task every 6 cycles (~60s)
 
 log = logging.getLogger("bridge.runner")
 
@@ -742,6 +743,18 @@ def main():
                         log.info("Inbox: processed %d message(s)", msgs)
                 except Exception as e:
                     log.error("Inbox check error: %s", e)
+
+            # --- Phase 2.5: Taskqueue processing (every TASKQUEUE_PROCESS_EVERY) ---
+            if not args.no_autonomy and iteration % TASKQUEUE_PROCESS_EVERY == 0:
+                try:
+                    from rudy.robin_taskqueue import process_next_task
+                    task_result = process_next_task()
+                    if task_result:
+                        log.info("[TaskQueue] Processed: %s (success=%s)",
+                                 task_result.get("title", "?"),
+                                 task_result.get("success"))
+                except Exception as e:
+                    log.error("[TaskQueue] Processing error: %s", e)
 
             # --- Phase 3: Alfred struggle detection (every STRUGGLE_CHECK_EVERY) ---
             if not args.no_autonomy and iteration % STRUGGLE_CHECK_EVERY == 0:
