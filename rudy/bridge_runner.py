@@ -166,6 +166,30 @@ def _check_inbox():
 
         processed = 0
         for msg in messages:
+            # S50 fix (LF-S47-001): Handle Lucius/Alfred batch files
+            if isinstance(msg, dict) and "tasks" in msg and "batch_id" in msg:
+                batch_id = msg["batch_id"]
+                tasks = msg.get("tasks", [])
+                log.info("[Inbox] Batch: %s (%d tasks)", batch_id, len(tasks))
+                try:
+                    from rudy.robin_taskqueue import add_task
+                    pm = {"critical": 10, "high": 20, "medium": 30, "low": 40}
+                    for t in tasks:
+                        add_task({
+                            "type": t.get("type", "agent"),
+                            "title": t.get("title", "Batch task"),
+                            "description": t.get("description", ""),
+                            "priority": pm.get(str(t.get("priority", "medium")).lower(), 30),
+                            "from_batch": batch_id,
+                            "from_task_id": t.get("task_id", ""),
+                            "status": "pending",
+                        })
+                        log.info("[Inbox] Queued: %s", t.get("title", "?"))
+                except Exception as be:
+                    log.error("[Inbox] Batch enqueue error: %s", be)
+                mailbox.mark_read(batch_id)
+                processed += 1
+                continue
             msg_type = msg.get("type", "unknown")
             msg_id = msg.get("id", "?")
             payload = msg.get("payload", {})
