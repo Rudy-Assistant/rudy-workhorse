@@ -32,7 +32,6 @@ import json
 import subprocess
 
 from datetime import datetime
-from pathlib import Path
 from collections import Counter
 from . import AgentBase, DESKTOP, LOGS_DIR
 

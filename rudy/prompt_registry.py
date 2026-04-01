@@ -14,7 +14,6 @@ This module is designed to be compatible with Agenta's SDK patterns.
 """
 
 import json
-import os
 import shutil
 from datetime import datetime
 from pathlib import Path

@@ -24,11 +24,9 @@ Required:
 """
 
 import json
-import os
 import subprocess
 import time
 from datetime import datetime
-from pathlib import Path
 from typing import Optional, Dict, List
 
 from rudy.paths import RUDY_LOGS, RUDY_DATA  # noqa: E402
@@ -194,7 +192,6 @@ class MotionDetector:
         Returns dict with: detected (bool), changed_pct, contours, bounding_boxes
         """
         import cv2
-        import numpy as np
 
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         gray = cv2.GaussianBlur(gray, (21, 21), 0)

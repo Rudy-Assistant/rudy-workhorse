@@ -25,10 +25,8 @@ Usage:
 
 import json
 import logging
-import os
 
 from datetime import datetime
-from pathlib import Path
 
 log = logging.getLogger("batcave_memory")
 

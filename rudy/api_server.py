@@ -23,11 +23,9 @@ Security:
 """
 
 import json
-import os
 import secrets
 import time
 from datetime import datetime
-from pathlib import Path
 
 from rudy.paths import RUDY_LOGS, RUDY_COMMANDS  # noqa: E402
 

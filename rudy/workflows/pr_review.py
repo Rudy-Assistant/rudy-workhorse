@@ -22,14 +22,11 @@ CLI (from Oracle):
     python -m rudy.workflows.pr_review alfred/my-feature
 """
 
-import json
 import logging
 import subprocess
 import sys
-from datetime import datetime
-from pathlib import Path
 
-from rudy.paths import REPO_ROOT, RUDY_DATA, GIT_EXE
+from rudy.paths import REPO_ROOT, GIT_EXE
 
 log = logging.getLogger("rudy.workflows.pr_review")
 

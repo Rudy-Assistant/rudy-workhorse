@@ -22,7 +22,6 @@ All processing is LOCAL — no cloud API needed, full privacy.
 """
 
 import json
-import os
 import shutil
 
 import time
@@ -356,7 +355,6 @@ class BarkEngine:
 
         try:
             from bark import generate_audio, SAMPLE_RATE
-            import numpy as np
             import soundfile as sf
 
             audio_array = generate_audio(text, history_prompt=speaker)

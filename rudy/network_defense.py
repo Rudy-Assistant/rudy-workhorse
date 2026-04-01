@@ -14,7 +14,6 @@ All checks are non-invasive, read-only, and designed to run every 30 minutes
 alongside the existing SecurityAgent cycle.
 """
 import json
-import os
 import re
 import socket
 import subprocess
@@ -22,7 +21,6 @@ import subprocess
 import hashlib
 from collections import defaultdict
 from datetime import datetime
-from pathlib import Path
 
 from rudy.paths import RUDY_LOGS  # noqa: E402
 

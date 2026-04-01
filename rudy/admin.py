@@ -16,7 +16,6 @@ import subprocess
 
 import os
 import time
-from pathlib import Path
 
 from rudy.paths import RUDY_LOGS  # noqa: E402
 

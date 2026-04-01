@@ -18,11 +18,9 @@ Called by:
     - CLI: python -m rudy.cli agent run <name>
 """
 import json
-import os
 import sys
 
 from datetime import datetime
-from pathlib import Path
 
 from rudy.paths import RUDY_LOGS, DESKTOP  # noqa: E402
 

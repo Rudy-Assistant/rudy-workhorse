@@ -21,12 +21,10 @@ Capabilities:
   7. Historical pattern matching (has this device appeared before?)
 """
 import json
-import os
 import re
 import subprocess
 
 from datetime import datetime
-from pathlib import Path
 
 from rudy.paths import RUDY_LOGS  # noqa: E402
 

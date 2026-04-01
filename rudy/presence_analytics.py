@@ -18,11 +18,9 @@ Data flow:
 """
 import json
 
-import os
 
 from collections import Counter
 from datetime import datetime
-from pathlib import Path
 from itertools import combinations
 
 from rudy.paths import RUDY_LOGS  # noqa: E402

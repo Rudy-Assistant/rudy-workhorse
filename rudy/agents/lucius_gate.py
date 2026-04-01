@@ -21,7 +21,6 @@ import enum
 import json
 import logging
 import os
-import sys
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -444,7 +443,6 @@ def _process_exists(process_name: str, cmdline_contains: str = None) -> bool:
 
 def _check_mcp_desktop_commander() -> GateCheck:
     """desktop-commander: node process with 'desktop-commander' in cmdline."""
-    import subprocess  # noqa: C3
 
     try:
         if _process_exists("node", cmdline_contains="desktopcommander"):

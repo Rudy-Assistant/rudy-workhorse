@@ -15,13 +15,12 @@ Capabilities:
 
 import hashlib
 import json
-import os
 
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional, List
-from urllib.parse import urlparse, urljoin
+from urllib.parse import urlparse
 
 from rudy.paths import RUDY_LOGS, RUDY_DATA  # noqa: E402
 

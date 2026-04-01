@@ -24,7 +24,7 @@ from typing import Optional
 
 logger = logging.getLogger("rudy.github")
 
-from rudy.paths import DESKTOP, REPO_ROOT
+from rudy.paths import DESKTOP
 
 REPO = "Rudy-Assistant/rudy-workhorse"
 

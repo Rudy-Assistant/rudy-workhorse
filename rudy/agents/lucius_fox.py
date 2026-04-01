@@ -35,10 +35,9 @@ import sys
 
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
-from rudy.paths import REPO_ROOT, RUDY_DATA, RUDY_LOGS, DESKTOP, BATCAVE_VAULT
-from . import AgentBase, LOGS_DIR
+from rudy.paths import REPO_ROOT, RUDY_DATA, BATCAVE_VAULT
+from . import AgentBase
 
 
 # ──────────────────────────────────────────────────────────────────────
