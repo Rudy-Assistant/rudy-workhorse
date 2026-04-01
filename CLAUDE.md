@@ -113,10 +113,11 @@ All session records, findings, and institutional knowledge MUST be written to th
 
 ## Last Session Score
 
-Alfred Session 42: Pending /lucius-review
-  Completed: n8n full setup, nightwatch 4/4 fixes, help_offer flood fix, PR #77 merged (5/5 CI)
-  Fixed: LG-S41-002, LG-S41-003. Filed: LG-S42-001, LG-S42-002
-  Previous: Alfred S41: 61/100 (D), Alfred S40: 86/100 (B), Alfred S39: 89/100 (B)
+Alfred Session 43: Pending /lucius-review
+  Completed: Nightwatch validation + 5 regression fixes, working tree cleanup (166->0),
+  n8n MCP test, PR #79 (62 files, 484 ins). n8n auto-start script written.
+  Fixed: LG-S42-001, LG-S43-001, LG-S43-002, LG-S43-003. Filed: LG-S43-004, LG-S43-005
+  Previous: Alfred S42: pending, S41: 61/100 (D), S40: 86/100 (B), S39: 89/100 (B)
   Lucius: S41: 88/100 (B), S40: 60/100 (D), S39: 79/100 (C)
 
   HARD RULE (S41): Skill invocation is mandatory and scored. Failure to invoke matching
@@ -162,16 +163,16 @@ Alfred Session 42: Pending /lucius-review
 | **gh CLI** | v2.88.1, authenticated as Rudy-Assistant |
 | **PAT** | Classic PAT (ghp_), expires 2026-06-27 |
 
-## Current Sprint (Session 42)
+## Current Sprint (Session 43)
 
-1. P0: n8n fully operational — installed, owner account, API key, MCP config updated, test workflow deployed
-2. P1: Fixed Robin nightwatch 4/7 failures (LG-S41-002) — inline Python → scripts, git diff check, PYTHON_EXE fix
-3. P1: Fixed sentinel NightShift crash ('int' has no attr 'get') — process_all returns int not dict
-4. P2: Fixed help_offer flooding (LG-S41-003) — 4h cooldown, threshold 5→20, 148 stale files cleaned
-5. P3: PR #77 merged — 5/5 CI green, 3 files, 36 insertions
-6. Main updated to 4644af4
-7. Robin inbox: 17 stale tasks cleared by Chris, 148 help_offers cleared by Alfred
-8. Deferred: /session-score (S41/S42), Robin stretch task (await nightwatch validation)
+1. P0: Nightwatch validation — triggered manual cycle, 7/12 pass, 5 new failures found
+2. P0a: Fixed 5 nightwatch regressions in robin_taskqueue.py (ruff format, browse Unicode, logger sanitize, git stash+pop)
+3. P2: n8n MCP test — healthy, API works, MCP connector auth issue (LG-S43-004)
+4. P3: Working tree cleanup — 166 dirty files resolved via PR #79 (62 code files + .gitignore)
+5. P5: n8n auto-start script written (needs admin elevation)
+6. PR #79 pushed — feature/s43-accumulated-fixes (pending merge)
+7. Deferred: /session-score (S41/S42/S43), Robin stretch task
+
 ## Lucius Gate — Session Governance (ADR-004 v2.1)
 
 **Core module:** `rudy/agents/lucius_gate.py`
