@@ -321,7 +321,6 @@ def _check_session_loop():
         try:
             signal = json.loads(lucius_done_path.read_text(encoding="utf-8"))
             grade = signal.get("grade", "?")
-            score = signal.get("score", 0)
         except (json.JSONDecodeError, OSError):
             grade = "?"
 
