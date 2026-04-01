@@ -209,13 +209,29 @@ Three consecutive D-grades (S41-S43) resulted from skipping this step. This is N
 7. RudyCommandRunner started manually (PID 39868) — scheduled task needs admin
 
 
-## Lucius Gate — Session Governance (ADR-004 v2.1)
+## Lucius Gate — Session Governance (ADR-004 v2.1, reformed by ADR-016)
 
 **Core module:** `rudy/agents/lucius_gate.py`
 **Three gates:** `session_start_gate()` (boot), `pre_commit_check()` (before push), `post_session_gate()` (before handoff)
 **MCP tiers:** `rudy/agents/lucius_mcp_tiers.yml` (CRITICAL/IMPORTANT/OPTIONAL)
 
 → Full gate docs, troubleshooting, compliance scoring: see `docs/ADR-004-lucius-fox-librarian.md`
+
+### Lucius Process Reform (ADR-016, effective S52)
+
+**Principle: Fix first. Document second. Score automatically.**
+
+**Time allocation:** 65% implementation, 20% diagnosis, 15% records.
+
+**Fix-or-Justify Gate:** A finding filed without a fix attempt in the same session MUST include a "Why Not Fixed" section. Invalid reasons: "Deferred to next session", "Out of scope", "Requires further investigation." Valid: needs permissions, context >70% consumed, needs Batman decision.
+
+**Compact records:** Session records max 30 lines. Handoffs max 40 lines. No narratives.
+
+**Outcome-weighted scoring (Reform 4):** Fixes merged=35%, Deliverable verification=20%, Finding resolution=25%, Robin throughput=10%, Records quality=10% (penalty only).
+
+**Self-evolution:** Every 5th session (S55, S60...) includes process retrospective.
+
+**Identity addendum:** Fix-first. A finding without a fix is an incomplete thought. Governance exists to improve the system, not to observe it.
 
 ## Context Window Management
 

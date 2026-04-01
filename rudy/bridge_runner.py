@@ -224,6 +224,10 @@ def _check_inbox():
                     })
                 except Exception as te:
                     log.error("[Inbox] Failed to enqueue task: %s", te)
+                # S53 fix (LF-S53-002): Mark task as read after enqueue to prevent
+                # infinite re-enqueue loop. Without this, every inbox cycle re-reads
+                # the same message and creates a duplicate task.
+                mailbox.mark_read(msg_id)
 
             elif msg_type == "session_start":
                 log.info("[Inbox] Alfred session started: %s (session #%s)",
@@ -708,6 +712,11 @@ def main():
         sys.exit(0 if ok else 1)
 
     setup_logging()
+
+    # LG-S37-002 fix: Write initial heartbeat immediately on startup
+    # so external health checks (FoxGate, Lucius) don't fail before
+    # register_peer completes. Uses "starting" status until fully up.
+    write_heartbeat("pending", iterations=0, autonomy_runs=0, inbox_msgs=0)
 
     # Singleton enforcement: only one bridge_runner at a time
     if not _acquire_lock():
