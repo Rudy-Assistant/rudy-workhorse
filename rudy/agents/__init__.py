@@ -10,13 +10,11 @@ where agent crashes caused memory loss between sessions.
 """
 import json
 import logging
-import os
 import sys
-import time
 import traceback as tb_module
 from datetime import datetime
 from pathlib import Path
-from rudy.paths import RUDY_LOGS, DESKTOP, REPO_ROOT
+from rudy.paths import RUDY_LOGS
 
 LOGS_DIR = RUDY_LOGS
 LOGS_DIR.mkdir(exist_ok=True)

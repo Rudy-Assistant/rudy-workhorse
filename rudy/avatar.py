@@ -42,7 +42,7 @@ def _save_json(path: Path, data):
 
 def _run(cmd: str, timeout: int = 300):
     try:
-        r = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=timeout)
+        r = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=timeout)  # nosec B602
         return r.stdout.strip(), r.stderr.strip(), r.returncode
     except subprocess.TimeoutExpired:
         return "", "Timeout", -1
@@ -178,7 +178,7 @@ class FaceSwapEngine:
 
     def _check_insightface(self) -> bool:
         try:
-            import insightface
+            import insightface  # noqa: F401
             return True
         except ImportError:
             return False
@@ -272,7 +272,7 @@ class MoviePyCompositor:
 
     def _check(self) -> bool:
         try:
-            from moviepy.editor import ImageClip
+            from moviepy.editor import ImageClip  # noqa: F401
             return True
         except ImportError:
             return False

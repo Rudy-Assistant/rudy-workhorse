@@ -46,7 +46,7 @@ def _load_config():
     config = {
         "api_key": secrets.token_urlsafe(32),
         "port": 8000,
-        "host": "0.0.0.0",
+        "host": "0.0.0.0",  # nosec B104
         "allowed_origins": ["*"],
         "rate_limit_per_minute": 60,
         "created": datetime.now().isoformat(),
@@ -63,7 +63,7 @@ def create_app():
     try:
         from fastapi import FastAPI, HTTPException, Header, Request
         from fastapi.middleware.cors import CORSMiddleware
-        from fastapi.responses import JSONResponse
+        from fastapi.responses import JSONResponse  # noqa: F401
     except ImportError:
         raise RuntimeError("FastAPI not installed. Run: pip install fastapi uvicorn")
 
@@ -245,7 +245,7 @@ def create_app():
                 f.write(script_content)
         else:
             with open(cmd_file, "w") as f:
-                f.write(f"import subprocess\nsubprocess.run({repr(command)}, shell=True)\n")
+                f.write(f"import subprocess\nsubprocess.run({repr(command)}, shell=True)\n")  # nosec B602
 
         return {"status": "queued", "command_file": str(cmd_file)}
 

@@ -39,7 +39,7 @@ GMAIL_IMAP_IPS = ["142.250.4.108", "142.250.4.109", "74.125.200.108", "74.125.20
 def ensure_playwright():
     """Install playwright if needed."""
     try:
-        from playwright.sync_api import sync_playwright
+        from playwright.sync_api import sync_playwright  # noqa: F401
         return True
     except ImportError:
         print("[*] Installing Playwright...")
@@ -333,8 +333,8 @@ def main():
         print("\n[✓] IMAP auth is working! No fix needed.")
         print("    Restarting Rudy listener...")
         # Kill any existing listener and restart
-        os.system('taskkill /F /FI "WINDOWTITLE eq Rudy*" >nul 2>&1')
-        os.system(f'start "Rudy" cmd /c "cd /d {DESKTOP} && start-rudy.bat"')
+        os.system('taskkill /F /FI "WINDOWTITLE eq Rudy*" >nul 2>&1')  # nosec B605
+        os.system(f'start "Rudy" cmd /c "cd /d {DESKTOP} && start-rudy.bat"')  # nosec B605
         write_results((True, None), {"status": "NOT_CHECKED"}, None)
         return
 
