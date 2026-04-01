@@ -224,6 +224,10 @@ def _check_inbox():
                     })
                 except Exception as te:
                     log.error("[Inbox] Failed to enqueue task: %s", te)
+                # S53 fix (LF-S53-002): Mark task as read after enqueue to prevent
+                # infinite re-enqueue loop. Without this, every inbox cycle re-reads
+                # the same message and creates a duplicate task.
+                mailbox.mark_read(msg_id)
 
             elif msg_type == "session_start":
                 log.info("[Inbox] Alfred session started: %s (session #%s)",
