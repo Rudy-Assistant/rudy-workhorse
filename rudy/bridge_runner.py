@@ -250,13 +250,76 @@ def _detect_and_offer_help():
 
 SESSION_LOOP_CHECK_EVERY = 18  # Check every 18 cycles (~3 min)
 
+def _launch_claude_new_task(prompt_path):
+    """Use Robin's MCP client to open a new Claude task with the given prompt.
+
+    Connects to Windows-MCP, clicks 'New task' in the Claude sidebar,
+    then pastes the prompt content.  Falls back to wake_via_claude_app()
+    if Windows-MCP is unavailable.
+
+    Returns True if the launch succeeded.
+    """
+    try:
+        from rudy.robin_mcp_client import MCPServerRegistry
+        registry = MCPServerRegistry()
+
+        if not registry.connect("windows-mcp"):
+            log.warning("[SessionLoop] Windows-MCP unavailable, falling back to protocol handler")
+            from rudy.robin_wake_alfred import wake_via_claude_app
+            return wake_via_claude_app()
+
+        import time as _time
+
+        # Step 1: Bring Claude to foreground
+        registry.call_tool("windows-mcp.App", {"action": "focus", "app": "Claude"})
+        _time.sleep(1.0)
+
+        # Step 2: Click 'New task' (top-left of sidebar)
+        # Use Snapshot first to find the button
+        registry.call_tool("windows-mcp.Snapshot", {})
+        log.info("[SessionLoop] Snapshot taken, looking for New task button")
+
+        # Click the '+ New task' area — typically near top-left of Claude window
+        registry.call_tool("windows-mcp.Click", {"element": "New task"})
+        _time.sleep(1.5)
+
+        # Step 3: Read the prompt file and paste it
+        prompt_text = prompt_path.read_text(encoding="utf-8") if prompt_path.exists() else ""
+        if prompt_text:
+            # Type the prompt into the message box
+            # For long prompts, use clipboard paste via shortcut
+            registry.call_tool("windows-mcp.Type", {"text": prompt_text, "element": "Message input"})
+            _time.sleep(0.5)
+
+            # Step 4: Send the message (press Enter or click Send)
+            registry.call_tool("windows-mcp.Shortcut", {"keys": ["enter"]})
+            log.info("[SessionLoop] Prompt sent to new Claude task")
+
+        registry.disconnect_all()
+        return True
+
+    except Exception as e:
+        log.error("[SessionLoop] MCP launch failed: %s", e)
+        # Fallback
+        try:
+            from rudy.robin_wake_alfred import wake_via_claude_app
+            return wake_via_claude_app()
+        except Exception:
+            return False
+
+
 def _check_session_loop():
     """Orchestrate the Alfred/Lucius session loop.
 
-    Reads session-loop-config.json. If status is "running":
-    - Detects signal files (alfred-done, lucius-done)
-    - Writes the next session prompt to next-session-prompt.md
-    - Launches Claude app to start the next session
+    Reads session-loop-config.json.  Responds to these statuses:
+      - "running"          : check for signal files, launch next agent
+      - "awaiting_lucius"  : waiting for Lucius to finish (do nothing)
+      - "awaiting_alfred"  : waiting for Alfred to finish (do nothing)
+      - "halted"/"completed": do nothing
+
+    After launching an agent, status transitions to "awaiting_*" so
+    the loop does NOT re-trigger on subsequent cycles.  Status returns
+    to "running" only when the next done-signal appears.
     """
     config_path = RUDY_DATA / "coordination" / "session-loop-config.json"
     if not config_path.exists():
@@ -267,10 +330,8 @@ def _check_session_loop():
     except (json.JSONDecodeError, OSError):
         return None
 
-    if config.get("state", {}).get("status") != "running":
-        return None
-
-    state = config["state"]
+    state = config.get("state", {})
+    status = state.get("status", "")
     signals = config.get("signals", {})
     prompts = config.get("prompts", {})
 
@@ -278,19 +339,42 @@ def _check_session_loop():
     lucius_done_path = RUDY_DATA.parent / signals.get("lucius_done", "")
     halt_path = RUDY_DATA.parent / signals.get("halt", "")
 
-    # Check for halt
+    # ---- Halt signal always takes priority ----
     if halt_path.exists():
         log.info("[SessionLoop] Halt signal detected. Stopping loop.")
         state["status"] = "halted"
         config_path.write_text(json.dumps(config, indent=2), encoding="utf-8")
         return {"action": "halted"}
 
-    # Determine next action based on signals
+    # ---- Awaiting states: check if the awaited agent finished ----
+    if status == "awaiting_lucius":
+        if lucius_done_path.exists():
+            log.info("[SessionLoop] Lucius done signal found while awaiting. Transitioning to running.")
+            state["status"] = "running"
+            config_path.write_text(json.dumps(config, indent=2), encoding="utf-8")
+            # Fall through to running logic below
+            status = "running"
+        else:
+            return None  # Still waiting
+
+    if status == "awaiting_alfred":
+        if alfred_done_path.exists():
+            log.info("[SessionLoop] Alfred done signal found while awaiting. Transitioning to running.")
+            state["status"] = "running"
+            config_path.write_text(json.dumps(config, indent=2), encoding="utf-8")
+            status = "running"
+        else:
+            return None  # Still waiting
+
+    if status != "running":
+        return None
+
+    # ---- Running: detect signals and launch next agent ----
     alfred_done = alfred_done_path.exists()
     lucius_done = lucius_done_path.exists()
 
     if alfred_done and not lucius_done:
-        # Alfred finished, need to start Lucius
+        # Alfred finished -> start Lucius
         log.info("[SessionLoop] Alfred done signal found. Starting Lucius session.")
         try:
             signal = json.loads(alfred_done_path.read_text(encoding="utf-8"))
@@ -298,25 +382,27 @@ def _check_session_loop():
         except (json.JSONDecodeError, OSError):
             session_num = "?"
 
-        # Write the Lucius prompt as next-session-prompt.md
+        # Write the Lucius prompt
         lucius_template = RUDY_DATA.parent / prompts.get("lucius_template", "")
         next_prompt = RUDY_DATA / "coordination" / "next-session-prompt.md"
         if lucius_template.exists():
             next_prompt.write_text(lucius_template.read_text(encoding="utf-8"), encoding="utf-8")
             log.info("[SessionLoop] Wrote Lucius prompt to %s", next_prompt)
 
-        # Update state
+        # Launch via MCP UI automation
+        launched = _launch_claude_new_task(next_prompt)
+        log.info("[SessionLoop] Lucius launch result: %s", launched)
+
+        # Transition to awaiting — prevents re-trigger
         state["current_agent"] = "lucius"
+        state["status"] = "awaiting_lucius"
+        state["last_launch_ts"] = datetime.now().isoformat()
         config_path.write_text(json.dumps(config, indent=2), encoding="utf-8")
 
-        # Launch Claude app
-        from rudy.robin_wake_alfred import wake_via_claude_app
-        launched = wake_via_claude_app()
-        log.info("[SessionLoop] Claude app launched for Lucius: %s", launched)
         return {"action": "started_lucius", "session": session_num, "launched": launched}
 
     elif lucius_done:
-        # Lucius finished, check grade and possibly start next Alfred
+        # Lucius finished -> evaluate grade, possibly start Alfred
         log.info("[SessionLoop] Lucius done signal found. Evaluating next iteration.")
         try:
             signal = json.loads(lucius_done_path.read_text(encoding="utf-8"))
@@ -327,7 +413,7 @@ def _check_session_loop():
         halt_below = config.get("config", {}).get("halt_on_grade_below", "D-")
         max_iter = config.get("config", {}).get("max_iterations", 5)
 
-        # Check halt conditions
+        # Grade halt check
         grade_order = ["F", "D-", "D", "D+", "C-", "C", "C+", "B-", "B", "B+", "A-", "A", "A+"]
         if grade in grade_order and halt_below in grade_order:
             if grade_order.index(grade) < grade_order.index(halt_below):
@@ -355,17 +441,21 @@ def _check_session_loop():
             next_prompt.write_text(alfred_template.read_text(encoding="utf-8"), encoding="utf-8")
             log.info("[SessionLoop] Wrote Alfred prompt to %s", next_prompt)
 
+        # Launch via MCP UI automation
+        launched = _launch_claude_new_task(next_prompt)
+        log.info("[SessionLoop] Alfred launch result: %s", launched)
+
+        # Transition to awaiting
         state["current_agent"] = "alfred"
         state["last_completed_agent"] = "lucius"
+        state["status"] = "awaiting_alfred"
+        state["last_launch_ts"] = datetime.now().isoformat()
         config_path.write_text(json.dumps(config, indent=2), encoding="utf-8")
 
-        from rudy.robin_wake_alfred import wake_via_claude_app
-        launched = wake_via_claude_app()
-        log.info("[SessionLoop] Claude app launched for Alfred: %s", launched)
         return {"action": "started_alfred", "iteration": state["current_iteration"], "launched": launched}
 
     else:
-        # No signals yet -- waiting
+        # No signals yet
         return None
 
 
