@@ -13,14 +13,11 @@ Capabilities:
 """
 
 import json
-import os
 import re
 from collections import Counter
 
-from pathlib import Path
 from typing import List, Tuple
 
-from rudy.paths import DESKTOP  # noqa: E402
 
 class SentimentAnalyzer:
     """Analyze sentiment of text."""

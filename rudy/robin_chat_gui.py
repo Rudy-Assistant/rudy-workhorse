@@ -15,13 +15,11 @@ Architecture:
 """
 
 import json
-import os
 
 import threading
 import urllib.request
 import urllib.error
 from datetime import datetime
-from pathlib import Path
 from flask import Flask, request, jsonify, Response, stream_with_context
 
 # ---------------------------------------------------------------------------

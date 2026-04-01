@@ -47,13 +47,12 @@ import json
 import os
 import time
 from datetime import datetime
-from pathlib import Path
 from typing import Optional
 
 # Shared sanitization (canonical: rudy/sanitize.py)
 from rudy.sanitize import sanitize_str as _sanitize_str
 from rudy.sanitize import validate_payload as _validate_payload
-from rudy.sanitize import MAX_PAYLOAD_SIZE, MAX_MESSAGE_AGE_HOURS
+from rudy.sanitize import MAX_MESSAGE_AGE_HOURS
 
 
 # Canonical paths

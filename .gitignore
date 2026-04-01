@@ -113,3 +113,43 @@ rudy-data/environment-profile.json
 # BatcaveVault — each Oracle's local memory (NEVER push to repo)
 vault/
 !vault/README.md
+
+# S43: Temp artifacts from session work
+rudy-data/executor-*.txt
+rudy-data/s4[0-9]*
+rudy-data/*-result*.json
+rudy-data/*-final*.json
+rudy-data/coordination/
+rudy-data/inboxes/robin-inbox/*.json
+rudy-data/git-*.json
+rudy-data/handoff-*.json
+rudy-data/final-*.json
+Session-*-Handoff.md
+Session-*-Prompt.md
+*-Session-*-Prompt.md
+scripts/*.log
+
+# S43: n8n install artifacts
+rudy-data/n8n-*.txt
+rudy-data/n8n-*.json
+rudy-data/n8n-*.ps1
+rudy-data/n8n_*.py
+rudy-data/npm-*.txt
+rudy-data/node-*.txt
+
+# S43: Old session helper scripts
+rudy-data/s3[0-9]*.py
+rudy-data/s43_*.py
+rudy-data/s43_*.bat
+
+# S43: Misc temp artifacts
+rudy-data/pr[0-9]*.json
+rudy-data/push-*.json
+rudy-data/sync*.json
+rudy-data/reg-*.txt
+rudy-data/tier*.json
+rudy-data/tob-*.json
+rudy-data/tmp-*/
+rudy-data/robin-continuous.log
+rudy-data/lucius-self-audit-prompt.md
+rudy-data/prompts/

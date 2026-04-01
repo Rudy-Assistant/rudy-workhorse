@@ -19,7 +19,6 @@ import smtplib
 import json
 import sys
 
-from pathlib import Path
 from email.mime.text import MIMEText
 
 EMAIL = "rudy.ciminoassist@gmail.com"

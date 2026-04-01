@@ -14,12 +14,10 @@ Data is stored in:
   - rudy-logs/presence-routines.json — learned patterns (day-of-week averages)
 """
 import json
-import os
 import re
 import subprocess
 import time
 from datetime import datetime
-from pathlib import Path
 
 from rudy.paths import RUDY_LOGS  # noqa: E402
 

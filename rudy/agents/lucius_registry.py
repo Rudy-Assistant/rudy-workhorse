@@ -24,11 +24,10 @@ CLI:
 import ast
 import json
 import logging
-import os
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional
+from typing import Optional
 
 log = logging.getLogger("lucius.registry")
 

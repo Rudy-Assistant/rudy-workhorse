@@ -27,7 +27,6 @@ import sys
 import threading
 import time
 from datetime import datetime
-from pathlib import Path
 from typing import Optional
 
 # ---------------------------------------------------------------------------
@@ -35,13 +34,9 @@ from typing import Optional
 # ---------------------------------------------------------------------------
 
 from rudy.paths import (  # noqa: E402
-    REPO_ROOT as RUDY_ROOT,
     RUDY_DATA,
     RUDY_LOGS,
-    ROBIN_CONFIG as RUDY_CONFIG,
     ROBIN_STATE,
-    ROBIN_INBOX,
-    HOME,
 )
 
 # ---------------------------------------------------------------------------

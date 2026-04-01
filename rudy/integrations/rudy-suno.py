@@ -38,7 +38,6 @@ import json
 import sys
 
 import requests
-from pathlib import Path
 from datetime import datetime
 from rudy.paths import RUDY_LOGS
 

@@ -20,10 +20,8 @@ Tier 3 (With mmWave Sensor — Future):
 All tiers feed into the same alert pipeline → email/notification to Chris.
 """
 import json
-import os
 
 from datetime import datetime
-from pathlib import Path
 
 from rudy.paths import RUDY_LOGS  # noqa: E402
 

@@ -20,13 +20,11 @@ import json
 import logging
 import smtplib
 import subprocess
-import time
-from datetime import datetime, timedelta
+from datetime import datetime
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from pathlib import Path
 
-from rudy.paths import RUDY_DATA, REPO_ROOT
+from rudy.paths import RUDY_DATA
 
 log = logging.getLogger("robin.wake_alfred")
 

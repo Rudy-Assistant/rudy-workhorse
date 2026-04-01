@@ -27,7 +27,6 @@ Network identification:
   This prevents spoofing — an attacker would need to replicate ALL of these.
 """
 import json
-import os
 import re
 import shutil
 import subprocess
@@ -35,7 +34,6 @@ import socket
 import hashlib
 from collections import defaultdict
 from datetime import datetime
-from pathlib import Path
 
 from rudy.paths import RUDY_LOGS  # noqa: E402
 

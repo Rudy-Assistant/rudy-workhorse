@@ -18,7 +18,6 @@ import imaplib
 import smtplib
 import email
 import json
-import os
 
 from dataclasses import dataclass
 from datetime import datetime

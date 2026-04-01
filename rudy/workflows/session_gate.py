@@ -18,9 +18,7 @@ Import Isolation (C3):
 
 import json
 import logging
-import time
 from datetime import datetime
-from pathlib import Path
 from typing import Optional
 
 log = logging.getLogger("rudy.session_gate")

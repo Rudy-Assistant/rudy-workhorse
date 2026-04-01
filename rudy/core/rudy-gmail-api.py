@@ -17,7 +17,6 @@ Requirements:
     pip install --break-system-packages google-auth-oauthlib google-api-python-client
 """
 
-import os
 import sys
 import json
 import time
@@ -26,7 +25,6 @@ import logging
 import subprocess
 import traceback
 from datetime import datetime
-from pathlib import Path
 from email.mime.text import MIMEText
 
 from rudy.paths import RUDY_LOGS, DESKTOP, ROBIN_CONFIG  # noqa: E402

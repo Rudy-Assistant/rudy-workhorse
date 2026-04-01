@@ -25,10 +25,8 @@ This module reads from all presence data sources and produces a unified,
 chronological feed suitable for dashboard display.
 """
 import json
-import os
 
 from datetime import datetime, timedelta
-from pathlib import Path
 
 from rudy.paths import RUDY_LOGS  # noqa: E402
 

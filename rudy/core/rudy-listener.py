@@ -33,7 +33,6 @@ import ssl
 import logging
 import traceback
 from datetime import datetime
-from pathlib import Path
 from email.mime.text import MIMEText
 
 from rudy.paths import RUDY_LOGS, DESKTOP  # noqa: E402

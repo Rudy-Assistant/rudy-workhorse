@@ -1321,7 +1321,7 @@ class SentinelObserver:
         if registry_path.exists():
             try:
                 reg_mtime = registry_path.stat().st_mtime
-                from datetime import datetime, timedelta
+                from datetime import datetime
                 reg_age_hours = (
                     datetime.now().timestamp() - reg_mtime
                 ) / 3600

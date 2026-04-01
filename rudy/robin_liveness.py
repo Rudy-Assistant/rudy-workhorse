@@ -33,7 +33,6 @@ import subprocess
 import sys
 import time
 from datetime import datetime
-from pathlib import Path
 
 from rudy.paths import REPO_ROOT, RUDY_DATA, RUDY_LOGS, ROBIN_STATE
 

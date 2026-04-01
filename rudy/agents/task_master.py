@@ -6,7 +6,7 @@ all other agents for health and progress.
 import json
 
 from datetime import datetime
-from . import AgentBase, DESKTOP, LOGS_DIR
+from . import AgentBase, LOGS_DIR
 
 class TaskMaster(AgentBase):
     name = "task_master"

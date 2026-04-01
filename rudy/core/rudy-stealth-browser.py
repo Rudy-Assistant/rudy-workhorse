@@ -5,8 +5,6 @@ import time
 
 import random
 import re
-from pathlib import Path
-from playwright.sync_api import sync_playwright
 from playwright_stealth import stealth
 
 from rudy.paths import RUDY_DATA

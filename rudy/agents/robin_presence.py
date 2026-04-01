@@ -27,12 +27,10 @@ Usage:
 import ctypes
 import json
 import logging
-import os
 import sys
 import time
 from datetime import datetime, timedelta
 from enum import Enum
-from pathlib import Path
 from typing import Optional
 
 # ---------------------------------------------------------------------------

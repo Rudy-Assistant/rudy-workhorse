@@ -71,23 +71,39 @@ During work, Lucius watches for these anti-patterns:
 | Scope creep | Work expanding beyond priority | Checkpoint with Batman. |
 | Registry amnesia | No registry.json check before coding | -5 score points per occurrence. |
 
-## Step 4: Post-Session Scoring
+## Step 4: Post-Session Scoring (ADR-009 — 7 Dimensions)
 
-At session end, score Alfred's work honestly:
+At session end, score Alfred's work using the ADR-009 rubric. Base score: 100. Deductions per dimension:
 
-**Category weights:**
-- Process compliance (30%): Did Alfred follow FoxGate for each priority?
-- Tool reuse (25%): Did Alfred use existing tools over custom code?
-- Robin delegation (20%): Did Alfred delegate local tasks to Robin?
-- Finding discipline (15%): Were findings logged, tracked, closed?
-- Documentation (10%): Were vault records, handoff, and CLAUDE.md updated?
+| # | Dimension | Max Deduction | Key Triggers |
+|---|-----------|--------------|-------------|
+| 1 | **Process Compliance** | -20 | Skipped gates (-2 to -5 each), late context eval (-5), prompted-only compliance (-3) |
+| 2 | **Tool Reuse & Build-vs-Buy** | -15 | Custom code without registry check (-3), existing tool ignored (-5), repeated broken workaround (-5) |
+| 3 | **Delegation Quality** | -20 | Opportunity Recognition (-5), Instruction Clarity (-5), Growth Investment (-5), Follow-Through (-5) |
+| 4 | **System Enrichment** | -15 | No peer leveraged (-5), no coordination check (-3), no capability expansion (-3), no reusable artifact (-2) |
+| 5 | **Finding Discipline** | -10 | Not logged (-3), not triaged (-2), HIGH not actioned (-2), rationalized away (-3) |
+| 6 | **Documentation & Vault** | -10 | No session record (-3), no CLAUDE.md update (-2), incomplete handoff (-2), undocumented decisions (-3) |
+| 7 | **Self-Scoring Integrity** | -10 | Arithmetic error (-3), unsupported severity claim (-3), omitted deduction (-2), >5pt Lucius discrepancy (-2) |
 
-**Scoring:**
-- 90-100 (A): Exemplary process adherence
-- 80-89 (B): Minor lapses, self-corrected
-- 70-79 (C): Multiple process violations
-- 60-69 (D): Systematic process bypass
-- <60 (F): Lucius gate was effectively rubber-stamped
+**Multiplier Tiers (declared by Lucius, not self-applied):**
+- x1.0 Standard — normal session
+- x1.5 Caution — single-dimension systemic failure
+- x2.0 Cooperation Failure — 2+ of: Robin idle, Lucius ignored, no enrichment
+- x2.5 Systemic Neglect — Cooperation Failure + integrity failure
+
+**Arithmetic format:** "Base deductions: [sum]. Multiplier: [tier]. Final: 100 - ([sum] x [multiplier]) = [score]."
+
+**Step 4a: Invoke /lucius-review** (if available) for independent Lucius scoring phase before handoff. Lucius's score stands unless Batman overrides.
+
+**Step 4b: Handoff Draft** — write handoff WITH corrected score, assess ADR-010 triggers, update CLAUDE.md "Last Session Score", write vault/Sessions/ record.
+
+**Grade Scale:**
+- 90-100 (A): Exemplary — team invested, system enriched
+- 80-89 (B): Strong — minor lapses, delegation mostly effective
+- 70-79 (C): Acceptable — multiple violations or delegation gaps
+- 60-69 (D): Passing — tasks done but system not improved
+- 50-59 (D-): Marginal — significant cooperation or process failure
+- Below 50 (F): Failure — systemic bypass or cooperation neglect
 
 **Write the score to CLAUDE.md** under "Last Session Score" with specific deductions.
 The next session instance MUST see this score before starting work.

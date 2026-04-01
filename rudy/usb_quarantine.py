@@ -51,7 +51,6 @@ import re
 import subprocess
 import time
 from datetime import datetime
-from pathlib import Path
 from typing import Dict, List
 
 from rudy.paths import RUDY_LOGS, RUDY_DATA  # noqa: E402

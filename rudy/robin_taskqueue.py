@@ -333,15 +333,13 @@ def execute_task(task: dict) -> tuple[bool, str]:
 
     elif task_type == "browse":
         url = _sanitize_metadata_string(task.get("metadata", {}).get("url", "https://example.com"), max_length=2000, url_mode=True)
-        code = (
-            f"import sys; sys.path.insert(0, r'{RUDY_ROOT}'); "
-            f"from rudy.tools.browser_tool import browse; "
-            f"r = browse('{url}'); "
-            f"print(f'Title: {{r.title}}'); "
-            f"print(f'Success: {{r.success}}'); "
-            f"print(r.text[:2000] if r.text else 'No text')"
+        # S43 fix: write standalone script instead of inline -c (avoids cp1252 Unicode crash)
+        browse_script = RUDY_DATA / "nightwatch_browse.py"
+        browse_script.write_text(
+            f"""import sys, os\nos.environ["PYTHONIOENCODING"] = "utf-8"\nsys.path.insert(0, r"{RUDY_ROOT}")\ntry:\n    from rudy.tools.browser_tool import browse\n    r = browse("{url}")\n    title = (r.title or "").encode("ascii", errors="replace").decode("ascii")\n    print(f"Title: {{title}}")\n    print(f"Success: {{r.success}}")\n    text = (r.text[:2000] if r.text else "No text").encode("ascii", errors="replace").decode("ascii")\n    print(text)\nexcept Exception as e:\n    print(f"Browse error: {{e}}")""",
+            encoding="utf-8"
         )
-        return _execute_python(code, timeout=60)
+        return _execute_command([PYTHON, str(browse_script)], timeout=60)
 
     elif task_type == "git":
         action = task.get("metadata", {}).get("action", "status")
@@ -356,12 +354,15 @@ def execute_task(task: dict) -> tuple[bool, str]:
             current_branch = (current_branch or "").strip()
 
             # Switch to nightwatch branch (create if needed)
+            # S43 fix: stash dirty working tree before switching branches
             if current_branch != nightwatch_branch:
-                # Try to checkout existing branch, or create from current HEAD
+                _execute_command([GIT_EXE, "stash", "push", "-m", "robin-nightwatch-autostash"])
                 ok_co, _ = _execute_command([GIT_EXE, "checkout", nightwatch_branch])
                 if not ok_co:
                     ok_co, _ = _execute_command([GIT_EXE, "checkout", "-b", nightwatch_branch])
                 if not ok_co:
+                    # Restore stash before aborting
+                    _execute_command([GIT_EXE, "stash", "pop"])
                     logger.error("Cannot switch to nightwatch branch — aborting commit")
                     return False, "Failed to switch to nightwatch branch"
                 logger.info(f"Switched to branch: {nightwatch_branch}")
@@ -386,6 +387,7 @@ def execute_task(task: dict) -> tuple[bool, str]:
             if not staged_files:
                 # Switch back to main even if nothing to stage
                 _execute_command([GIT_EXE, "checkout", "main"])
+                _execute_command([GIT_EXE, "stash", "pop"])
                 return False, "No files to stage"
 
             # Check if there's actually anything staged to commit
@@ -393,6 +395,7 @@ def execute_task(task: dict) -> tuple[bool, str]:
             if ok_diff and not (diff_out or "").strip():
                 logger.info("Nothing staged after git add — no changes to commit")
                 _execute_command([GIT_EXE, "checkout", "main"])
+                _execute_command([GIT_EXE, "stash", "pop"])
                 return True, "No changes to commit (files unchanged)"
 
             success2, out2 = _execute_command([GIT_EXE, "commit", "-m", msg])
@@ -400,6 +403,7 @@ def execute_task(task: dict) -> tuple[bool, str]:
 
             # Always return to main after nightwatch commit
             _execute_command([GIT_EXE, "checkout", "main"])
+            _execute_command([GIT_EXE, "stash", "pop"])
             return all([success2, success3]), f"Staged: {staged_files}\n{out2}\n{out3}"
         return False, f"Unknown git action: {action}"
 
@@ -410,7 +414,7 @@ def execute_task(task: dict) -> tuple[bool, str]:
         except ImportError:
             _py_exe = PYTHON
         return _execute_command(
-            [_py_exe, "-m", "ruff", "check", str(RUDY_ROOT / "rudy"), "--output-format=text"],
+            [_py_exe, "-m", "ruff", "check", str(RUDY_ROOT / "rudy"), "--output-format=concise"],
             timeout=60
         )
 
@@ -565,7 +569,7 @@ def process_next_task() -> Optional[dict]:
                 logger.warning(f"Task blocked (transient): {task['title']}")
             else:
                 complete_task(task["id"], result, success=False)
-                logger.warning(f"Task failed: {task['title']}: {result[:200]}")
+                logger.warning(f"Task failed: {task['title']}: {result[:200].encode('ascii', errors='replace').decode('ascii')}")
                 _notify_alfred(task, success=False, result=result)
 
         task["result"] = result

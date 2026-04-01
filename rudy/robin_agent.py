@@ -42,10 +42,9 @@ import re
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
-from pathlib import Path
 from typing import Optional
 
-from rudy.robin_mcp_client import MCPServerRegistry, MCPToolResult
+from rudy.robin_mcp_client import MCPServerRegistry
 
 try:
     from rudy.robin_logger import log_task_to_notion

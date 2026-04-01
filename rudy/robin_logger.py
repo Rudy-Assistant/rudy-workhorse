@@ -16,7 +16,6 @@ import os
 import urllib.request
 import urllib.error
 from datetime import datetime
-from pathlib import Path
 from typing import Optional
 
 log = logging.getLogger("robin_logger")

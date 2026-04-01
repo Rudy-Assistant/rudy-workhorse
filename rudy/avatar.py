@@ -208,7 +208,6 @@ class FaceSwapEngine:
         """Face swap via InsightFace."""
         try:
             import cv2
-            import numpy as np
             import insightface
             from insightface.app import FaceAnalysis
 
