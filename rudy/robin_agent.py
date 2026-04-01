@@ -147,7 +147,7 @@ EXAMPLE 3 - Taking a screenshot (only for UI tasks):
 {"tool": "windows-mcp.Snapshot", "args": {"use_vision": true}}
 </tool_call>
 
-EXAMPLE 3 - Searching the web:
+EXAMPLE 4 - Searching the web:
 <tool_call>
 {"tool": "brave-search.brave_web_search", "args": {"query": "example search"}}
 </tool_call>

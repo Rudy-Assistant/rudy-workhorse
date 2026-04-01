@@ -312,14 +312,13 @@ def _execute_via_agent(task: dict, timeout: int = 300) -> tuple[bool, str]:
     try:
         from rudy.robin_agent import RobinAgent
         from rudy.robin_mcp_client import MCPServerRegistry
-        import json as _json
 
         # Load secrets for MCP connections
         secrets = {}
         secrets_file = RUDY_DATA / "robin-secrets.json"
         if secrets_file.exists():
             try:
-                secrets = _json.loads(secrets_file.read_text(encoding="utf-8"))
+                secrets = json.loads(secrets_file.read_text(encoding="utf-8"))
             except Exception:
                 pass
 
@@ -327,9 +326,13 @@ def _execute_via_agent(task: dict, timeout: int = 300) -> tuple[bool, str]:
         model = secrets.get("ollama_model", "qwen2.5:7b")
 
         # Build task prompt with full context
-        task_prompt = f"""TASK: {task.get('title', 'Unknown task')}
+        # Sanitize task metadata before embedding in prompt (F2: prevent injection)
+        safe_title = _sanitize_metadata_string(task.get('title', 'Unknown task'), max_length=200)
+        safe_desc = _sanitize_metadata_string(task.get('description', 'No description provided.'))
 
-DESCRIPTION: {task.get('description', 'No description provided.')}
+        task_prompt = f"""TASK: {safe_title}
+
+DESCRIPTION: {safe_desc}
 
 PRIORITY: {task.get('priority', 'medium')}
 
@@ -376,6 +379,10 @@ def execute_task(task: dict) -> tuple[bool, str]:
 
     Returns (success, result_text).
     """
+    # Defensive: ensure task has an id (batch-seeded tasks may lack one, LF-S51-001)
+    if "id" not in task:
+        task["id"] = str(uuid.uuid4())[:8]
+        logger.warning(f"Task missing 'id' field, generated: {task['id']}")
     task_type = task.get("type", "unknown")
     logger.info(f"Executing [{task_type}]: {task['title']}")
 
@@ -387,17 +394,7 @@ def execute_task(task: dict) -> tuple[bool, str]:
     if task.get("python_code"):
         return _execute_python(task["python_code"], timeout=task.get("estimated_minutes", 5) * 60)
 
-    # Tasks with description but no command/code -> agent handles them
-    if not task.get("command") and not task.get("python_code") and task.get("description"):
-        # Check if this is a type we have a hardcoded executor for
-        hardcoded_types = {"audit", "profile", "browse", "git", "pr_create",
-                          "code_quality", "report", "handoff", "health_check",
-                          "security_scan", "shell"}
-        if task_type not in hardcoded_types:
-            logger.info(f"Task [{task_type}] has description but no command -- using agent")
-            return _execute_via_agent(task, timeout=task.get("estimated_minutes", 5) * 60)
-
-    # Type-specific executors
+    # Type-specific executors (checked BEFORE agent fallback to prevent bypass)
     if task_type == "audit":
         return _execute_command(
             [PYTHON, "-m", "rudy.agents.lucius_fox", "hygiene_check"],
