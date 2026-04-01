@@ -30,6 +30,7 @@ Usage:
 """
 
 import json
+import os
 import logging
 import platform
 import shutil
@@ -454,7 +455,10 @@ class NightShift:
     6. Code quality: run linters, tests, dependency checks on rudy-workhorse
     """
 
-    INACTIVITY_THRESHOLD_HOURS = 2  # Hours of Batman inactivity before night shift
+    # Away-mode: activate after 15 min of inactivity (was 2h).
+    # Override via directive file or ROBIN_INACTIVITY_MINUTES env var.
+    INACTIVITY_THRESHOLD_HOURS = float(os.environ.get(
+        "ROBIN_INACTIVITY_MINUTES", "15")) / 60
     NIGHT_HOURS = (23, 6)  # 11 PM to 6 AM = automatic night shift consideration
 
     def __init__(self, state: dict, online: bool = False):
@@ -743,7 +747,13 @@ def run_continuous() -> None:
     cycle = 0
     while True:
         try:
-            time.sleep(300)  # 5 minutes
+            # Poll faster (60s) when a directive is active, normal (300s) otherwise
+            try:
+                from rudy.robin_autonomy import DirectiveTracker
+                poll_interval = 60 if DirectiveTracker().has_active_directive() else 300
+            except Exception:
+                poll_interval = 300
+            time.sleep(poll_interval)
             cycle += 1
 
             # Quick health check every cycle

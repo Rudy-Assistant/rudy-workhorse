@@ -92,6 +92,33 @@ Christopher M. Cimino (ccimino2@gmail.com). Attorney — California State Bar #2
 6. **Robin-first for local tasks** (HARD RULE - Session 32). Before Alfred executes ANY filesystem scan, npm install, git operation, port check, or local I/O task: delegate to Robin first. Alfred's role is reasoning, orchestration, and review - not running local commands that Robin handles natively. Violations should be flagged by Sentinel/Scorer. The only exceptions are: (a) single-command diagnostics needed for immediate decision-making, (b) Robin is confirmed offline.
 6. **Robin-first for local tasks** (HARD RULE - Session 32). Before Alfred executes ANY filesystem scan, npm install, git operation, port check, or local I/O task: delegate to Robin first. Alfred's role is reasoning, orchestration, and review - not running local commands that Robin handles natively. Violations should be flagged by Sentinel/Scorer. The only exceptions are: (a) single-command diagnostics needed for immediate decision-making, (b) Robin is confirmed offline.
 
+### Away Mode Protocol (HARD RULE — Session 43)
+
+When Batman says "stepping away for N minutes" or "going to bed" or similar:
+
+**Timed mode** (e.g. "stepping away for 20 minutes"):
+```python
+from rudy.robin_autonomy import DirectiveTracker
+DirectiveTracker.create_directive("Work plan summary here", hours=20/60)
+```
+
+**Indefinite mode** (e.g. "going to bed", "handle things"):
+```python
+DirectiveTracker.create_directive("Work plan summary here", hours=None)
+```
+
+Robin's sentinel (PID 17984) picks this up automatically:
+- Polls every 60s when a directive is active (vs 300s normally)
+- AutonomyEngine.decide() routes to directive mode (MODE 1)
+- Robin executes tasks, uses Ollama for reasoning, creates PRs
+- Checkpoints logged to `rudy-data/coordination/active-directive.json`
+
+**Inactivity auto-activation**: Robin activates after 15 min of no Batman activity
+(configurable via `ROBIN_INACTIVITY_MINUTES` env var). No directive needed.
+
+**To cancel**: Set directive status to "cancelled" in the directive file,
+or Batman returning naturally supersedes (Robin yields to Alfred).
+
 ### Finding Capture Protocol (HARD RULE — Session 14)
 
 When any investigation surfaces an issue — **regardless of its origin** — follow this triage:

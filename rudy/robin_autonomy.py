@@ -94,7 +94,9 @@ class DirectiveTracker:
         if not self.directive:
             return False
         expires = self.directive.get("expires_at")
-        if expires and datetime.fromisoformat(expires) < datetime.now():
+        if not expires:
+            return True  # Indefinite directive — active until manually cancelled
+        if datetime.fromisoformat(expires) < datetime.now():
             self.directive["status"] = "expired"
             self._save()
             log.info("Directive expired: %s", self.directive.get("directive", "?"))
@@ -110,9 +112,9 @@ class DirectiveTracker:
         if not self.has_active_directive():
             return None
         expires = self.directive.get("expires_at")
-        if expires:
-            return datetime.fromisoformat(expires) - datetime.now()
-        return None
+        if not expires:
+            return timedelta(hours=9999)  # Indefinite — effectively unlimited
+        return datetime.fromisoformat(expires) - datetime.now()
 
     def get_progress_pct(self):
         if not self.directive:
@@ -120,7 +122,9 @@ class DirectiveTracker:
         given = datetime.fromisoformat(self.directive["given_at"])
         expires = self.directive.get("expires_at")
         if not expires:
-            return 0.0
+            # Indefinite mode — use elapsed hours as rough progress indicator
+            elapsed_h = (datetime.now() - given).total_seconds() / 3600
+            return min(99.0, elapsed_h * 10)  # ~10% per hour, never "done"
         total = (datetime.fromisoformat(expires) - given).total_seconds()
         elapsed = (datetime.now() - given).total_seconds()
         return min(100.0, (elapsed / total) * 100) if total > 0 else 100.0
@@ -146,10 +150,16 @@ class DirectiveTracker:
         log.info("Directive checkpoint %.0f%%: %s", checkpoint_pct, summary)
 
     @staticmethod
-    def create_directive(directive, hours, checkpoints=None):
-        """Create a new directive (called by Alfred or Batman)."""
+    def create_directive(directive, hours=None, checkpoints=None):
+        """Create a new directive (called by Alfred or Batman).
+
+        Args:
+            directive: What to work on.
+            hours: Time budget. None or 0 = indefinite (until Batman returns).
+            checkpoints: Progress milestones. Auto-generated if not provided.
+        """
         now = datetime.now()
-        expires = now + timedelta(hours=hours)
+        expires = (now + timedelta(hours=hours)) if hours else None
         if not checkpoints:
             checkpoints = [
                 {"at_pct": 25, "note": "Initial assessment and plan"},
@@ -162,7 +172,7 @@ class DirectiveTracker:
             "given_by": "batman",
             "given_at": now.isoformat(),
             "time_budget_hours": hours,
-            "expires_at": expires.isoformat(),
+            "expires_at": expires.isoformat() if expires else None,
             "checkpoints": checkpoints,
             "progress": [],
             "status": "active",
