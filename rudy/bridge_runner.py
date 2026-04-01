@@ -256,12 +256,39 @@ def _detect_and_offer_help():
 
 SESSION_LOOP_CHECK_EVERY = 18  # Check every 18 cycles (~3 min)
 
+def _parse_snapshot_elements(snapshot_text):
+    """Parse Windows-MCP Snapshot output to extract interactive elements.
+
+    Returns dict mapping element names (lowercased) to their coords.
+    """
+    elements = {}
+    for line in str(snapshot_text).split("\n"):
+        line = line.strip()
+        # Format: # id|window|control_type|name|coords|focus
+        # e.g.  113|Claude|Link|New task|(215,109)|0
+        if "|" not in line:
+            continue
+        parts = line.split("|")
+        if len(parts) >= 5:
+            name = parts[3].strip()
+            coords_str = parts[4].strip()
+            # Parse (x,y) coords
+            if coords_str.startswith("(") and "," in coords_str:
+                try:
+                    coords_str = coords_str.strip("()")
+                    x, y = int(coords_str.split(",")[0]), int(coords_str.split(",")[1])
+                    elements[name.lower()] = (x, y)
+                except (ValueError, IndexError):
+                    pass
+    return elements
+
+
 def _launch_claude_new_task(prompt_path):
     """Use Robin's MCP client to open a new Claude task with the given prompt.
 
-    Connects to Windows-MCP, clicks 'New task' in the Claude sidebar,
-    then pastes the prompt content.  Falls back to wake_via_claude_app()
-    if Windows-MCP is unavailable.
+    Connects to Windows-MCP, takes a Snapshot to find UI element coordinates,
+    then clicks 'New task' and types the prompt.  Falls back to
+    wake_via_claude_app() if Windows-MCP is unavailable.
 
     Returns True if the launch succeeded.
     """
@@ -270,35 +297,69 @@ def _launch_claude_new_task(prompt_path):
         registry = MCPServerRegistry()
 
         if not registry.connect("windows-mcp"):
-            log.warning("[SessionLoop] Windows-MCP unavailable, falling back to protocol handler")
+            log.warning("[SessionLoop] Windows-MCP unavailable, falling back")
             from rudy.robin_wake_alfred import wake_via_claude_app
             return wake_via_claude_app()
 
         import time as _time
 
-        # Step 1: Bring Claude to foreground
-        registry.call_tool("windows-mcp.App", {"action": "focus", "app": "Claude"})
-        _time.sleep(1.0)
+        # Step 1: Launch/focus Claude app
+        registry.call_tool("windows-mcp.App", {"mode": "launch", "name": "Claude"})
+        _time.sleep(2.0)
 
-        # Step 2: Click 'New task' (top-left of sidebar)
-        # Use Snapshot first to find the button
-        registry.call_tool("windows-mcp.Snapshot", {})
-        log.info("[SessionLoop] Snapshot taken, looking for New task button")
+        # Step 2: Take Snapshot to find UI element coordinates
+        snap_result = registry.call_tool("windows-mcp.Snapshot", {})
+        snap_text = snap_result.content if snap_result else ""
+        elements = _parse_snapshot_elements(snap_text)
+        log.info("[SessionLoop] Snapshot parsed: %d elements found", len(elements))
 
-        # Click the '+ New task' area — typically near top-left of Claude window
-        registry.call_tool("windows-mcp.Click", {"element": "New task"})
-        _time.sleep(1.5)
+        # Step 3: Find and click "New task"
+        new_task_coords = elements.get("new task")
+        if not new_task_coords:
+            log.error("[SessionLoop] Could not find 'New task' in Snapshot elements")
+            registry.disconnect_all()
+            return False
 
-        # Step 3: Read the prompt file and paste it
+        log.info("[SessionLoop] Clicking 'New task' at %s", new_task_coords)
+        registry.call_tool("windows-mcp.Click", {"loc": list(new_task_coords)})
+        _time.sleep(2.0)
+
+        # Step 4: Take another Snapshot to find the input field
+        snap_result2 = registry.call_tool("windows-mcp.Snapshot", {})
+        snap_text2 = snap_result2.content if snap_result2 else ""
+        elements2 = _parse_snapshot_elements(snap_text2)
+
+        # Find the prompt input field
+        input_coords = None
+        for name, coords in elements2.items():
+            if "write your prompt" in name or "message" in name:
+                input_coords = coords
+                break
+        # Fallback: look for any Edit control in Claude
+        if not input_coords:
+            for name, coords in elements2.items():
+                if "reply" in name or "prompt" in name:
+                    input_coords = coords
+                    break
+
+        if not input_coords:
+            log.error("[SessionLoop] Could not find input field after clicking New task")
+            registry.disconnect_all()
+            return False
+
+        # Step 5: Type the prompt
         prompt_text = prompt_path.read_text(encoding="utf-8") if prompt_path.exists() else ""
         if prompt_text:
-            # Type the prompt into the message box
-            # For long prompts, use clipboard paste via shortcut
-            registry.call_tool("windows-mcp.Type", {"text": prompt_text, "element": "Message input"})
-            _time.sleep(0.5)
+            # Truncate if very long (Type has practical limits)
+            if len(prompt_text) > 4000:
+                prompt_text = prompt_text[:4000] + "\n\n[Prompt truncated for UI paste]"
 
-            # Step 4: Send the message (press Enter or click Send)
-            registry.call_tool("windows-mcp.Shortcut", {"keys": ["enter"]})
+            log.info("[SessionLoop] Typing prompt (%d chars) at %s", len(prompt_text), input_coords)
+            registry.call_tool("windows-mcp.Type", {
+                "loc": list(input_coords),
+                "text": prompt_text,
+                "press_enter": True,
+            })
             log.info("[SessionLoop] Prompt sent to new Claude task")
 
         registry.disconnect_all()
@@ -306,7 +367,6 @@ def _launch_claude_new_task(prompt_path):
 
     except Exception as e:
         log.error("[SessionLoop] MCP launch failed: %s", e)
-        # Fallback
         try:
             from rudy.robin_wake_alfred import wake_via_claude_app
             return wake_via_claude_app()
