@@ -145,7 +145,7 @@ class RobinMailbox:
                         if msg_id in seen_ids:
                             continue  # Dedup across inbox dirs
                         seen_ids.add(msg_id)
-                        if msg.get("status") in ("unread", "pending"):
+                        if msg.get("status", "unread") in ("unread", "pending"):
                             # TTL check — skip expired messages
                             msg_ts = msg.get("timestamp", "")
                             if msg_ts:
@@ -563,7 +563,7 @@ class AlfredMailbox:
             try:
                 with open(f) as fh:
                     msg = json.load(fh)
-                if msg.get("status") in ("unread", "pending"):
+                if msg.get("status", "unread") in ("unread", "pending"):
                     # TTL check — skip expired messages (Protocol Salvage fix)
                     msg_ts = msg.get("timestamp", "")
                     if msg_ts:
