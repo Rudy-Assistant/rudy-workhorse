@@ -71,6 +71,20 @@ except ImportError:
         return "Browser tools not available"
 
 # ---------------------------------------------------------------------------
+# # Persona config integration (S55 — ADR-017)
+try:
+    from rudy.persona_loader import get_persona, get_system_prompt
+    PERSONA_AVAILABLE = True
+except ImportError:
+    PERSONA_AVAILABLE = False
+
+    def get_persona(name):
+        return None
+
+    def get_system_prompt(name, tools_prompt=""):
+        return None
+
+# ---------------------------------------------------------------------------
 # Data classes (preserved from robin_agent.py for compatibility)
 # ---------------------------------------------------------------------------
 
@@ -673,16 +687,30 @@ class RobinAgentV2:
         ollama_host: str = "http://localhost:11434",
         model: str = "qwen2.5:7b",
         max_steps: int = 15,
+        persona_name: str = "robin",
     ):
         self.registry = registry
-        self.ollama_host = ollama_host
-        self.model = model
-        self.max_steps = max_steps
+        self.persona_name = persona_name
+
+        # Load persona config if available (S55 — ADR-017)
+        self.persona = get_persona(persona_name) if PERSONA_AVAILABLE else None
+        if self.persona:
+            self.ollama_host = self.persona.ollama_host or ollama_host
+            self.model = self.persona.model or model
+            self.max_steps = self.persona.max_steps or max_steps
+            logger.info(f"Persona config loaded for '{persona_name}'")
+        else:
+            self.ollama_host = ollama_host
+            self.model = model
+            self.max_steps = max_steps
+            logger.info(f"No persona config for '{persona_name}', using defaults")
+
         self.graph = build_robin_graph()
 
         logger.info(
-            f"RobinAgentV2 initialized: model={model}, "
-            f"max_steps={max_steps}, host={ollama_host}"
+            f"RobinAgentV2 initialized: model={self.model}, "
+            f"max_steps={self.max_steps}, host={self.ollama_host}, "
+            f"persona={persona_name}"
         )
 
     def run(self, task: str, context: Optional[dict] = None) -> AgentResult:
@@ -707,7 +735,23 @@ class RobinAgentV2:
                 logger.warning(f"Could not get tools prompt: {e}")
                 tools_prompt = "(Tool discovery failed — proceed with known tools)"
 
-        system_prompt = AGENT_SYSTEM_PROMPT.format(tools_prompt=tools_prompt)
+        # Use persona-aware prompt if available, fall back to hardcoded (S55)
+        if self.persona and PERSONA_AVAILABLE:
+            system_prompt = self.persona.build_system_prompt(tools_prompt)
+            # Append tool call format instructions (not in persona config)
+            system_prompt += (
+                "\n\nTOOL CALL FORMAT — use EXACTLY this format, one tool per response:\n"
+                "<tool_call>\n"
+                '{"tool": "server-name.ToolName", "args": {"param": "value"}}\n'
+                "</tool_call>\n\n"
+                "RULES:\n"
+                "1. Call ONE tool per response. Wait for the result.\n"
+                "2. After receiving a tool result, analyze it and decide next action.\n"
+                "3. When complete, respond with your final answer in plain text.\n"
+                "4. Do NOT describe what you would do — actually call the tool."
+            )
+        else:
+            system_prompt = AGENT_SYSTEM_PROMPT.format(tools_prompt=tools_prompt)
         messages = [{"role": "system", "content": system_prompt}]
 
         if context:
