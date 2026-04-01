@@ -84,7 +84,7 @@ Christopher M. Cimino (ccimino2@gmail.com). Attorney — California State Bar #2
 
 ## HARD RULES — Session Discipline
 
-1. **At session start**: Read `CLAUDE.md` first (HARD RULE — Session 22). Then read `rudy-logs/session-briefing.md` if it exists. Contains: machine state, pending work, last session summary, available tools.
+1. **At session start**: Read `CLAUDE.md` first (HARD RULE — Session 22). Then check `rudy-data/coordination/session-loop-config.json` — if `status` is `"running"`, you are in an automated session loop: read the prompt at `rudy-data/coordination/next-session-prompt.md` and follow its protocol. Otherwise, read `rudy-logs/session-briefing.md` if it exists.
 2. **Before writing ANY new Python file**: Check `registry.json` or `rudy-logs/capability-manifest.json` for existing solutions. Also check: Cowork skills (30+), MCP connectors (5+), rudy/ modules (31+), installed packages (100+), scheduled tasks (24). The Capability Index in `docs/lucius-registry.md` is your cheat sheet.
 3. **Before building custom**: Search the MCP registry, check installed pip packages, and review the capability index. If you're writing >50 lines of Python for something that sounds generic, you almost certainly missed an existing tool.
 4. **All handoff drafts MUST include explicit instruction to consult CLAUDE.md** (HARD RULE — Session 22). Every bootstrap prompt, continuation prompt, and handoff brief must tell the next session to read CLAUDE.md before doing any work.
@@ -140,8 +140,9 @@ All session records, findings, and institutional knowledge MUST be written to th
 
 ## Last Session Score
 
-Alfred Session 45: Pending /lucius-review. 100% skill invocation (6/6).
-Previous: S44: 79/C (D-streak broken). Full history in vault/Scores/.
+Alfred Session 46: Pending /lucius-review. 100% skill invocation (5/5 applicable).
+Self-deductions: premature handoff at 35% context, misdiagnosed Robin as dead, delayed resuscitation.
+Previous: S45 pending, S44: 79/C. Full history in vault/Scores/.
 
 ### SKILL INVOCATION GATE (HARD RULE — S41, reinforced S44)
 
@@ -196,11 +197,17 @@ Three consecutive D-grades (S41-S43) resulted from skipping this step. This is N
 | **gh CLI** | v2.88.1, authenticated as Rudy-Assistant |
 | **PAT** | Classic PAT (ghp_), expires 2026-06-27 |
 
-## Current Sprint (Session 45)
+## Current Sprint (Session 46)
 
-PRs #83-86 merged (F401 cleanup, cooldown removal, ADR-012 comms paths). Nightwatch 15/15.
-n8n-mcp v2.44.0 installed (server restart pending). ADR-012 inter-agent comms implemented.
-Robin sentinel restart pending (watchdog code pickup). See Session-45-Handoff.md for S46 priorities.
+1. Path divergence FIXED: junction C:\Users\ccimi\rudy-workhorse\rudy-data -> C:\Users\ccimi\rudy-data
+2. PR #88 merged: E402 import order cleanup (8/8 errors, zero remaining)
+3. PRs #76, #67 closed (content on main / superseded)
+4. Robin confirmed alive (bridge_runner PID 17984 + robin_main PID 6044)
+5. Liveness watchdog registered (RobinLivenessWatchdog every 5 min)
+6. n8n healthy (v2.44.0, Rudy Health Ping active)
+7. ADR-012 Lucius inbox protocol verified (6/6 checks pass)
+8. Session loop automation designed: Alfred->Lucius sequential, config + prompts written
+9. Lucius documentation request filed (ADR-013 proposal)
 
 ## Lucius Gate — Session Governance (ADR-004 v2.1)
 
