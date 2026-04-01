@@ -22,7 +22,7 @@ Christopher M. Cimino (ccimino2@gmail.com). Attorney — California State Bar #2
 
 | Detail | Value |
 |--------|-------|
-| **Hardware** | Ace Magician AM06 Pro Mini PC |
+| **Hardware** | HP ENVY Laptop 16-h1xxx (14C/20T Intel 13th Gen, 16GB RAM, ~1TB SSD) |
 | **OS** | Windows 11 |
 | **Remote** | RustDesk (password-only) + Tailscale (100.83.49.9) + SSH + WinRM |
 | **Local IP** | 192.168.7.25 |
@@ -140,9 +140,10 @@ All session records, findings, and institutional knowledge MUST be written to th
 
 ## Last Session Score
 
-Alfred Session 46: Pending /lucius-review. 100% skill invocation (5/5 applicable).
-Self-deductions: premature handoff at 35% context, misdiagnosed Robin as dead, delayed resuscitation.
-Previous: S45 pending, S44: 79/C. Full history in vault/Scores/.
+Alfred Session 52: Pending /lucius-review. 2 skill invocations (engineering:debug, engineering:system-design).
+PRs: #104 (inbox fix), #108 (Robin awareness fix), #105, #106-107, #109 (docs).
+Self-deductions: failed to invoke skill before initial LF-S52-002 proposal, initial architecture was dependency-creating.
+Previous: S46 pending. Full history in vault/Scores/.
 
 ### SKILL INVOCATION GATE (HARD RULE — S41, reinforced S44)
 
@@ -197,17 +198,16 @@ Three consecutive D-grades (S41-S43) resulted from skipping this step. This is N
 | **gh CLI** | v2.88.1, authenticated as Rudy-Assistant |
 | **PAT** | Classic PAT (ghp_), expires 2026-06-27 |
 
-## Current Sprint (Session 46)
+## Current Sprint (Session 52)
 
-1. Path divergence FIXED: junction C:\Users\ccimi\rudy-workhorse\rudy-data -> C:\Users\ccimi\rudy-data
-2. PR #88 merged: E402 import order cleanup (8/8 errors, zero remaining)
-3. PRs #76, #67 closed (content on main / superseded)
-4. Robin confirmed alive (bridge_runner PID 17984 + robin_main PID 6044)
-5. Liveness watchdog registered (RobinLivenessWatchdog every 5 min)
-6. n8n healthy (v2.44.0, Rudy Health Ping active)
-7. ADR-012 Lucius inbox protocol verified (6/6 checks pass)
-8. Session loop automation designed: Alfred->Lucius sequential, config + prompts written
-9. Lucius documentation request filed (ADR-013 proposal)
+1. LF-S52-001 FIXED (PR #104): Robin inbox pipeline unblocked — msg.get("status", "unread")
+2. LF-S52-002 FIXED (PR #108): Robin dynamic awareness — age-aware offline detection + loop staleness
+3. Robin E2E pipeline confirmed: 72+ inbox messages processed, task execution working
+4. Robin restarted on latest main (PID 44944) with both fixes live
+5. Session loop halted (was stuck at awaiting_lucius since S47)
+6. S51 handoff reconstructed from PR trail (PR #105)
+7. RudyCommandRunner started manually (PID 39868) — scheduled task needs admin
+
 
 ## Lucius Gate — Session Governance (ADR-004 v2.1)
 
