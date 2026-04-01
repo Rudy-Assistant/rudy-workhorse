@@ -86,6 +86,9 @@ OPENSPACE_DIR = HOME / "OpenSpace"
 # Vault Handoffs: canonical handoff location inside Obsidian (most-used folder)
 VAULT_HANDOFFS = BATCAVE_VAULT / "Handoffs"
 
+# Agent avatar assets
+ROBIN_AVATAR = RUDY_DATA / "assets" / "robin-avatar.png"
+
 # ---------------------------------------------------------------------------
 # Ensure critical directories exist at import time
 # ---------------------------------------------------------------------------

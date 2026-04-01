@@ -43,11 +43,10 @@ ROBIN_INBOX = RUDY_DATA / "robin-inbox"
 ROBIN_INBOX_V2 = RUDY_DATA / "inboxes" / "robin-inbox"
 ALFRED_INBOX = RUDY_DATA / "alfred-inbox"
 BRIDGE_LOG = RUDY_DATA / "logs" / "bridge-runner.log"
-ROBIN_AVATAR = Path(
-    r"C:\Users\ccimi\Downloads"
-    r"\oneseer_Jason_Todd_Robin_Portrait_Art_Black_Background"
-    r"_by_Aki_2ba54536-5fd1-46c8-8f80-2aa34719b1c6_2.png"
-)
+try:
+    from rudy.paths import ROBIN_AVATAR
+except ImportError:
+    ROBIN_AVATAR = RUDY_DATA / "assets" / "robin-avatar.png"
 PORT = 7780
 
 
