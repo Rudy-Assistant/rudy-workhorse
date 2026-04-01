@@ -44,6 +44,8 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
+from rudy.sanitize import sanitize_str as _sanitize_str_shared
+from rudy.paths import REPO_ROOT, RUDY_DATA
 
 logger = logging.getLogger("robin.taskqueue")
 
@@ -53,7 +55,6 @@ logger = logging.getLogger("robin.taskqueue")
 # ---------------------------------------------------------------------------
 
 # Shared sanitization (canonical: rudy/sanitize.py)
-from rudy.sanitize import sanitize_str as _sanitize_str_shared
 
 
 def _sanitize_metadata_string(value: str, max_length: int = 500, url_mode: bool = False) -> str:
@@ -63,7 +64,6 @@ def _sanitize_metadata_string(value: str, max_length: int = 500, url_mode: bool 
 # Paths
 # ---------------------------------------------------------------------------
 
-from rudy.paths import REPO_ROOT, RUDY_DATA
 
 QUEUE_DIR = RUDY_DATA / "robin-taskqueue"
 ACTIVE_QUEUE = QUEUE_DIR / "active.json"
