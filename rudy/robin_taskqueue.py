@@ -301,6 +301,75 @@ def _execute_python(code: str, timeout: int = 120) -> tuple[bool, str]:
     """Run Python code and return (success, output)."""
     return _execute_command([PYTHON, "-c", code], timeout)
 
+
+def _execute_via_agent(task: dict, timeout: int = 300) -> tuple[bool, str]:
+    """Delegate a task to RobinAgent (Ollama) for open-ended execution.
+
+    Used when the task has no explicit command and doesn't match a
+    hardcoded task type. The agent can reason about the task and
+    use MCP tools (Shell, Snapshot, etc.) to accomplish it.
+    """
+    try:
+        from rudy.robin_agent import RobinAgent
+        from rudy.robin_mcp_client import MCPServerRegistry
+        import json as _json
+
+        # Load secrets for MCP connections
+        secrets = {}
+        secrets_file = RUDY_DATA / "robin-secrets.json"
+        if secrets_file.exists():
+            try:
+                secrets = _json.loads(secrets_file.read_text(encoding="utf-8"))
+            except Exception:
+                pass
+
+        # Determine model
+        model = secrets.get("ollama_model", "qwen2.5:7b")
+
+        # Build task prompt with full context
+        task_prompt = f"""TASK: {task.get('title', 'Unknown task')}
+
+DESCRIPTION: {task.get('description', 'No description provided.')}
+
+PRIORITY: {task.get('priority', 'medium')}
+
+INSTRUCTIONS: Execute this task completely. Use Shell commands for file operations,
+code execution, and system tasks. Use Snapshot only for UI tasks. When done,
+provide a clear summary of what you accomplished and any results.
+
+If the task involves reading or analyzing files, use Shell with Get-Content or python.
+If the task involves running scripts, use Shell with the appropriate interpreter.
+If the task is research, use brave-search to find information.
+
+Do NOT ask for clarification. Do your best with the information given.
+If you cannot complete the task, explain specifically what blocked you."""
+
+        # Connect MCP servers
+        registry = MCPServerRegistry(secrets)
+        registry.connect_all()
+
+        try:
+            agent = RobinAgent(
+                registry=registry,
+                model=model,
+                max_steps=10,
+            )
+            result = agent.run(task_prompt)
+
+            if result.success:
+                return True, result.final_answer[:3000]
+            else:
+                return False, f"Agent failed: {result.final_answer[:2000]}"
+        finally:
+            registry.disconnect_all()
+
+    except ImportError as e:
+        logger.warning("RobinAgent not available: %s", e)
+        return False, f"Agent unavailable: {e}"
+    except Exception as e:
+        logger.error("Agent execution error: %s", e)
+        return False, f"Agent error: {e}"
+
 def execute_task(task: dict) -> tuple[bool, str]:
     """
     Execute a task based on its type.
@@ -317,6 +386,16 @@ def execute_task(task: dict) -> tuple[bool, str]:
     # Python code tasks
     if task.get("python_code"):
         return _execute_python(task["python_code"], timeout=task.get("estimated_minutes", 5) * 60)
+
+    # Tasks with description but no command/code -> agent handles them
+    if not task.get("command") and not task.get("python_code") and task.get("description"):
+        # Check if this is a type we have a hardcoded executor for
+        hardcoded_types = {"audit", "profile", "browse", "git", "pr_create",
+                          "code_quality", "report", "handoff", "health_check",
+                          "security_scan", "shell"}
+        if task_type not in hardcoded_types:
+            logger.info(f"Task [{task_type}] has description but no command -- using agent")
+            return _execute_via_agent(task, timeout=task.get("estimated_minutes", 5) * 60)
 
     # Type-specific executors
     if task_type == "audit":
@@ -587,7 +666,9 @@ def execute_task(task: dict) -> tuple[bool, str]:
             return False, str(e)
 
     else:
-        return False, f"Unknown task type: {task_type}"
+        # Delegate unknown task types to RobinAgent (Ollama) for open-ended execution
+        logger.info(f"No hardcoded executor for [{task_type}] -- delegating to RobinAgent")
+        return _execute_via_agent(task, timeout=task.get("estimated_minutes", 5) * 60)
 
 # ---------------------------------------------------------------------------
 # Main Loop (called by NightShift or directly)
