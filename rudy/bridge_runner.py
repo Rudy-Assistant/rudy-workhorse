@@ -309,9 +309,27 @@ def _parse_snapshot_elements(snapshot_text):
     """Parse Windows-MCP Snapshot output to extract interactive elements.
 
     Returns dict mapping element names (lowercased) to their coords.
+
+    Note (S49 fix): Robin's MCP client returns content as a JSON-encoded
+    string (e.g. '["\n  Active Desktop:..."]'). We must JSON-decode first
+    to get real newlines, then parse the pipe-delimited element lines.
     """
+    import json as _json
+
+    # Unwrap JSON encoding if present
+    raw = str(snapshot_text)
+    if raw.startswith("[") or raw.startswith('"'):
+        try:
+            decoded = _json.loads(raw)
+            if isinstance(decoded, list):
+                raw = "\n".join(str(item) for item in decoded)
+            elif isinstance(decoded, str):
+                raw = decoded
+        except (ValueError, TypeError):
+            pass  # Not JSON, use as-is
+
     elements = {}
-    for line in str(snapshot_text).split("\n"):
+    for line in raw.split("\n"):
         line = line.strip()
         # Format: # id|window|control_type|name|coords|focus
         # e.g.  113|Claude|Link|New task|(215,109)|0
