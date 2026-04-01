@@ -161,20 +161,56 @@ class RobinMailbox:
         return messages
 
     def mark_read(self, msg_id: str):
-        """Mark a message as read and archive it."""
-        for f in ROBIN_INBOX.glob(f"{msg_id}*.json"):
-            try:
-                with open(f) as fh:
-                    msg = json.load(fh)
-                msg["status"] = "read"
-                msg["read_at"] = datetime.now().isoformat()
-                # Archive
-                archive_path = ARCHIVE_DIR / f.name
-                with open(archive_path, "w") as fh:
-                    json.dump(msg, fh, indent=2)
-                f.unlink()
-            except Exception:
+        """Mark a message as read and archive it.
+
+        Scans both ROBIN_INBOX and ROBIN_INBOX_V2 (S48 fix).
+        Handles batch files (JSON arrays) by marking individual items
+        and archiving the whole file when all items are read.
+        """
+        inbox_dirs = [ROBIN_INBOX, ROBIN_INBOX_V2]
+        for inbox_dir in inbox_dirs:
+            if not inbox_dir.exists():
                 continue
+            for fpath in inbox_dir.glob("*.json"):
+                try:
+                    with open(fpath) as fh:
+                        raw = json.load(fh)
+                except (json.JSONDecodeError, OSError):
+                    continue
+                if isinstance(raw, list):
+                    # Batch file: find and mark the specific item
+                    found = False
+                    for item in raw:
+                        if isinstance(item, dict) and item.get("id") == msg_id:
+                            item["status"] = "read"
+                            item["read_at"] = datetime.now().isoformat()
+                            found = True
+                            break
+                    if found:
+                        # Check if ALL items are now read
+                        all_read = all(
+                            isinstance(it, dict) and it.get("status") == "read"
+                            for it in raw
+                        )
+                        if all_read:
+                            archive_path = ARCHIVE_DIR / fpath.name
+                            with open(archive_path, "w") as fh:
+                                json.dump(raw, fh, indent=2)
+                            fpath.unlink()
+                        else:
+                            # Update in-place
+                            with open(fpath, "w") as fh:
+                                json.dump(raw, fh, indent=2)
+                        return  # Done
+                elif isinstance(raw, dict) and raw.get("id") == msg_id:
+                    # Single-message file
+                    raw["status"] = "read"
+                    raw["read_at"] = datetime.now().isoformat()
+                    archive_path = ARCHIVE_DIR / fpath.name
+                    with open(archive_path, "w") as fh:
+                        json.dump(raw, fh, indent=2)
+                    fpath.unlink()
+                    return  # Done
 
     def get_alfred_status(self) -> Optional[dict]:
         """Check Alfred's last known status."""
