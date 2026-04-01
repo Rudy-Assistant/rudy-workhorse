@@ -37,11 +37,11 @@ import json
 import logging
 import re
 
-log = logging.getLogger("rudy.handoff")
 from datetime import datetime
 from pathlib import Path
-
 from rudy.paths import BATCAVE_VAULT, HANDOFFS_DIR, REPO_ROOT, VAULT_HANDOFFS
+log = logging.getLogger("rudy.handoff")
+
 
 
 class HandoffWriter:

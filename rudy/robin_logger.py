@@ -10,6 +10,7 @@ Target: Robin Operations Log page in Notion.
 Page ID: 3327d3f7-e736-816d-8622-d884ccc0a3cd
 """
 
+from rudy.paths import RUDY_LOGS
 import json
 import logging
 import os
@@ -73,7 +74,6 @@ def _notion_request(method: str, path: str, token: str, data: dict = None) -> di
         return json.loads(resp.read().decode())
 
 
-from rudy.paths import RUDY_LOGS
 LOCAL_LOG_DIR = RUDY_LOGS
 LOCAL_LOG_DIR.mkdir(parents=True, exist_ok=True)
 

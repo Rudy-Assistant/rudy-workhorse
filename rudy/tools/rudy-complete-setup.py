@@ -14,6 +14,7 @@ This script will:
 - Update credentials in rudy-totp-secret.json
 - Optionally start the email listener
 """
+from rudy.paths import RUDY_LOGS
 import imaplib
 import smtplib
 import json
@@ -23,7 +24,6 @@ from email.mime.text import MIMEText
 
 EMAIL = "rudy.ciminoassist@gmail.com"
 APP_PW = "bviuyjdptufrtnys"
-from rudy.paths import RUDY_LOGS
 SECRET = RUDY_LOGS / "rudy-totp-secret.json"
 
 print("=" * 50)
