@@ -407,6 +407,94 @@ def execute_task(task: dict) -> tuple[bool, str]:
             return all([success2, success3]), f"Staged: {staged_files}\n{out2}\n{out3}"
         return False, f"Unknown git action: {action}"
 
+    elif task_type == "pr_create":
+        # S43 stretch: Robin can independently create PRs from nightwatch findings
+        branch_name = _sanitize_metadata_string(
+            task.get("metadata", {}).get("branch", "robin/nightwatch-findings"),
+            max_length=100
+        )
+        title = _sanitize_metadata_string(
+            task.get("metadata", {}).get("title", "Robin: Nightwatch findings"),
+            max_length=200
+        )
+        body = _sanitize_metadata_string(
+            task.get("metadata", {}).get("body", "Automated PR from Robin nightwatch cycle."),
+            max_length=2000
+        )
+
+        # Safety: never create PRs targeting protected branches directly
+        if branch_name in PROTECTED_BRANCHES:
+            return False, f"BLOCKED: branch name '{branch_name}' is protected"
+
+        # Step 1: Stash, create branch, stage safe files
+        _execute_command([GIT_EXE, "stash", "push", "-m", "robin-pr-autostash"])
+
+        ok_br, _ = _execute_command([GIT_EXE, "checkout", "-b", branch_name])
+        if not ok_br:
+            # Branch exists, try checkout
+            ok_br, _ = _execute_command([GIT_EXE, "checkout", branch_name])
+        if not ok_br:
+            _execute_command([GIT_EXE, "stash", "pop"])
+            return False, f"Cannot create/switch to branch: {branch_name}"
+
+        # Step 2: Stage safe paths only
+        safe_paths = [
+            "rudy-data/robin-taskqueue/",
+            "rudy-data/environment-profile.json",
+            "rudy-data/lucius-reviews/",
+        ]
+        staged = []
+        for sp in safe_paths:
+            full = RUDY_ROOT / sp
+            if full.exists():
+                ok_add, _ = _execute_command([GIT_EXE, "add", str(full)])
+                if ok_add:
+                    staged.append(sp)
+
+        # Step 3: Check if anything staged
+        ok_diff, diff_out = _execute_command([GIT_EXE, "diff", "--cached", "--stat"])
+        if ok_diff and not (diff_out or "").strip():
+            logger.info("PR creation: nothing to commit")
+            _execute_command([GIT_EXE, "checkout", "main"])
+            _execute_command([GIT_EXE, "branch", "-D", branch_name])
+            _execute_command([GIT_EXE, "stash", "pop"])
+            return True, "No changes to PR (files unchanged)"
+
+        # Step 4: Commit
+        ok_commit, commit_out = _execute_command(
+            [GIT_EXE, "commit", "-m", f"robin: {title}"]
+        )
+
+        # Step 5: Push
+        ok_push, push_out = _execute_command(
+            [GIT_EXE, "push", "origin", branch_name]
+        )
+
+        # Step 6: Create PR via gh CLI
+        ok_pr, pr_out = _execute_command(
+            ["gh", "pr", "create",
+             "--title", title,
+             "--body", body,
+             "--head", branch_name,
+             "--base", "main",
+             "--repo", "Rudy-Assistant/rudy-workhorse"],
+            timeout=30
+        )
+
+        # Step 7: Return to main, restore stash
+        _execute_command([GIT_EXE, "checkout", "main"])
+        _execute_command([GIT_EXE, "stash", "pop"])
+
+        if ok_pr:
+            logger.info(f"Robin created PR: {pr_out.strip()[:200]}")
+            return True, f"PR created: {pr_out.strip()[:500]}"
+        elif ok_commit and ok_push:
+            logger.info(f"Robin pushed branch but PR creation failed: {pr_out[:200]}")
+            return True, f"Branch pushed (PR creation failed): {push_out[:200]}"
+        else:
+            return False, f"PR workflow failed: commit={ok_commit} push={ok_push} pr={ok_pr}"
+
+
     elif task_type == "code_quality":
         # Run ruff linter if available — use paths.PYTHON_EXE for correct env
         try:
@@ -713,6 +801,13 @@ def seed_deep_work():
                   "Monitor crawl4ai and playwright ecosystem for new tools",
                   priority=55, estimated_minutes=2,
                   metadata={"url": "https://github.com/unclecode/crawl4ai/releases"}),
+
+        make_task("pr_create", "Create PR from nightwatch findings",
+                  "If nightwatch found changes worth committing, create a PR",
+                  priority=95, estimated_minutes=2,
+                  metadata={"branch": "robin/nightwatch-auto",
+                            "title": "Robin: Nightwatch automated findings",
+                            "body": "Automated PR from Robin nightwatch cycle.\n\nIncludes environment profile updates, task queue state, and review artifacts."}),
 
         make_task("profile", "Re-run profiler after task execution",
                   "Check if RAM/CPU usage changed during nightwatch",
