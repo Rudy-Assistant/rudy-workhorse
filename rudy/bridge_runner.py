@@ -182,6 +182,8 @@ def _check_inbox():
                             "type": t.get("type", "agent"),
                             "title": t.get("title", "Batch task"),
                             "description": t.get("description", ""),
+                            "command": t.get("command"),
+                            "python_code": t.get("python_code"),
                             "priority": pm.get(str(t.get("priority", "medium")).lower(), 30),
                             "from_batch": batch_id,
                             "from_task_id": t.get("task_id", ""),
