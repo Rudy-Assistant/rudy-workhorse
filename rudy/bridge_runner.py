@@ -16,6 +16,7 @@ Session 34: Wired autonomy into the running process (was dead code).
 """
 
 import json
+import uuid
 import logging
 import os
 import signal
@@ -177,6 +178,7 @@ def _check_inbox():
                     pm = {"critical": 10, "high": 20, "medium": 30, "low": 40}
                     for t in tasks:
                         add_task({
+                            "id": str(uuid.uuid4())[:8],
                             "type": t.get("type", "agent"),
                             "title": t.get("title", "Batch task"),
                             "description": t.get("description", ""),
@@ -211,6 +213,7 @@ def _check_inbox():
                     if not _task_type:
                         _task_type = "shell" if _has_cmd else "agent"
                     add_task({
+                        "id": str(uuid.uuid4())[:8],
                         "type": _task_type,
                         "title": payload.get("title", payload.get("task", "Alfred task")),
                         "description": payload.get("description", payload.get("details", "")),
