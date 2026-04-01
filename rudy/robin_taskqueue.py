@@ -379,6 +379,10 @@ def execute_task(task: dict) -> tuple[bool, str]:
 
     Returns (success, result_text).
     """
+    # Defensive: ensure task has an id (batch-seeded tasks may lack one, LF-S51-001)
+    if "id" not in task:
+        task["id"] = str(uuid.uuid4())[:8]
+        logger.warning(f"Task missing 'id' field, generated: {task['id']}")
     task_type = task.get("type", "unknown")
     logger.info(f"Executing [{task_type}]: {task['title']}")
 
