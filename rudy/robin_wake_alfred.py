@@ -58,18 +58,28 @@ def _save_wake_state(state: dict):
 
 
 def _alfred_offline_minutes() -> float:
-    """How long has Alfred been offline?"""
+    """How long has Alfred been offline (or stale)?
+
+    IMPORTANT: A stale 'online' status is NOT online. If Alfred crashed,
+    the status file stays 'online' forever. We must check the AGE of the
+    claim, not just the claimed state. (LF-S52-002 fix)
+    """
     status_file = COORD_DIR / "alfred-status.json"
     if not status_file.exists():
         return 9999  # Never seen = very offline
     try:
         data = json.loads(status_file.read_text(encoding="utf-8"))
-        if data.get("state") == "online":
-            return 0
         updated = data.get("updated_at", "")
-        if updated:
-            last = datetime.fromisoformat(updated)
-            return (datetime.now() - last).total_seconds() / 60
+        if not updated:
+            return 9999
+        last = datetime.fromisoformat(updated)
+        age_minutes = (datetime.now() - last).total_seconds() / 60
+        # A fresh "online" status (< 15 min) means Alfred is actually active
+        if data.get("state") == "online" and age_minutes < 15:
+            return 0
+        # Anything older than 15 min is stale -- treat as offline regardless
+        # of claimed state. Active Alfred sessions update status frequently.
+        return age_minutes
     except Exception:
         pass
     return 9999
