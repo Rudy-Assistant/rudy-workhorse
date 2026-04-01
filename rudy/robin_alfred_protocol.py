@@ -397,53 +397,111 @@ class RobinMailbox:
         }, priority="normal")
 
     def detect_alfred_struggle(self) -> dict:
-        """Check Alfred's status for signs of struggle.
+        """Check Alfred's status with tiered awareness (S48 hardening).
 
         Returns a dict with:
             - struggling: bool
             - signals: list of detected struggle signals
-            - recommendation: what Robin should do
+            - recommendation: "standby" | "offer_help" | "autonomous" | "wait"
+            - staleness_tier: 0 (fresh) | 1 (stale) | 2 (absent) | 3 (gone)
+            - context: dict with session_loop, directive, etc.
 
-        Robin should call this periodically (e.g., every heartbeat cycle)
-        and call offer_help() if struggling is True.
+        Tiers:
+            0: <10 min  — Alfred is active, standby
+            1: 10-30min — Alfred may be paused mid-work, offer help once
+            2: 30min-2hr — Alfred session likely ended without handoff,
+                           check for active directive or session loop
+            3: >2hr     — Alfred is gone, Robin should self-direct
         """
         alfred_status = self.get_alfred_status()
         if not alfred_status:
-            return {"struggling": False, "signals": ["Alfred status unavailable"], "recommendation": "wait"}
+            return {"struggling": False, "signals": ["Alfred status unavailable"],
+                    "recommendation": "wait", "staleness_tier": -1, "context": {}}
 
         signals = []
         state = alfred_status.get("state", "unknown")
         details = alfred_status.get("details", "")
         updated = alfred_status.get("updated_at", "")
 
-        # Signal: Alfred has been offline for a while
-        if state == "offline":
-            signals.append("Alfred is offline")
+        # Check session loop state
+        loop_config_path = RUDY_DATA / "coordination" / "session-loop-config.json"
+        loop_status = None
+        try:
+            if loop_config_path.exists():
+                import json as _json
+                lc = _json.loads(loop_config_path.read_text(encoding="utf-8"))
+                loop_status = lc.get("state", {}).get("status")
+        except Exception:
+            pass
+
+        # Check active directive
+        directive_path = RUDY_DATA / "coordination" / "active-directive.json"
+        has_directive = False
+        try:
+            if directive_path.exists():
+                import json as _json
+                d = _json.loads(directive_path.read_text(encoding="utf-8"))
+                has_directive = d.get("status") in ("active", "in_progress")
+        except Exception:
+            pass
+
+        context = {
+            "session_loop_status": loop_status,
+            "has_active_directive": has_directive,
+            "alfred_state": state,
+        }
 
         # Signal: Alfred's details mention errors
         error_keywords = ["error", "fail", "timeout", "blocked", "stuck", "retry"]
         if any(kw in details.lower() for kw in error_keywords):
             signals.append(f"Alfred status mentions issues: {details[:100]}")
 
-        # Signal: Alfred status is stale (>10 minutes old)
+        # Signal: Alfred has been offline
+        if state == "offline":
+            signals.append("Alfred is offline")
+
+        # Tiered staleness
+        staleness_tier = 0
+        age_seconds = 0
         if updated:
             try:
-                from datetime import datetime
                 last_update = datetime.fromisoformat(updated)
                 age_seconds = (datetime.now() - last_update).total_seconds()
-                if age_seconds > 600:
-                    signals.append(f"Alfred status is stale ({age_seconds:.0f}s old)")
+                if age_seconds > 7200:
+                    staleness_tier = 3
+                    signals.append(f"Alfred gone ({age_seconds/3600:.1f}h)")
+                elif age_seconds > 1800:
+                    staleness_tier = 2
+                    signals.append(f"Alfred absent ({age_seconds/60:.0f}min)")
+                elif age_seconds > 600:
+                    staleness_tier = 1
+                    signals.append(f"Alfred stale ({age_seconds/60:.0f}min)")
             except (ValueError, TypeError):
                 pass
 
+        # Determine recommendation based on tier + context
+        if staleness_tier == 0 and not signals:
+            recommendation = "standby"
+        elif staleness_tier <= 1:
+            recommendation = "offer_help"
+        elif has_directive:
+            recommendation = "execute_directive"
+        elif loop_status in ("running", "awaiting_alfred", "awaiting_lucius"):
+            recommendation = "session_loop_active"
+        elif staleness_tier >= 2:
+            recommendation = "autonomous"
+        else:
+            recommendation = "offer_help"
+
         struggling = len(signals) > 0
-        recommendation = "offer_help" if struggling else "standby"
 
         return {
             "struggling": struggling,
             "signals": signals,
             "recommendation": recommendation,
-            "alfred_state": state,
+            "staleness_tier": staleness_tier,
+            "age_seconds": age_seconds,
+            "context": context,
         }
 
     def send_health(self):
