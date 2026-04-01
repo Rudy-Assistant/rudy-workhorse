@@ -113,19 +113,18 @@ All session records, findings, and institutional knowledge MUST be written to th
 
 ## Last Session Score
 
-Session 38: 66/100 (D) [Batman-corrected]
-  Base deductions (-13):
-    -2: n8n startup blocked (LG-S38-002, delegated to Robin)
-    -3: Under-delegation to Robin (missed 4+ opportunities: P5 backfill, lint fix, audit execution, CI monitoring)
-    -3: Compounding cost of Robin under-utilization (delays proxy/heir training, Colab/HF compute path)
-    -2: Missing Context Evaluation + handoff prompt (FoxGate Step 4 protocol violation)
-    -2: DC read_file workaround cycles (known bug, cost time early)
-    -1: Git CLI quoting struggles before establishing helper script pattern
-  Penalty doubler (x2) applied: Bat Family cooperation failure
-    Tasks completed but system/peers not enriched. Robin starved of learning.
-    Lucius feedback loop activated but not leveraged for concurrent analysis.
-    Alfred also miscalculated own deductions (reported 87 instead of 79) -- self-scoring integrity issue.
-  Finding: LG-S38-003 (Scoring system needs Lucius revision -- concurrent analysis commissioned for S39)
+Session 40: 86/100 (B) [ADR-009 rubric, second use]
+  Base deductions (-14):
+    -4: Process - DC read_file bug hit (-2), no session-briefing check (-2)
+    -2: Tool Reuse - DC metadata bug before switching to Get-Content (-2)
+    -4: Delegation Quality - instruction clarity (-1), growth structure (-1), follow-through (-2)
+    -3: System Enrichment - no new reusable artifact (-2), offset for permanent fix (-1 net)
+    0: Finding Discipline - LG-S40-001 discovered, diagnosed, fixed, filed
+    -1: Documentation - CLAUDE.md update pending at score time (-1)
+    0: Self-Scoring Integrity - arithmetic: 4+2+4+3+0+1+0=14, 100-14=86
+  Multiplier: x1.0 (Standard) - Robin engaged (5 msgs, 2 acks), Lucius integrated
+  Findings: LG-S40-001 (inbox dual bug, FIXED)
+  Previous: Session 39: 89/100 (B), Session 38: 66/100 (D)
 
 ## Known Workarounds (Hot)
 
@@ -167,17 +166,16 @@ Session 38: 66/100 (D) [Batman-corrected]
 | **gh CLI** | v2.88.1, authenticated as Rudy-Assistant |
 | **PAT** | Classic PAT (ghp_), expires 2026-06-27 |
 
-## Current Sprint (Session 38)
+## Current Sprint (Session 40)
 
-1. ✅ P0: Commit/merge S37 fixes (PR #73 merged)
-2. ✅ P1: Activate Lucius feedback loop (ADR-008 severity tiering + directives)
-3. ✅ P2: Obsidian vault integration (ADR-007 Phase 1 — .base dashboards, templates, sessions)
-4. ⚠️ P3: n8n startup blocked (LG-S38-002 — delegated to Robin)
-5. ✅ P4: Fix hardcoded paths (6 paths → rudy.paths constants)
-6. ⏳ P5: Backfill vault Sessions 13-26 (27-36 done)
-7. ✅ P6: Full Lucius audit (141 findings: 5H/14M/9L/113I)
-8. PR #74: feature/s38-feedback-loop (4 commits, CI re-running after lint fix)
-
+1. P0: Robin check-in - alive (PID 17984), 0 inbox msgs (protocol bug LG-S40-001)
+2. P0-FIX: Diagnosed + fixed Robin inbox dual bug (wrong schema + wrong path)
+3. P0: Delegated 4 tasks via proper AlfredMailbox protocol (lint, n8n, HF, scorer)
+4. Robin confirmed processing: 5 msgs processed, 2 task_acks received
+5. Reviewed Lucius S39 governance package (ADR-009/010/011, 8 vault artifacts)
+6. Vault: Finding LG-S40-001, Session-40.md, Handoff, CLAUDE.md updated
+7. PR #75: OPEN (lint CI failed, delegated ruff --fix to Robin)
+8. n8n: delegated clean reinstall to Robin
 ## Lucius Gate — Session Governance (ADR-004 v2.1)
 
 **Core module:** `rudy/agents/lucius_gate.py`
