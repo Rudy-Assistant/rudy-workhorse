@@ -203,6 +203,12 @@ def _check_inbox():
                 log.info("[Inbox] Finding from Alfred: %s (sev=%s)",
                          payload.get("title"), payload.get("severity"))
 
+            elif msg_type == "peer_message":
+                # Colleague message (e.g. from Lucius) -- log and acknowledge
+                sender = msg.get("from", payload.get("from", "unknown"))
+                subject = payload.get("subject", payload.get("title", ""))
+                log.info("[Inbox] Peer message from %s: %s", sender, subject[:80])
+
             else:
                 log.info("[Inbox] Unhandled msg type: %s", msg_type)
 
