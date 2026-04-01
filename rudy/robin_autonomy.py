@@ -53,6 +53,7 @@ from rudy.paths import (  # noqa: E402
 COORD_DIR = RUDY_DATA / "coordination"
 ALFRED_INBOX = RUDY_DATA / "alfred-inbox"
 ROBIN_INBOX = RUDY_DATA / "robin-inbox"
+ROBIN_INBOX_V2 = RUDY_DATA / "inboxes" / "robin-inbox"  # Canonical path (ADR-012, S47 fix)
 ARCHIVE_DIR = COORD_DIR / "archive"
 DIRECTIVE_FILE = COORD_DIR / "active-directive.json"
 AUTONOMY_LOG = RUDY_LOGS / "robin-autonomy.log"
@@ -193,16 +194,31 @@ class AlfredCoordinator:
         pass
 
     def check_alfred_messages(self):
-        """Check for unread messages from Alfred."""
+        """Check for unread messages from Alfred.
+
+        Scans both ROBIN_INBOX and ROBIN_INBOX_V2. Handles batch files (S47 fix).
+        """
         messages = []
-        for f in sorted(ROBIN_INBOX.glob("*.json")):
-            try:
-                with open(f) as fh:
-                    msg = json.load(fh)
-                if msg.get("status") == "unread":
-                    messages.append(msg)
-            except (json.JSONDecodeError, OSError):
+        seen_ids = set()
+        for inbox_dir in [ROBIN_INBOX, ROBIN_INBOX_V2]:
+            if not inbox_dir.exists():
                 continue
+            for f in sorted(inbox_dir.glob("*.json")):
+                try:
+                    with open(f) as fh:
+                        raw = json.load(fh)
+                    items = raw if isinstance(raw, list) else [raw]
+                    for msg in items:
+                        if not isinstance(msg, dict):
+                            continue
+                        msg_id = msg.get("id", str(f.name))
+                        if msg_id in seen_ids:
+                            continue
+                        seen_ids.add(msg_id)
+                        if msg.get("status") == "unread":
+                            messages.append(msg)
+                except (json.JSONDecodeError, OSError, AttributeError):
+                    continue
         return messages
 
     def send_to_alfred(self, msg_type, payload, priority="normal"):
