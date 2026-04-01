@@ -391,9 +391,6 @@ def execute_task(task: dict) -> tuple[bool, str]:
         return _execute_python(task["python_code"], timeout=task.get("estimated_minutes", 5) * 60)
 
     # Type-specific executors (checked BEFORE agent fallback to prevent bypass)
-    hardcoded_types = {"audit", "profile", "browse", "git", "pr_create",
-                      "code_quality", "report", "handoff", "health_check",
-                      "security_scan", "shell"}
     if task_type == "audit":
         return _execute_command(
             [PYTHON, "-m", "rudy.agents.lucius_fox", "hygiene_check"],
