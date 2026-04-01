@@ -1,0 +1,13 @@
+{
+  "id": "LF-S50-001",
+  "title": "bridge_runner has no taskqueue processing phase",
+  "severity": "HIGH",
+  "filed_by": "alfred",
+  "session": 50,
+  "timestamp": "2026-04-01T05:15:00",
+  "description": "bridge_runner.py calls add_task() to enqueue tasks from inbox messages (LF-S46-001 fix) but never calls process_next_task() to execute them. The main loop had Phases 1-6 (bridge poll, inbox check, struggle detection, autonomy, wake check, session loop) but no taskqueue drain phase. Result: 28 Lucius-delegated tasks accumulated in active.json over sessions S47-S49 without a single completion from the delegation pipeline.",
+  "fix": "Added Phase 2.5 to bridge_runner main loop: calls process_next_task() every 6 cycles (~60s). PR #99.",
+  "status": "fixed",
+  "pr": 99,
+  "files": ["rudy/bridge_runner.py"]
+}
