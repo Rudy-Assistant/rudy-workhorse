@@ -224,27 +224,76 @@ def _check_inbox():
         return 0
 
 
+# Cooldown state for help_offer (S48) -- prevents spam
+_last_help_offer_ts = 0.0
+_last_help_tier = 0
+
 def _detect_and_offer_help():
-    """Check if Alfred is struggling and proactively offer help."""
+    """Check if Alfred is struggling with tiered awareness (S48 hardening).
+
+    Tiers:
+        0: Active -- do nothing
+        1: Stale (10-30min) -- offer help ONCE, then cooldown 15min
+        2: Absent (30min-2hr) -- check directive/loop, log, cooldown 30min
+        3: Gone (>2hr) -- activate autonomous mode, cooldown 1hr
+    """
+    global _last_help_offer_ts, _last_help_tier
     try:
+        import time as _time
         from rudy.robin_alfred_protocol import RobinMailbox
         mailbox = RobinMailbox()
         result = mailbox.detect_alfred_struggle()
 
-        if result.get("struggling"):
-            signals = result.get("signals", [])
-            log.info("[Assertive] Alfred struggle detected: %s", signals)
+        tier = result.get("staleness_tier", 0)
+        rec = result.get("recommendation", "standby")
+        signals = result.get("signals", [])
+        ctx = result.get("context", {})
+
+        if not result.get("struggling"):
+            _last_help_tier = 0
+            return False
+
+        # Cooldown: don't spam. Longer cooldown for higher tiers.
+        now = _time.time()
+        cooldowns = {0: 0, 1: 900, 2: 1800, 3: 3600}  # seconds
+        cooldown = cooldowns.get(tier, 900)
+        if (now - _last_help_offer_ts) < cooldown and tier <= _last_help_tier:
+            return False  # Still in cooldown for this tier
+
+        _last_help_offer_ts = now
+        _last_help_tier = tier
+
+        if rec == "session_loop_active":
+            log.info("[Awareness] Alfred absent but session loop is %s. Standing by.",
+                     ctx.get("session_loop_status"))
+            return False
+
+        if rec == "execute_directive":
+            log.info("[Awareness] Alfred absent but active directive exists. Executing.")
+            return False  # Directive execution handled by autonomy engine
+
+        if rec == "autonomous":
+            log.info("[Awareness] Alfred gone (tier 3). Robin entering autonomous mode.")
             mailbox.offer_help(
-                context="bridge_runner autonomy check",
+                context="bridge_runner awareness — Alfred gone >2hr",
                 what_noticed="; ".join(signals),
-                suggested_action="Robin is available for local tasks. Delegate freely.",
+                suggested_action="Robin is self-directing. Will handle tasks autonomously.",
             )
             return True
-        return False
+
+        # Tier 1-2: standard help offer
+        log.info("[Awareness] Alfred struggle tier %d: %s (rec=%s)", tier, signals, rec)
+        mailbox.offer_help(
+            context=f"bridge_runner awareness check (tier {tier})",
+            what_noticed="; ".join(signals),
+            suggested_action="Robin is available for local tasks. Delegate freely.",
+        )
+        return True
+
     except ImportError:
         return False
     except Exception as e:
-        log.error("[Assertive] Struggle detection error: %s", e)
+        log.error("[Awareness] Detection error: %s", e)
         return False
 
 
