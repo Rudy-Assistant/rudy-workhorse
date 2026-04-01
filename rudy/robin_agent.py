@@ -134,7 +134,7 @@ You MUST use <tool_call> tags with valid JSON. Here are concrete examples:
 
 EXAMPLE 1 - Running a shell command (MOST COMMON - uses PowerShell):
 <tool_call>
-{"tool": "windows-mcp.Shell", "args": {"command": "Get-ChildItem C:\\Users\\ccimi\\rudy-workhorse\\rudy -Filter *.py | Measure-Object | Select-Object -ExpandProperty Count"}}
+{"tool": "windows-mcp.Shell", "args": {"command": "Get-ChildItem C:\\path\\to\\project\\src -Filter *.py | Measure-Object | Select-Object -ExpandProperty Count"}}
 </tool_call>
 
 EXAMPLE 2 - Running a Python script:
@@ -517,7 +517,7 @@ class RobinAgent:
 
                 # Detect repeated failed tool calls -- nudge model to try differently
                 if not result.success and step_num > 1:
-                    prev_calls = [s for s in steps if s.action == "tool_call" 
+                    prev_calls = [s for s in steps if s.action == "tool_call"
                                   and s.tool_name == tool_name]
                     if len(prev_calls) >= 2:
                         # Same tool failed 2+ times -- inject correction nudge
