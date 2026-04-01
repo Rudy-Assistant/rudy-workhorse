@@ -113,18 +113,15 @@ All session records, findings, and institutional knowledge MUST be written to th
 
 ## Last Session Score
 
-Session 40: 86/100 (B) [ADR-009 rubric, second use]
-  Base deductions (-14):
-    -4: Process - DC read_file bug hit (-2), no session-briefing check (-2)
-    -2: Tool Reuse - DC metadata bug before switching to Get-Content (-2)
-    -4: Delegation Quality - instruction clarity (-1), growth structure (-1), follow-through (-2)
-    -3: System Enrichment - no new reusable artifact (-2), offset for permanent fix (-1 net)
-    0: Finding Discipline - LG-S40-001 discovered, diagnosed, fixed, filed
-    -1: Documentation - CLAUDE.md update pending at score time (-1)
-    0: Self-Scoring Integrity - arithmetic: 4+2+4+3+0+1+0=14, 100-14=86
-  Multiplier: x1.0 (Standard) - Robin engaged (5 msgs, 2 acks), Lucius integrated
-  Findings: LG-S40-001 (inbox dual bug, FIXED)
-  Previous: Session 39: 89/100 (B), Session 38: 66/100 (D)
+Session 41: Pending /lucius-review
+  Preliminary self-assessment (use /session-score in S42 for formal scoring):
+    Completed: PR #75 merged (main current), /session-score skill created,
+    Robin assessed (3/10), ADR-010 evaluated, 3 findings filed
+    Delegation: Robin unable (environmental blockers — ruff missing, n8n broken)
+    Exception applied: Robin-first rule waived per exception (b) confirmed unable
+    New artifact: /session-score skill (251 lines)
+    Findings: LG-S41-001 (FIXED), LG-S41-002 (OPEN), LG-S41-003 (OPEN)
+  Previous: Session 40: 86/100 (B), Session 39: 89/100 (B), Session 38: 66/100 (D)
 
 ## Known Workarounds (Hot)
 
@@ -166,16 +163,17 @@ Session 40: 86/100 (B) [ADR-009 rubric, second use]
 | **gh CLI** | v2.88.1, authenticated as Rudy-Assistant |
 | **PAT** | Classic PAT (ghp_), expires 2026-06-27 |
 
-## Current Sprint (Session 40)
+## Current Sprint (Session 41)
 
-1. P0: Robin check-in - alive (PID 17984), 0 inbox msgs (protocol bug LG-S40-001)
-2. P0-FIX: Diagnosed + fixed Robin inbox dual bug (wrong schema + wrong path)
-3. P0: Delegated 4 tasks via proper AlfredMailbox protocol (lint, n8n, HF, scorer)
-4. Robin confirmed processing: 5 msgs processed, 2 task_acks received
-5. Reviewed Lucius S39 governance package (ADR-009/010/011, 8 vault artifacts)
-6. Vault: Finding LG-S40-001, Session-40.md, Handoff, CLAUDE.md updated
-7. PR #75: OPEN (lint CI failed, delegated ruff --fix to Robin)
-8. n8n: delegated clean reinstall to Robin
+1. P0: Reviewed Robin's 4 delegated tasks — all acked, none completed (environmental blockers)
+2. P1: Fixed null byte corruption in robin_agent_langgraph.py (LG-S41-001)
+3. P1: PR #75 merged — all 5 CI checks green, 62 files, 3002 insertions landed on main
+4. P2: n8n reinstall launched (background) — previous install broken (module not found)
+5. P3: Robin readiness assessed at 3/10 (up from 2/10) — ruff now installed
+6. P4: Created /session-score skill (251 lines, ADR-009 compliant)
+7. P5: ADR-010 Phase 2 — no concurrent trigger for S42
+8. Vault: Session-41.md, LG-S41-001.md, Handoff written
+9. Open: LG-S41-002 (Robin nightwatch failures), LG-S41-003 (help_offer flooding)
 ## Lucius Gate — Session Governance (ADR-004 v2.1)
 
 **Core module:** `rudy/agents/lucius_gate.py`

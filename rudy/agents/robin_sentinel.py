@@ -31,7 +31,6 @@ Usage:
 
 import json
 import logging
-import os
 import platform
 import shutil
 import socket
@@ -513,10 +512,10 @@ class NightShift:
                 if self.online:
                     seed_deep_work()
                 self.log.info("Step 2: Processing task queue (max 30 min)")
-                tq_results = process_all(max_tasks=20, max_minutes=30)
-                results["taskqueue"] = tq_results
-                self.log.info("Task queue: %d completed, %d failed",
-                              tq_results.get("completed", 0), tq_results.get("failed", 0))
+                tq_count = process_all(max_tasks=20, max_minutes=30)
+                # process_all returns int (number of tasks processed)
+                results["taskqueue"] = tq_count
+                self.log.info("Task queue: %d tasks processed", tq_count)
             else:
                 self.log.warning("Task queue not available — falling back to legacy steps")
                 # Legacy fallback: hardcoded steps

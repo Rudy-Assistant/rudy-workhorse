@@ -29,11 +29,9 @@ Usage:
 
 import json
 import logging
-import os
 import subprocess
 import time as _time
 from datetime import datetime, timedelta
-from pathlib import Path
 
 try:
     from rudy.robin_sentinel import SentinelObserver
@@ -856,6 +854,12 @@ pr_review, finding_fix, health_check"""
                 "rationale": "Proactive syntax and import validation of all Robin modules"}
 
     def _assess_alfred_coordination(self):
+        # LG-S41-003 FIX: Prevent help_offer/ping flooding with cooldown.
+        # Only ping Alfred once every 4 hours, not every autonomy cycle.
+        recent = self._recent_initiatives("alfred_coordination", hours=4)
+        if recent:
+            return {"needs_work": False}
+
         alfred_status = COORD_DIR / "alfred-status.json"
         if not alfred_status.exists():
             return {"needs_work": True, "action": "ping_alfred",
@@ -871,8 +875,9 @@ pr_review, finding_fix, health_check"""
                             "rationale": f"Alfred status is {age:.1f}h old - sending status update"}
         except Exception:
             pass
+        # Don't flood inbox review — only flag if messages are from Alfred (not Robin's own)
         outbox_count = len(list(ALFRED_INBOX.glob("*.json")))
-        if outbox_count > 5:
+        if outbox_count > 20:
             return {"needs_work": True, "action": "review_unanswered_messages",
                     "rationale": f"{outbox_count} messages in Alfred's inbox unanswered"}
         return {"needs_work": False}
