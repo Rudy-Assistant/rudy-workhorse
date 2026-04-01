@@ -65,6 +65,12 @@ ROBIN_SECRETS = RUDY_DATA / "robin-secrets.json"
 SCREENSHOT_DIR = RUDY_LOGS / "screenshots"
 LUCIUS_AUDITS = RUDY_DATA / "lucius-audits"
 
+# Inter-agent inboxes (ADR-012)
+INBOXES_DIR = RUDY_DATA / "inboxes"
+ALFRED_INBOX = INBOXES_DIR / "alfred-inbox"
+LUCIUS_INBOX = INBOXES_DIR / "lucius-inbox"
+ROBIN_INBOX_V2 = INBOXES_DIR / "robin-inbox"  # New canonical path (inboxes/)
+
 # Environment profile (written by environment_profiler.py)
 ENVIRONMENT_PROFILE = RUDY_DATA / "environment-profile.json"
 
@@ -84,7 +90,7 @@ VAULT_HANDOFFS = BATCAVE_VAULT / "Handoffs"
 # Ensure critical directories exist at import time
 # ---------------------------------------------------------------------------
 
-for _d in [RUDY_DATA, RUDY_LOGS, RUDY_COMMANDS, ROBIN_INBOX, SCREENSHOT_DIR, LUCIUS_AUDITS, HANDOFFS_DIR, BATCAVE_VAULT, VAULT_HANDOFFS]:
+for _d in [RUDY_DATA, RUDY_LOGS, RUDY_COMMANDS, ROBIN_INBOX, SCREENSHOT_DIR, LUCIUS_AUDITS, INBOXES_DIR, ALFRED_INBOX, LUCIUS_INBOX, ROBIN_INBOX_V2, HANDOFFS_DIR, BATCAVE_VAULT, VAULT_HANDOFFS]:
     _d.mkdir(parents=True, exist_ok=True)
 
 # Scaffold BatcaveVault Home.md if missing (per-Oracle, gitignored)
