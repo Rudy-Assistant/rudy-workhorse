@@ -56,7 +56,7 @@ from rudy.sanitize import MAX_MESSAGE_AGE_HOURS
 
 
 # Canonical paths
-from rudy.paths import RUDY_DATA, ROBIN_INBOX  # noqa: E402
+from rudy.paths import RUDY_DATA, ROBIN_INBOX, ROBIN_INBOX_V2  # noqa: E402
 
 COORD_DIR = RUDY_DATA / "coordination"
 ALFRED_INBOX = RUDY_DATA / "alfred-inbox"
@@ -120,25 +120,44 @@ class RobinMailbox:
         return msg_id
 
     def check_inbox(self) -> list:
-        """Check Robin's inbox for messages from Alfred."""
+        """Check Robin's inbox for messages from Alfred.
+
+        Scans both legacy ROBIN_INBOX and ROBIN_INBOX_V2 (LF-S45-001).
+        Handles batch files (JSON arrays) gracefully (S47 fix).
+        """
         messages = []
-        for f in sorted(ROBIN_INBOX.glob("*.json")):
-            try:
-                with open(f) as fh:
-                    msg = json.load(fh)
-                if msg.get("status") == "unread":
-                    # TTL check — skip expired messages (Protocol Salvage fix)
-                    msg_ts = msg.get("timestamp", "")
-                    if msg_ts:
-                        try:
-                            age = (datetime.now() - datetime.fromisoformat(msg_ts)).total_seconds()
-                            if age > MAX_MESSAGE_AGE_HOURS * 3600:
-                                continue  # Message expired
-                        except (ValueError, TypeError):
-                            pass
-                    messages.append(msg)
-            except (json.JSONDecodeError, OSError):
+        seen_ids = set()
+        # Scan both legacy and v2 inbox paths (LF-S45-001)
+        inbox_dirs = [ROBIN_INBOX, ROBIN_INBOX_V2]
+        for inbox_dir in inbox_dirs:
+            if not inbox_dir.exists():
                 continue
+            for f in sorted(inbox_dir.glob("*.json")):
+                try:
+                    with open(f) as fh:
+                        raw = json.load(fh)
+                    # Handle batch files (JSON arrays) — S47 fix
+                    items = raw if isinstance(raw, list) else [raw]
+                    for msg in items:
+                        if not isinstance(msg, dict):
+                            continue
+                        msg_id = msg.get("id", str(f.name))
+                        if msg_id in seen_ids:
+                            continue  # Dedup across inbox dirs
+                        seen_ids.add(msg_id)
+                        if msg.get("status") == "unread":
+                            # TTL check — skip expired messages
+                            msg_ts = msg.get("timestamp", "")
+                            if msg_ts:
+                                try:
+                                    age = (datetime.now() - datetime.fromisoformat(msg_ts)).total_seconds()
+                                    if age > MAX_MESSAGE_AGE_HOURS * 3600:
+                                        continue
+                                except (ValueError, TypeError):
+                                    pass
+                            messages.append(msg)
+                except (json.JSONDecodeError, OSError, AttributeError):
+                    continue
         return messages
 
     def mark_read(self, msg_id: str):

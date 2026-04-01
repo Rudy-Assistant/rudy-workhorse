@@ -173,23 +173,23 @@ def _check_inbox():
 
             if msg_type == "task":
                 # Alfred assigned a task -- acknowledge and queue it
-                log.info("[Inbox] Task from Alfred: %s", payload.get("task", "?"))
+                log.info("[Inbox] Task from Alfred: %s", payload.get("task", payload.get("title", "?")))
                 mailbox.acknowledge_task(msg_id, eta_minutes=5)
-                # Write to nightwatch-tasks.json for execution
-                task_file = RUDY_DATA / "nightwatch-tasks.json"
-                tasks = []
-                if task_file.exists():
-                    try:
-                        tasks = json.loads(task_file.read_text(encoding="utf-8"))
-                    except (json.JSONDecodeError, OSError):
-                        tasks = []
-                tasks.append({
-                    "task": payload.get("task", ""),
-                    "details": payload.get("details", ""),
-                    "priority": msg.get("priority", "medium"),
-                    "from_msg_id": msg_id,
-                })
-                task_file.write_text(json.dumps(tasks, indent=2), encoding="utf-8")
+                # Route to robin_taskqueue for execution (LF-S46-001)
+                try:
+                    from rudy.robin_taskqueue import add_task
+                    _pri_map = {"critical": 10, "high": 20, "medium": 30, "low": 40}
+                    add_task({
+                        "type": payload.get("type", "shell"),
+                        "title": payload.get("title", payload.get("task", "Alfred task")),
+                        "description": payload.get("description", payload.get("details", "")),
+                        "command": payload.get("command"),
+                        "priority": _pri_map.get(str(msg.get("priority", "medium")).lower(), 30),
+                        "from_msg_id": msg_id,
+                        "status": "pending",
+                    })
+                except Exception as te:
+                    log.error("[Inbox] Failed to enqueue task: %s", te)
 
             elif msg_type == "session_start":
                 log.info("[Inbox] Alfred session started: %s (session #%s)",
