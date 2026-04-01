@@ -698,7 +698,7 @@ def process_all(max_tasks: int = 10, max_minutes: int = 30):
 # ---------------------------------------------------------------------------
 
 SEED_TIMESTAMP_FILE = QUEUE_DIR / ".last_seed"
-SEED_COOLDOWN_HOURS = 4  # Minimum hours between auto-reseeds
+SEED_COOLDOWN_HOURS = 0  # S44: Batman directive — no cooldown. Safe because add_task() deduplicates.
 
 def _can_reseed() -> bool:
     """Check if enough time has passed since last seed."""
