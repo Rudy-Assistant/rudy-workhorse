@@ -115,6 +115,32 @@ Robin's sentinel (PID 17984) picks this up automatically:
 
 **To cancel**: Set directive status to "cancelled" in the directive file,
 or Batman returning naturally supersedes (Robin yields to Alfred).
+### Process Hygiene Protocol (HARD RULE — Session 64)
+
+**Every Alfred/Robin session MUST clean up spawned processes before ending.**
+
+DC `start_process` spawns child processes (python, cmd, powershell, conhost)
+that persist after completion. Without cleanup, autonomous loops accumulate
+hundreds of orphans consuming GB of RAM. S64 audit: 110 python procs = 2GB.
+
+**At session end (before handoff):**
+```python
+from rudy.process_hygiene import cleanup_session_processes
+result = cleanup_session_processes()  # kills idle python/cmd/powershell
+# Log: result["killed"], result["freed_mb"]
+```
+
+**In autonomous/away mode:** Robin's sentinel MUST call `cleanup_session_processes()`
+every 30 minutes when a directive is active.
+
+**In scheduled tasks:** Any task using DC `start_process` must call cleanup after
+completing its work.
+
+**Audit command:** `python -m rudy.process_hygiene --audit`
+**Preview command:** `python -m rudy.process_hygiene --dry-run`
+
+Protected: Ollama, Node (n8n/MCP), RustDesk, Tailscale, SSH. See `rudy/process_hygiene.py`.
+
 ### Finding Capture Protocol (HARD RULE — Session 14)
 
 When any investigation surfaces an issue — **regardless of its origin** — follow this triage:
