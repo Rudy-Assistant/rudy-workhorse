@@ -44,15 +44,8 @@ from . import AgentBase
 # Constants
 # ──────────────────────────────────────────────────────────────────────
 
-# Patterns that should NEVER appear in committed code
-HARDCODED_PATH_PATTERNS = [
-    r'C:\\Users\\ccimi\\Desktop',
-    r'C:/Users/ccimi/Desktop',
-    r"C:\\\\Users\\\\ccimi",
-    r'~/Desktop/rudy-',
-    r'r"C:\\Users',
-    r"r'C:\\Users",
-]
+# Patterns moved to lucius_hardcoded_paths.py (S72 extraction)
+from rudy.agents.lucius_hardcoded_paths import HARDCODED_PATH_PATTERNS  # noqa: F401,E402
 
 # Protected branches that Robin/automated agents must never push to
 PROTECTED_BRANCHES = frozenset({"main", "master"})
@@ -665,70 +658,14 @@ class LuciusFox(AgentBase):
     # ================================================================
 
     def _check_hardcoded_paths(self):
-        """Scan entire codebase for hardcoded paths that should use rudy.paths."""
-        self.log.info("Checking for hardcoded paths...")
-
-        # Files/patterns that are expected to contain path strings (not actual usage)
-        EXEMPT_FILES = {"rudy/paths.py", "rudy/agents/lucius_fox.py"}
-
-        for root, dirs, files in os.walk(self.RUDY_PKG):
-            dirs[:] = [d for d in dirs if d != "__pycache__"]
-            for f in files:
-                if not f.endswith(".py"):
-                    continue
-                fp = Path(root) / f
-                rel = str(fp.relative_to(self.CODEBASE_ROOT))
-
-                # Skip files that legitimately define/document path patterns
-                if rel in EXEMPT_FILES:
-                    continue
-
-                try:
-                    content = fp.read_text(encoding="utf-8", errors="replace")
-                    for i, line in enumerate(content.split("\n"), 1):
-                        stripped = line.strip()
-                        # Skip comments and docstrings
-                        if stripped.startswith("#"):
-                            continue
-                        if stripped.startswith('"""') or stripped.startswith("'''"):
-                            continue
-                        for pattern in HARDCODED_PATH_PATTERNS:
-                            if re.search(pattern, line, re.IGNORECASE):
-                                self.findings.append({
-                                    "type": "hardcoded_path",
-                                    "severity": "high",
-                                    "title": f"Hardcoded path: {rel}:{i}",
-                                    "detail": f"Line {i}: {stripped[:120]}",
-                                    "recommendation": "Import from rudy.paths",
-                                })
-                                break  # One finding per line is enough
-                except Exception:
-                    pass
-
-        # Also check scripts/
-        scripts_dir = self.CODEBASE_ROOT / "scripts"
-        if scripts_dir.exists():
-            for fp in scripts_dir.glob("**/*.py"):
-                try:
-                    content = fp.read_text(encoding="utf-8", errors="replace")
-                    for i, line in enumerate(content.split("\n"), 1):
-                        stripped = line.strip()
-                        if stripped.startswith("#"):
-                            continue
-                        for pattern in HARDCODED_PATH_PATTERNS:
-                            if re.search(pattern, line, re.IGNORECASE):
-                                rel = str(fp.relative_to(self.CODEBASE_ROOT))
-                                self.findings.append({
-                                    "type": "hardcoded_path",
-                                    "severity": "medium",
-                                    "title": f"Hardcoded path in script: {rel}:{i}",
-                                    "detail": f"Line {i}: {stripped[:120]}",
-                                    "recommendation": "Import from rudy.paths or use dynamic detection",
-                                })
-                                break
-                except Exception:
-                    pass
-
+        """Scan for hardcoded paths. Delegated to lucius_hardcoded_paths."""
+        from rudy.agents.lucius_hardcoded_paths import check_hardcoded_paths
+        result = check_hardcoded_paths(
+            codebase_root=self.CODEBASE_ROOT,
+            rudy_pkg=self.RUDY_PKG,
+        )
+        self.findings.extend(result.get('findings', []))
+        self.action("Hardcoded paths check complete")
     def _check_lint(self):
         """Run ruff linter and capture findings."""
         self.log.info("Running ruff lint check...")
@@ -761,176 +698,28 @@ class LuciusFox(AgentBase):
             self.warn("Ruff timed out")
 
     def _check_import_hygiene(self):
-        """Check that modules use rudy.paths for path resolution."""
-        self.log.info("Checking import hygiene...")
-
-        for root, dirs, files in os.walk(self.RUDY_PKG):
-            dirs[:] = [d for d in dirs if d != "__pycache__"]
-            for f in files:
-                if not f.endswith(".py") or f == "paths.py":
-                    continue
-                fp = Path(root) / f
-                try:
-                    content = fp.read_text(encoding="utf-8", errors="replace")
-                    rel = str(fp.relative_to(self.CODEBASE_ROOT))
-
-                    # Check: file constructs paths with Path(__file__) but doesn't import from rudy.paths
-                    uses_file_path = "Path(__file__)" in content
-                    imports_rudy_paths = "from rudy.paths" in content or "import rudy.paths" in content
-
-                    # Exempt: sys.path bootstrap pattern (e.g. scripts that insert repo root
-                    # before importing rudy.paths — the bootstrap IS the path to rudy.paths)
-                    is_bootstrap = "sys.path.insert" in content and "Path(__file__)" in content
-
-                    if uses_file_path and not imports_rudy_paths and not is_bootstrap:
-                        self.findings.append({
-                            "type": "import_hygiene",
-                            "severity": "medium",
-                            "title": f"{rel} uses Path(__file__) without rudy.paths",
-                            "detail": "Module constructs paths from __file__ instead of importing canonical paths",
-                            "recommendation": "Import from rudy.paths for consistency and portability",
-                        })
-
-                    # Check: file references DESKTOP or HOME directly via os.environ
-                    if ("USERPROFILE" in content or "os.path.expanduser" in content) and not imports_rudy_paths:
-                        if f != "__init__.py":
-                            self.findings.append({
-                                "type": "import_hygiene",
-                                "severity": "low",
-                                "title": f"{rel} resolves home directory without rudy.paths",
-                                "detail": "Uses USERPROFILE/expanduser directly",
-                                "recommendation": "Use rudy.paths.HOME or rudy.paths.DESKTOP",
-                            })
-
-                except Exception:
-                    pass
-
-    # ================================================================
-    # MANDATE 4: THE ECONOMIST — Prevent Reinvention (ADR-005)
-    # ================================================================
-
+        """Check import hygiene. Delegated to lucius_import_hygiene."""
+        from rudy.agents.lucius_import_hygiene import check_import_hygiene
+        result = check_import_hygiene(
+            codebase_root=self.CODEBASE_ROOT,
+            rudy_pkg=self.RUDY_PKG,
+        )
+        self.findings.extend(result.get('findings', []))
+        self.action("Import hygiene check complete")
     def _check_reinvention(self):
-        """Scan codebase for patterns that reinvent standard tools.
-
-        ADR-005: Every custom check, scanner, or utility must be justified
-        against the KNOWN_REPLACEMENTS registry. If a standard tool does the
-        same thing, the custom code should be flagged for migration.
-
-        This check catches:
-            1. Custom regex patterns that duplicate bandit/semgrep rules
-            2. Custom subprocess wrappers around tools with Python APIs
-            3. Custom CI scripts that replicate GitHub Actions
-            4. Functions whose docstrings describe standard tool functionality
-        """
-        self.log.info("Checking for wheel-reinvention (Mandate 4)...")
-
-        # File-level co-occurrence patterns: when multiple strings appear in
-        # the same file, it strongly suggests reinvention of a standard tool.
-        # Each entry: (list_of_required_strings, tool, description)
-        reinvention_indicators = [
-            # Custom security scanning (bandit does all of these)
-            (
-                [r"\\beval\\s", "re.search"],
-                "bandit",
-                "Custom regex to detect eval() — bandit B307 does this natively",
-            ),
-            (
-                [r"\\bexec\\s", "re.search"],
-                "bandit",
-                "Custom regex to detect exec() — bandit B102 does this natively",
-            ),
-            (
-                ["security_patterns", "re.search", "finding"],
-                "bandit",
-                "Custom security pattern scanner — bandit does this natively with 68+ checks",
-            ),
-            # Custom dependency version checking (pip-audit does this)
-            (
-                ["Check PyPI for latest version"],
-                "pip-audit",
-                "Manual dependency note — pip-audit automates CVE checking",
-            ),
-            # Custom PR comment posting (reviewdog / Actions do this)
-            (
-                ["api.github.com", "issues", "comments", "urllib"],
-                "reviewdog / GitHub Actions",
-                "Custom PR comment posting — reviewdog bridges any linter to PRs",
-            ),
-            # Custom dead-code detection
-            (
-                ["unused", "import", "AST", "remove"],
-                "vulture / ruff F401",
-                "Custom unused import detection — ruff F401 already in CI",
-            ),
-        ]
-
-        # Self-exemption: lucius_fox.py itself contains these patterns because
-        # it defines them. The KNOWN_REPLACEMENTS registry is the documentation,
-        # not the violation.
-        ECONOMIST_EXEMPT = {
-            "rudy/agents/lucius_fox.py",  # Defines the detection, not a consumer
-            "rudy/paths.py",              # Canonical path constants
-        }
-
-        for root, dirs, files in os.walk(self.RUDY_PKG):
-            dirs[:] = [d for d in dirs if d != "__pycache__"]
-            for f in files:
-                if not f.endswith(".py"):
-                    continue
-                fp = Path(root) / f
-                rel = str(fp.relative_to(self.CODEBASE_ROOT))
-
-                if rel in ECONOMIST_EXEMPT:
-                    continue
-
-                try:
-                    content = fp.read_text(encoding="utf-8", errors="replace")
-                    content_lower = content.lower()
-                    self._scan_for_reinvention(rel, content_lower, reinvention_indicators)
-                except Exception:
-                    pass
-
-        # Also check scripts/ci/ for custom CI that overlaps with Actions
-        ci_dir = self.CODEBASE_ROOT / "scripts" / "ci"
-        if ci_dir.exists():
-            for fp in ci_dir.glob("*.py"):
-                try:
-                    content = fp.read_text(encoding="utf-8", errors="replace")
-                    rel = str(fp.relative_to(self.CODEBASE_ROOT))
-                    content_lower = content.lower()
-                    self._scan_for_reinvention(
-                        rel, content_lower, reinvention_indicators, is_ci=True
-                    )
-                except Exception:
-                    pass
-
+        """Scan for wheel-reinvention. Delegated to lucius_reinvention_check."""
+        from rudy.agents.lucius_reinvention_check import check_reinvention
+        result = check_reinvention(
+            codebase_root=self.CODEBASE_ROOT,
+            rudy_pkg=self.RUDY_PKG,
+        )
+        self.findings.extend(result.get('findings', []))
         self.action("Reinvention check complete (Mandate 4 / ADR-005)")
 
     def _scan_for_reinvention(self, rel_path, content_lower, indicators, is_ci=False):
-        """Check a file's content against reinvention indicators.
-
-        Uses co-occurrence matching: all required strings must appear in the
-        file for the indicator to trigger.
-        """
-        for required_strings, tool, desc in indicators:
-            if all(s.lower() in content_lower for s in required_strings):
-                prefix = "CI script reinvention" if is_ci else "Possible reinvention"
-                self.findings.append({
-                    "type": "reinvention",
-                    "severity": "medium",
-                    "title": f"{prefix}: {rel_path}",
-                    "detail": desc,
-                    "recommendation": (
-                        f"Migrate to {tool}. "
-                        "See ADR-005 and KNOWN_REPLACEMENTS registry. "
-                        "Custom code should only exist where no standard tool applies."
-                    ),
-                })
-
-    # ================================================================
-    # REPORTING
-    # ================================================================
-
+        """Backward compat wrapper. Delegated to lucius_reinvention_check."""
+        from rudy.agents.lucius_reinvention_check import _scan_for_reinvention
+        return _scan_for_reinvention(rel_path, content_lower, indicators, is_ci=is_ci)
     def _generate_audit_report(self):
         """Write structured audit report."""
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -1052,223 +841,18 @@ class LuciusFox(AgentBase):
         return line
 
     # ================================================================
-    # ADR-004 TOOLKIT: lucius:skills-check
+    # ADR-004 TOOLKIT: lucius:skills-check (extracted S72)
     # ================================================================
 
-    # The Capability Index — maps keywords to available tools.
-    # Structured as: category → list of (keywords, tool_name, tool_type, description)
-    # Keywords are lowercase for case-insensitive matching.
-
-    CAPABILITY_INDEX = {
-        "connectors": [
-            (["email", "gmail", "inbox", "draft", "message", "send email"],
-             "Gmail MCP", "connector", "Search/read/draft emails for ccimino2@gmail.com"),
-            (["calendar", "schedule", "meeting", "event", "free time", "rsvp", "availability"],
-             "Google Calendar MCP", "connector", "List/create/update events, find free time"),
-            (["notion", "knowledge base", "database", "sprint log", "improvement log"],
-             "Notion MCP", "connector", "Search/create/update pages & databases"),
-            (["canva", "design", "graphic", "social media", "poster", "banner"],
-             "Canva MCP", "connector", "Generate/edit/export designs"),
-            (["chrome", "browser", "web page", "scrape", "form", "screenshot", "navigate"],
-             "Chrome Extension", "connector", "Navigate pages, read content, execute JS"),
-            (["google drive", "drive", "file search", "document retrieval"],
-             "Google Drive MCP", "connector", "Search files, fetch content"),
-            (["github", "repo", "pull request", "issue", "commit", "pr"],
-             "GitHub MCP", "connector", "Repo operations, PRs, issues, file contents"),
-        ],
-        "cowork_skills": [
-            (["word", "docx", "report", "memo", "letter", "document"],
-             "docx", "skill", "Create/edit Word documents"),
-            (["powerpoint", "pptx", "presentation", "slides", "deck"],
-             "pptx", "skill", "Create/edit PowerPoint presentations"),
-            (["excel", "xlsx", "spreadsheet", "budget", "data table", "financial model"],
-             "xlsx", "skill", "Create/edit Excel spreadsheets"),
-            (["pdf", "form", "extract", "merge", "split"],
-             "pdf", "skill", "Create/extract/merge/split PDFs"),
-            (["schedule", "recurring", "cron", "every day at", "scheduled task"],
-             "schedule", "skill", "Create scheduled tasks"),
-            (["research", "brief", "investigate", "deep dive", "synthesis"],
-             "research-brief", "skill", "Deep research with source synthesis"),
-            (["code", "script", "run", "execute", "prototype", "algorithm"],
-             "code-runner", "skill", "Execute code snippets in sandbox"),
-        ],
-        "plugins": [
-            (["standup", "code review", "architecture", "incident", "debug",
-              "deploy", "testing", "tech debt", "system design", "documentation"],
-             "Engineering plugin", "plugin",
-             "standups, code-review, architecture, incidents, docs"),
-            (["task", "memory", "dashboard", "productivity"],
-             "Productivity plugin", "plugin",
-             "tasks, memory, dashboard"),
-            (["runbook", "vendor", "capacity", "compliance", "process", "status report"],
-             "Operations plugin", "plugin",
-             "runbooks, vendor reviews, capacity, compliance"),
-            (["contract", "nda", "legal", "risk assessment", "compliance check"],
-             "Legal plugin", "plugin",
-             "contract review, NDA triage, legal briefs, risk assessment"),
-        ],
-        "rudy_modules": [
-            (["presence", "device", "network scan", "arp", "wifi"],
-             "rudy/presence.py + presence_analytics.py", "module",
-             "Network device scanning and classification"),
-            (["security", "threat", "defense", "intrusion", "anomaly"],
-             "rudy/network_defense.py + security_agent.py", "module",
-             "7-check defensive suite, threat detection"),
-            (["email", "send", "smtp", "imap", "mail backend"],
-             "rudy/email_multi.py", "module",
-             "Multi-provider email with automatic failover"),
-            (["ai", "llm", "local", "offline", "ollama", "inference"],
-             "rudy/local_ai.py + offline_ops.py", "module",
-             "Local LLM inference (Ollama/llama-cpp), offline ops"),
-            (["voice", "tts", "speech", "whisper", "audio", "clone"],
-             "rudy/voice.py + voice_clone.py", "module",
-             "TTS, STT, voice cloning"),
-            (["ocr", "image text", "pdf extract", "document parse"],
-             "rudy/ocr.py", "module",
-             "Image OCR (EasyOCR), PDF extraction (pdfplumber)"),
-            (["nlp", "sentiment", "entity", "summarize", "keyword"],
-             "rudy/nlp.py", "module",
-             "Sentiment analysis, entity extraction, summarization"),
-            (["web", "scrape", "article", "page change", "whois"],
-             "rudy/web_intelligence.py", "module",
-             "Article extraction, page monitoring, WHOIS/DNS"),
-            (["financial", "market", "stock", "crypto", "forex", "portfolio"],
-             "rudy/financial.py", "module",
-             "Market data (yfinance), portfolio tracking, alerts"),
-            (["phone", "mobile", "malware", "spyware", "forensic"],
-             "rudy/phone_check.py", "module",
-             "Mobile device security scanning"),
-            (["photo", "exif", "gps", "timeline", "image metadata"],
-             "rudy/photo_intel.py", "module",
-             "EXIF metadata, GPS extraction, timeline"),
-            (["usb", "quarantine", "device fingerprint"],
-             "rudy/usb_quarantine.py", "module",
-             "USB quarantine protocol"),
-            (["surveillance", "camera", "motion", "video"],
-             "rudy/surveillance.py", "module",
-             "Video camera integration, motion detection"),
-            (["vpn", "proton", "privacy", "tunnel"],
-             "rudy/vpn_manager.py", "module",
-             "ProtonVPN control, session timeouts"),
-            (["avatar", "face swap", "talking head", "video presenter"],
-             "rudy/avatar.py", "module",
-             "Digital avatars, face swap, talking-head video"),
-            (["knowledge", "semantic search", "chromadb", "index"],
-             "rudy/knowledge_base.py", "module",
-             "Semantic search over all Rudy data"),
-            (["wellness", "family safety", "inactivity", "fall risk"],
-             "rudy/wellness.py", "module",
-             "Family safety monitoring"),
-            (["travel", "network change", "baseline", "portable"],
-             "rudy/travel_mode.py", "module",
-             "Portable network intelligence"),
-            (["find my", "location", "geofence", "icloud"],
-             "rudy/find_my.py", "module",
-             "iCloud location monitoring for family safety"),
-            (["pentest", "penetration", "vulnerability", "port scan", "nmap"],
-             "rudy/pentest.py", "module",
-             "Penetration testing orchestration"),
-            (["handoff", "continuity", "session", "bootstrap"],
-             "rudy/workflows/handoff.py", "module",
-             "Automated session handoff protocol"),
-            (["audit", "quality", "lint", "governance", "registry"],
-             "rudy/agents/lucius_fox.py", "module",
-             "Code audits, dependency governance, quality gate"),
-            (["gate", "mcp", "circuit breaker", "session start"],
-             "rudy/agents/lucius_gate.py", "module",
-             "Session governance with MCP circuit breakers"),
-        ],
-    }
+    # CAPABILITY_INDEX moved to lucius_skills_check.py
+    from rudy.agents.lucius_skills_check import CAPABILITY_INDEX  # noqa: F811,E303
 
     def _skills_check(self, task: str) -> dict:
-        """lucius:skills-check — Recommend relevant tools for a task.
-
-        ADR-004 Toolkit: At session start or mid-session, list relevant
-        skills, connectors, modules, and plugins for the current task.
-
-        Args:
-            task: Natural language description of the task or goal.
-
-        Returns:
-            dict with 'recommendations' (list of matches) and 'summary' (str).
-        """
-        if not task:
-            self.log.warning("skills_check called with empty task")
-            return {
-                "recommendations": [],
-                "summary": "No task provided. Pass task='describe your task' to get recommendations.",
-            }
-
-        task_lower = task.lower()
-        task_words = set(task_lower.split())
-
-        recommendations = []
-        seen_tools = set()
-
-        for category, entries in self.CAPABILITY_INDEX.items():
-            for keywords, tool_name, tool_type, description in entries:
-                if tool_name in seen_tools:
-                    continue
-
-                # Score: count how many keyword phrases match in the task
-                score = 0
-                matched_keywords = []
-                for kw in keywords:
-                    if kw in task_lower:
-                        score += 2  # phrase match = strong signal
-                        matched_keywords.append(kw)
-                    elif any(w in task_words for w in kw.split()):
-                        score += 1  # word overlap = weaker signal
-                        matched_keywords.append(kw)
-
-                if score > 0:
-                    seen_tools.add(tool_name)
-                    recommendations.append({
-                        "tool": tool_name,
-                        "type": tool_type,
-                        "category": category,
-                        "description": description,
-                        "score": score,
-                        "matched": matched_keywords,
-                    })
-
-        # Sort by score descending
-        recommendations.sort(key=lambda r: r["score"], reverse=True)
-
-        # Build summary
-        if recommendations:
-            top = recommendations[:5]
-            summary_parts = [
-                f"Found {len(recommendations)} relevant tool(s) for: \"{task}\""
-            ]
-            summary_parts.append("")
-            summary_parts.append("Top recommendations:")
-            for r in top:
-                summary_parts.append(
-                    f"  [{r['type'].upper()}] {r['tool']} — {r['description']}"
-                )
-            summary_parts.append("")
-            summary_parts.append(
-                "REMINDER: Check these BEFORE writing custom code (HARD RULE)."
-            )
-            summary = "\n".join(summary_parts)
-        else:
-            summary = (
-                f"No existing tools matched for: \"{task}\". "
-                f"If this is a generic capability, search the MCP registry and "
-                f"pip packages before building custom."
-            )
-
-        self.log.info(f"skills_check: {len(recommendations)} matches for '{task}'")
-        self.action(f"Skills check: {len(recommendations)} recommendations")
-
-        return {
-            "task": task,
-            "recommendations": recommendations,
-            "summary": summary,
-            "total_matches": len(recommendations),
-        }
-
+        """lucius:skills-check -- delegated to lucius_skills_check.py."""
+        from rudy.agents.lucius_skills_check import skills_check
+        result = skills_check(task=task)
+        self.action(f"Skills check: {result.get('total_matches', 0)} recommendations")
+        return result
 
     def _plan_impact(self, files: list, description: str = "") -> dict:
         """lucius:plan -- Impact analysis. Delegated to lucius_plan_impact."""
