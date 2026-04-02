@@ -115,6 +115,11 @@ class Sentinel(AgentBase):
         if not self._time_ok():
             return self._finalize(state)
 
+        # === Behavioral Learning Loop (ADR-018) ===
+        self._scan_behavioral_patterns(state)
+        if not self._time_ok():
+            return self._finalize(state)
+
         self._micro_improve(state)
         self._finalize(state)
 
@@ -1042,6 +1047,47 @@ class Sentinel(AgentBase):
 
         except Exception as e:
             self._observe("handoff_error", f"Handoff failed: {e}")
+
+    def _scan_behavioral_patterns(self, state):
+        """Run the behavioral learning loop (ADR-018).
+
+        Composes ActivityWatch + PM4Py + PrefixSpan + Alfred/Ollama
+        to observe user behavior, discover patterns, and propose automations.
+        Heavy analysis runs every 6 hours; quick checks every cycle.
+        """
+        try:
+            from rudy.sentinel_learning import run_learning_cycle
+
+            remaining = self.MAX_RUNTIME - (time.time() - self.start)
+            if remaining < 5:
+                return  # Not enough time for even a quick cycle
+
+            result = run_learning_cycle(
+                max_runtime_secs=min(remaining - 2, 25),
+                use_alfred=True,
+            )
+
+            events = result.get("events_fetched", 0)
+            patterns = result.get("patterns_discovered", 0)
+            proposals = result.get("proposals_generated", 0)
+
+            if events > 0:
+                self._observe(
+                    "behavioral_learning",
+                    f"Learning cycle: {events} events, {patterns} patterns, {proposals} proposals"
+                    + (f" (full analysis)" if result.get("full_analysis") else " (quick)"),
+                    actionable=proposals > 0,
+                )
+            elif result.get("result") == "no_events_available":
+                self._observe(
+                    "behavioral_learning",
+                    "ActivityWatch not running or no events — learning loop idle",
+                )
+
+        except ImportError as exc:
+            self._observe("behavioral_learning", f"Learning module not available: {exc}")
+        except Exception as exc:
+            self._observe("behavioral_learning", f"Learning cycle error: {exc}")
 
     def _micro_improve(self, state):
         """Take small, safe improvement actions."""

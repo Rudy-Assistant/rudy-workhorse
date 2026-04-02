@@ -74,6 +74,9 @@ ROBIN_INBOX_V2 = INBOXES_DIR / "robin-inbox"  # New canonical path (inboxes/)
 # Environment profile (written by environment_profiler.py)
 ENVIRONMENT_PROFILE = RUDY_DATA / "environment-profile.json"
 
+# Sentinel learning loop (ADR-018)
+SENTINEL_LEARNING = RUDY_DATA / "sentinel-learning"
+
 # Handoff directory: Alfred writes handoff briefs, Robin scans on activation
 HANDOFFS_DIR = RUDY_DATA / "handoffs"
 
