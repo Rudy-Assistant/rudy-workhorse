@@ -188,6 +188,15 @@ Then read with: `Get-Content "path\to\output.json" -Raw`
 `read_file` returns metadata-only. Use `Get-Content "path" -Raw` via `start_process` instead.
 For large files: `Get-Content "path" | Select-Object -First 100`
 
+
+### DC start_process Shell Selection (LG-S64-001)
+PowerShell `&` operator silently drops Python scripts that perform network I/O (git push, API calls).
+**Always use `shell: "cmd"` for scripts with network operations:**
+```
+mcp__Desktop_Commander__start_process(command="C:\Python312\python.exe script.py", shell="cmd")
+```
+The `Could not find platform independent libraries <prefix>` warning from CMD is harmless.
+
 ### Oracle Git Helper
 **Reusable utility:** `rudy-data/helpers/oracle_git.py`
 ```python
@@ -211,6 +220,7 @@ Always write results to a JSON file (stdout is swallowed).
 | LG-S63-002 | GitHub MCP `create_pull_request` | Parse error on `null merge_commit_sha` | Harmless — PR still creates. Verify with `pr_view()` |
 | LG-S63-003 | GitHub MCP `get_file_contents` | Returns `[object Object]` for large files | Use `oracle_git.py` or DC to read locally |
 | LG-S63-004 | DC `write_file` | 25-30 line chunk limit makes large files slow | Write complete file via Python helper script |
+| LG-S64-001 | DC `start_process` | PowerShell `&` silently drops long-running Python scripts (~>1s network I/O); exits code 0, no output file written | Use `shell: "cmd"` parameter for any script with network operations (git push, API calls) |
 
 ## Robin-Central Principle (HARD RULE — Session 60)
 
