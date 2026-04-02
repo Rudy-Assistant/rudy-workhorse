@@ -535,207 +535,30 @@ class LuciusFox(AgentBase):
     # ================================================================
 
     def _review_diff(self, diff_text: str, branch: str = "unknown") -> dict:
-        """Review a git diff and produce a Lucius Review Record.
-
-        Checks:
-            1. Hardcoded paths (must use rudy.paths)
-            2. Direct pushes to protected branches
-            3. Missing docstrings on new functions/classes
-            4. Overly broad except clauses
-            5. Security anti-patterns (eval, exec, shell=True)
-            6. Import hygiene (unused or circular)
-        """
-        self.log.info(f"Reviewing diff for branch: {branch}")
-        review_id = f"LRR-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
-
-        # Parse added lines from diff
-        added_lines = []
-        current_file = ""
-        for line in diff_text.split("\n"):
-            if line.startswith("+++ b/"):
-                current_file = line[6:]
-            elif line.startswith("+") and not line.startswith("+++"):
-                added_lines.append((current_file, line[1:]))
-
-        # Check 1: Hardcoded paths
-        for filepath, line in added_lines:
-            for pattern in HARDCODED_PATH_PATTERNS:
-                if re.search(pattern, line, re.IGNORECASE):
-                    self.findings.append({
-                        "type": "hardcoded_path",
-                        "severity": "high",
-                        "title": f"Hardcoded path in {filepath}",
-                        "detail": f"Line: {line.strip()[:120]}",
-                        "recommendation": "Import from rudy.paths instead of hardcoding",
-                    })
-
-        # Check 2: Security anti-patterns
-        security_patterns = [
-            (r'\beval\s*\(', "eval() usage — potential code injection"),
-            (r'\bexec\s*\(', "exec() usage — potential code injection"),
-            (r'shell\s*=\s*True', "shell=True in subprocess — potential injection"),
-            (r'pickle\.loads?\(', "pickle.load — potential deserialization attack"),
-            (r'__import__\s*\(', "Dynamic __import__ — review for necessity"),
-        ]
-        for filepath, line in added_lines:
-            if not filepath.endswith(".py"):
-                continue
-            for pattern, desc in security_patterns:
-                if re.search(pattern, line):
-                    self.findings.append({
-                        "type": "security_concern",
-                        "severity": "high",
-                        "title": f"Security: {desc}",
-                        "detail": f"File: {filepath}, Line: {line.strip()[:120]}",
-                        "recommendation": "Review for necessity and add safety comment if intentional",
-                    })
-
-        # Check 3: Overly broad exception handling
-        for filepath, line in added_lines:
-            if not filepath.endswith(".py"):
-                continue
-            stripped = line.strip()
-            if stripped == "except:" or stripped == "except Exception:":
-                self.findings.append({
-                    "type": "broad_except",
-                    "severity": "low",
-                    "title": f"Broad except clause in {filepath}",
-                    "detail": f"Line: {stripped}",
-                    "recommendation": "Catch specific exceptions where possible",
-                })
-
-        # Check 4: Missing docstrings on new functions/classes
-        for filepath, line in added_lines:
-            if not filepath.endswith(".py"):
-                continue
-            stripped = line.strip()
-            if stripped.startswith("def ") or stripped.startswith("class "):
-                # Look ahead in added lines for a docstring
-                # (simplified — just flag for manual review)
-                self.findings.append({
-                    "type": "review_hint",
-                    "severity": "info",
-                    "title": f"New definition in {filepath}",
-                    "detail": f"{stripped[:80]}",
-                    "recommendation": "Verify docstring and type hints are present",
-                })
-
-        # Check 5: git add -A (dangerous in Robin context)
-        for filepath, line in added_lines:
-            if "git add -A" in line or "git add ." in line:
-                self.findings.append({
-                    "type": "dangerous_git",
-                    "severity": "high",
-                    "title": f"Unrestricted git add in {filepath}",
-                    "detail": f"Line: {line.strip()[:120]}",
-                    "recommendation": "Use explicit file paths instead of git add -A",
-                })
-
-        # Generate verdict
-        high_count = sum(1 for f in self.findings if f.get("severity") == "high")
-        verdict = "approve" if high_count == 0 else "request_changes"
-
-        record = {
-            "review_id": review_id,
-            "timestamp": datetime.now().isoformat(),
-            "branch": branch,
-            "verdict": verdict,
-            "findings_count": len(self.findings),
-            "high_severity": high_count,
-            "findings": self.findings,
-        }
-
-        review_file = self.REVIEWS_DIR / f"{review_id}.json"
-        with open(review_file, "w", encoding="utf-8") as f:
-            json.dump(record, f, indent=2, default=str)
-
-        self.action(f"Review {review_id}: {verdict} ({len(self.findings)} findings, {high_count} high)")
-        self.log.info(f"Review verdict: {verdict}")
-        return record
+        """Review a git diff. Delegated to lucius_diff_review."""
+        from rudy.agents.lucius_diff_review import review_diff
+        result = review_diff(
+            diff_text=diff_text,
+            branch=branch,
+            reviews_dir=self.REVIEWS_DIR,
+        )
+        # Sync findings back to self
+        self.findings.extend(result.get("findings", []))
+        self.action(f"Review {result.get('review_id', '?')}: {result.get('verdict', '?')}")
+        return result
 
     def _review_files(self, files: list) -> dict:
-        """Review specific files for quality issues.
-
-        Runs all Gate checks on the file contents directly.
-        """
-        self.log.info(f"Reviewing {len(files)} files...")
-
-        for filepath in files:
-            fp = self.CODEBASE_ROOT / filepath
-            if not fp.exists():
-                self.warn(f"File not found: {filepath}")
-                continue
-            if not filepath.endswith(".py"):
-                continue
-
-            content = fp.read_text(encoding="utf-8", errors="replace")
-            lines = content.split("\n")
-
-            # Check hardcoded paths
-            for i, line in enumerate(lines, 1):
-                for pattern in HARDCODED_PATH_PATTERNS:
-                    if re.search(pattern, line, re.IGNORECASE):
-                        self.findings.append({
-                            "type": "hardcoded_path",
-                            "severity": "high",
-                            "title": f"Hardcoded path in {filepath}:{i}",
-                            "detail": f"Line {i}: {line.strip()[:120]}",
-                            "recommendation": "Import from rudy.paths instead",
-                        })
-
-            # Check for functions without docstrings
-            for i, line in enumerate(lines, 1):
-                stripped = line.strip()
-                if (stripped.startswith("def ") or stripped.startswith("class ")) and not stripped.startswith("def _"):
-                    # Check if next non-empty line is a docstring
-                    has_docstring = False
-                    for j in range(i, min(i + 3, len(lines))):
-                        next_line = lines[j].strip()
-                        if next_line.startswith('"""') or next_line.startswith("'''"):
-                            has_docstring = True
-                            break
-                        if next_line and not next_line.startswith("#"):
-                            break
-                    if not has_docstring:
-                        self.findings.append({
-                            "type": "missing_docstring",
-                            "severity": "low",
-                            "title": f"Missing docstring: {filepath}:{i}",
-                            "detail": f"{stripped[:80]}",
-                            "recommendation": "Add a docstring explaining purpose and parameters",
-                        })
-
-            # Check for imports not from rudy.paths when using path patterns
-            if "Desktop" in content and "from rudy.paths" not in content:
-                self.findings.append({
-                    "type": "path_import_missing",
-                    "severity": "medium",
-                    "title": f"{filepath} references 'Desktop' without importing rudy.paths",
-                    "detail": "File may have hardcoded path constructions",
-                    "recommendation": "Import paths from rudy.paths",
-                })
-
-        # Generate review record
-        review_id = f"LRR-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
-        high_count = sum(1 for f in self.findings if f.get("severity") == "high")
-        verdict = "approve" if high_count == 0 else "request_changes"
-
-        record = {
-            "review_id": review_id,
-            "timestamp": datetime.now().isoformat(),
-            "files_reviewed": files,
-            "verdict": verdict,
-            "findings_count": len(self.findings),
-            "high_severity": high_count,
-            "findings": self.findings,
-        }
-
-        review_file = self.REVIEWS_DIR / f"{review_id}.json"
-        with open(review_file, "w", encoding="utf-8") as f:
-            json.dump(record, f, indent=2, default=str)
-
-        self.action(f"File review {review_id}: {verdict}")
-        return record
+        """Review files for quality. Delegated to lucius_diff_review."""
+        from rudy.agents.lucius_diff_review import review_files
+        result = review_files(
+            files=files,
+            codebase_root=self.CODEBASE_ROOT,
+            reviews_dir=self.REVIEWS_DIR,
+        )
+        # Sync findings back to self
+        self.findings.extend(result.get("findings", []))
+        self.action(f"File review {result.get('review_id', '?')}: {result.get('verdict', '?')}")
+        return result
 
     def _audit_branches(self) -> dict:
         """Audit git branch state — stale branches, unmerged work, governance.
@@ -1448,204 +1271,17 @@ class LuciusFox(AgentBase):
 
 
     def _plan_impact(self, files: list, description: str = "") -> dict:
-        """lucius:plan — Impact analysis before multi-file changes.
-
-        ADR-004 Compliance: Analyzes the blast radius of planned changes.
-        Run BEFORE making multi-file modifications.
-
-        Args:
-            files: List of file paths (relative to repo root) to be changed.
-            description: Natural language description of the planned change.
-
-        Returns:
-            dict with impact analysis: affected modules, dependents,
-            agents, tests, CI checks, risk assessment, and recommendations.
-        """
-        if not files:
-            return {
-                "error": "No files provided. Pass files=['path/to/file.py', ...] to analyze impact.",
-                "risk": "UNKNOWN",
-            }
-
-        analysis = {
-            "description": description,
-            "planned_files": files,
-            "impact": [],
-            "affected_agents": [],
-            "affected_tests": [],
-            "ci_checks": [],
-            "import_dependents": {},
-            "risk": "LOW",
-            "recommendations": [],
-        }
-
-        # Resolve paths and categorize
-        agent_modules = set()
-        core_modules = set()
-        workflow_modules = set()
-        config_files = set()
-        ci_files = set()
-
-        for f in files:
-            fp = Path(f)
-            name = fp.name
-
-            if "agents/" in f or "agents\\" in f:
-                agent_modules.add(name)
-            if f.startswith("rudy/") and "agents/" not in f and "workflows/" not in f:
-                core_modules.add(name)
-            if "workflows/" in f:
-                workflow_modules.add(name)
-            if f.endswith((".yml", ".yaml", ".json", ".toml")):
-                config_files.add(name)
-            if ".github/" in f:
-                ci_files.add(name)
-
-        # Scan for import dependents across codebase
-        import_targets = set()
-        for f in files:
-            fp = Path(f)
-            if fp.suffix == ".py":
-                # e.g., rudy/agents/sentinel.py → "sentinel", "rudy.agents.sentinel"
-                stem = fp.stem
-                dotpath = str(fp).replace("/", ".").replace("\\", ".").rstrip(".py")
-                if dotpath.endswith(".py"):
-                    dotpath = dotpath[:-3]
-                import_targets.add(stem)
-                import_targets.add(dotpath)
-
-        if import_targets:
-            for root, dirs, filenames in os.walk(self.CODEBASE_ROOT):
-                dirs[:] = [d for d in dirs if d != "__pycache__" and not d.startswith(".")]
-                for fname in filenames:
-                    if not fname.endswith(".py"):
-                        continue
-                    scan_path = Path(root) / fname
-                    rel = str(scan_path.relative_to(REPO_ROOT)).replace("\\", "/")
-                    # Skip the files being changed themselves
-                    if rel in files:
-                        continue
-                    try:
-                        content = scan_path.read_text(encoding="utf-8", errors="replace")
-                        for target in import_targets:
-                            if target in content:
-                                if target not in analysis["import_dependents"]:
-                                    analysis["import_dependents"][target] = []
-                                analysis["import_dependents"][target].append(rel)
-                    except Exception:
-                        continue
-
-        # Identify affected agents
-        for agent_name in self.KNOWN_AGENTS:
-            agent_file = f"rudy/agents/{agent_name}.py"
-            if agent_file in files:
-                analysis["affected_agents"].append(agent_name)
-            # Also check if any changed module is imported by this agent
-            agent_path = self.RUDY_PKG / "agents" / f"{agent_name}.py"
-            if agent_path.exists():
-                try:
-                    agent_content = agent_path.read_text(encoding="utf-8", errors="replace")
-                    for target in import_targets:
-                        if target in agent_content and agent_name not in analysis["affected_agents"]:
-                            analysis["affected_agents"].append(f"{agent_name} (imports changed module)")
-                except Exception:
-                    pass
-
-        # Identify affected tests
-        test_dirs = [REPO_ROOT / "tests"]
-        for test_dir in test_dirs:
-            if not test_dir.exists():
-                continue
-            for test_file in test_dir.rglob("*.py"):
-                try:
-                    content = test_file.read_text(encoding="utf-8", errors="replace")
-                    for target in import_targets:
-                        if target in content:
-                            rel = str(test_file.relative_to(REPO_ROOT)).replace("\\", "/")
-                            if rel not in analysis["affected_tests"]:
-                                analysis["affected_tests"].append(rel)
-                except Exception:
-                    continue
-
-        # Determine which CI checks will run
-        analysis["ci_checks"] = ["lint.yml (ruff + py_compile)"]
-        if ci_files:
-            analysis["ci_checks"].append("CI workflow files modified — verify syntax")
-        if any(f.startswith("rudy/") for f in files):
-            analysis["ci_checks"].append("test.yml (smoke tests — module imports)")
-            analysis["ci_checks"].append("lucius-review.yml (bandit + pip-audit + batcave-paths)")
-
-        # Risk assessment
-        risk_factors = []
-        total_dependents = sum(len(v) for v in analysis["import_dependents"].values())
-
-        if any("__init__" in f for f in files):
-            risk_factors.append("Package __init__.py modified — may break all imports in package")
-        if any("paths.py" in f for f in files):
-            risk_factors.append("paths.py modified — central path registry, affects entire codebase")
-        if agent_modules:
-            risk_factors.append(f"Agent module(s) modified: {', '.join(agent_modules)}")
-        if workflow_modules:
-            risk_factors.append(f"Workflow module(s) modified: {', '.join(workflow_modules)}")
-        if total_dependents > 10:
-            risk_factors.append(f"High dependency count: {total_dependents} files import changed modules")
-        if config_files:
-            risk_factors.append(f"Config file(s) modified: {', '.join(config_files)}")
-        if any("lucius" in f.lower() for f in files):
-            risk_factors.append("Lucius module modified — governance layer change")
-
-        if len(risk_factors) >= 3 or total_dependents > 10:
-            analysis["risk"] = "HIGH"
-        elif len(risk_factors) >= 1 or total_dependents > 3:
-            analysis["risk"] = "MEDIUM"
-
-        analysis["risk_factors"] = risk_factors
-
-        # Recommendations
-        if analysis["risk"] == "HIGH":
-            analysis["recommendations"].append("Create a dedicated feature branch for this change")
-            analysis["recommendations"].append("Run full Lucius hygiene_check after changes")
-            analysis["recommendations"].append("Test all affected agents via `python -m rudy.agents.runner health`")
-        if total_dependents > 0:
-            analysis["recommendations"].append(
-                f"Verify {total_dependents} dependent file(s) still work after changes"
-            )
-        if analysis["affected_tests"]:
-            analysis["recommendations"].append(
-                f"Run affected tests: {', '.join(analysis['affected_tests'][:5])}"
-            )
-        if not analysis["affected_tests"] and any(f.startswith("rudy/") for f in files):
-            analysis["recommendations"].append("No tests found for changed modules — consider adding test coverage")
-
-        # Build summary
-        summary_lines = [
-            f"Impact Analysis: {description or 'multi-file change'}",
-            f"Risk: {analysis['risk']}",
-            f"Files to change: {len(files)}",
-            f"Import dependents: {total_dependents}",
-            f"Affected agents: {len(analysis['affected_agents'])}",
-            f"Affected tests: {len(analysis['affected_tests'])}",
-            f"CI checks: {len(analysis['ci_checks'])}",
-        ]
-        if risk_factors:
-            summary_lines.append("")
-            summary_lines.append("Risk factors:")
-            for rf in risk_factors:
-                summary_lines.append(f"  - {rf}")
-        if analysis["recommendations"]:
-            summary_lines.append("")
-            summary_lines.append("Recommendations:")
-            for rec in analysis["recommendations"]:
-                summary_lines.append(f"  - {rec}")
-
-        analysis["summary"] = "\n".join(summary_lines)
-
-        self.log.info(f"plan: {analysis['risk']} risk, {total_dependents} dependents, "
-                       f"{len(analysis['affected_agents'])} agents affected")
-        self.action(f"Impact analysis: {analysis['risk']} risk for {len(files)} files")
-
-        return analysis
-
+        """lucius:plan -- Impact analysis. Delegated to lucius_plan_impact."""
+        from rudy.agents.lucius_plan_impact import plan_impact
+        result = plan_impact(
+            files=files,
+            description=description,
+            codebase_root=self.CODEBASE_ROOT,
+            known_agents=self.KNOWN_AGENTS,
+        )
+        if "summary" in result:
+            self.action(f"Impact analysis: {result['risk']} risk for {len(files)} files")
+        return result
 
 # ──────────────────────────────────────────────────────────────────────
 # CLI entry point
