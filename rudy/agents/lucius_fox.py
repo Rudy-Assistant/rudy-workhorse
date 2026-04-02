@@ -395,57 +395,11 @@ class LuciusFox(AgentBase):
                     })
 
     def _audit_dependencies(self):
-        """Check Python package dependencies for currency and security."""
-        self.log.info("Auditing dependencies...")
-
-        req_file = self.CODEBASE_ROOT / "requirements.txt"
-        if req_file.exists():
-            reqs = req_file.read_text(errors="replace").strip().split("\n")
-            for req in reqs:
-                req = req.strip()
-                if not req or req.startswith("#"):
-                    continue
-                pkg = req.split("==")[0].split(">=")[0].split("<=")[0].strip()
-                self.findings.append({
-                    "type": "dependency_check",
-                    "severity": "info",
-                    "title": f"Dependency: {pkg}",
-                    "detail": f"Requirement: {req}. Check PyPI for latest version and known CVEs.",
-                    "recommendation": "Verify currency on next audit with web search",
-                })
-        else:
-            self.findings.append({
-                "type": "missing_config",
-                "severity": "medium",
-                "title": "No requirements.txt found",
-                "detail": "Dependencies are not pinned. Builds may not be reproducible.",
-                "recommendation": "Generate requirements.txt with pip freeze > requirements.txt",
-            })
-
-        if hasattr(self, "_inventory"):
-            all_imports = set()
-            for info in self._inventory["modules"].values():
-                for imp in info["imports"]:
-                    if imp.startswith("from "):
-                        pkg = imp.split()[1].split(".")[0]
-                    else:
-                        pkg = imp.split()[1].split(".")[0]
-                    all_imports.add(pkg)
-
-            stdlib = {
-                "os", "sys", "json", "time", "datetime", "pathlib", "subprocess",
-                "hashlib", "logging", "re", "math", "collections", "functools",
-                "itertools", "typing", "abc", "io", "shutil", "tempfile",
-                "threading", "socket", "http", "urllib", "email", "smtplib",
-                "traceback", "importlib", "contextlib", "dataclasses", "enum",
-                "copy", "struct", "base64", "uuid", "random", "string",
-                "textwrap", "argparse", "configparser", "csv", "sqlite3",
-                "glob", "fnmatch", "signal", "ctypes", "platform", "warnings",
-                "codecs",
-            }
-            internal = {"rudy"}
-            third_party = all_imports - stdlib - internal - {""}
-            self.status["third_party_imports"] = sorted(third_party)
+        """Check Python package dependencies -- delegated to lucius_dependency_audit.py."""
+        from rudy.agents.lucius_dependency_audit import audit_dependencies  # lucius-exempt
+        self.log.info("Auditing dependencies (via pip-audit)...")
+        dep_findings = audit_dependencies(codebase_root=self.CODEBASE_ROOT)
+        self.findings.extend(dep_findings)
 
     def _audit_agent_health(self):
         """Check status of all known agents."""
@@ -554,40 +508,32 @@ class LuciusFox(AgentBase):
         return result
 
     def _audit_branches(self) -> dict:
-        """Audit git branch state — stale branches, unmerged work, governance.
-
-        This is the Gate's branch governance function. It checks:
-            1. Are there stale feature branches (>7 days)?
-            2. Are there branches with unmerged commits?
-            3. Is Robin on the correct branch?
-        """
+        """Audit git branch state -- stale branches and governance."""
         self.log.info("Auditing branch governance...")
         result = {"branches": [], "warnings": []}
-
         try:
             git_result = subprocess.run(
-                ["git", "branch", "-a", "--format=%(refname:short) %(committerdate:iso8601)"],
-                capture_output=True, text=True, cwd=str(self.CODEBASE_ROOT),
-                timeout=30, encoding="utf-8", errors="replace"
+                ["git", "branch", "-a",
+                 "--format=%(refname:short) %(committerdate:iso8601)"],
+                capture_output=True, text=True,
+                cwd=str(self.CODEBASE_ROOT),
+                timeout=30, encoding="utf-8", errors="replace",
             )
             if git_result.returncode != 0:
                 self.warn(f"git branch failed: {git_result.stderr}")
                 return result
-
             for line in git_result.stdout.strip().split("\n"):
                 if not line.strip():
                     continue
                 parts = line.strip().split(" ", 1)
                 branch_name = parts[0]
-                date_str = parts[1] if len(parts) > 1 else ""
-
                 result["branches"].append(branch_name)
-
-                # Check for stale branches
+                date_str = parts[1] if len(parts) > 1 else ""
                 if date_str and branch_name not in PROTECTED_BRANCHES:
                     try:
-                        # Parse ISO date loosely
-                        branch_date = datetime.fromisoformat(date_str.strip().replace(" ", "T")[:19])
+                        branch_date = datetime.fromisoformat(
+                            date_str.strip().replace(" ", "T")[:19]
+                        )
                         age_days = (datetime.now() - branch_date).days
                         if age_days > 7:
                             self.findings.append({
@@ -599,57 +545,20 @@ class LuciusFox(AgentBase):
                             })
                     except (ValueError, TypeError):
                         pass
-
         except (subprocess.TimeoutExpired, FileNotFoundError) as e:
             self.warn(f"Git not available for branch audit: {e}")
-
         self.action(f"Branch audit: {len(result['branches'])} branches found")
         return result
 
     def _review_proposal(self, proposal):
-        """Review a new module/dependency proposal (Lucius Review Record)."""
-        self.log.info(f"Reviewing proposal: {proposal.get('title', 'untitled')}")
-
-        record = {
-            "review_id": f"LRR-{datetime.now().strftime('%Y%m%d-%H%M%S')}",
-            "timestamp": datetime.now().isoformat(),
-            "proposal": proposal,
-            "verdict": "pending",
-            "alternatives_found": [],
-            "recommendation": "",
-            "implementation_spec": None,
-            "checks": {
-                "duplicates_existing": False,
-                "requires_new_dependency": False,
-                "architecture_impact": "none",
-            },
-        }
-
-        title_lower = proposal.get("title", "").lower()
-        desc_lower = proposal.get("description", "").lower()
-
-        # Check for overlap with existing modules
-        if hasattr(self, "_inventory"):
-            for path in self._inventory["modules"]:
-                module_name = Path(path).stem.lower()
-                if module_name in title_lower or module_name in desc_lower:
-                    record["checks"]["duplicates_existing"] = True
-                    record["alternatives_found"].append(path)
-
-        if record["checks"]["duplicates_existing"]:
-            record["verdict"] = "request_changes"
-            record["recommendation"] = (
-                f"Possible overlap with existing modules: {record['alternatives_found']}. "
-                "Review for consolidation before creating new module."
-            )
-        else:
-            record["verdict"] = "approved_pending_implementation"
-            record["recommendation"] = "No obvious overlap. Proceed with implementation."
-
-        review_file = self.REVIEWS_DIR / f"{record['review_id']}.json"
-        with open(review_file, "w", encoding="utf-8") as f:
-            json.dump(record, f, indent=2, default=str)
-
+        """Review a new module/dependency proposal -- delegated to lucius_proposal_review.py."""
+        from rudy.agents.lucius_proposal_review import review_proposal  # lucius-exempt
+        inventory = self._inventory if hasattr(self, "_inventory") else None
+        record = review_proposal(
+            proposal=proposal,
+            inventory=inventory,
+            reviews_dir=self.REVIEWS_DIR,
+        )
         self.action(f"Proposal review: {record['verdict']}")
         return record
 
@@ -721,62 +630,15 @@ class LuciusFox(AgentBase):
         from rudy.agents.lucius_reinvention_check import _scan_for_reinvention
         return _scan_for_reinvention(rel_path, content_lower, indicators, is_ci=is_ci)
     def _generate_audit_report(self):
-        """Write structured audit report."""
-        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-        report = {
-            "audit_id": f"lucius-audit-{timestamp}",
-            "timestamp": datetime.now().isoformat(),
-            "agent_version": self.version,
-            "summary": {
-                "total_findings": len(self.findings),
-                "by_severity": {},
-                "by_type": {},
-            },
-            "findings": self.findings,
-            "code_stats": self.status.get("code_inventory", {}),
-            "third_party": self.status.get("third_party_imports", []),
-        }
-
-        for f in self.findings:
-            sev = f.get("severity", "unknown")
-            typ = f.get("type", "unknown")
-            report["summary"]["by_severity"][sev] = report["summary"]["by_severity"].get(sev, 0) + 1
-            report["summary"]["by_type"][typ] = report["summary"]["by_type"].get(typ, 0) + 1
-
-        report_file = self.AUDIT_DIR / f"audit-{timestamp}.json"
-        with open(report_file, "w", encoding="utf-8") as f:
-            json.dump(report, f, indent=2, default=str)
-
-        self.log.info(f"Audit report: {report_file}")
-        self.log.info(f"Findings: {report['summary']['by_severity']}")
-
-        md_file = self.AUDIT_DIR / f"audit-{timestamp}.md"
-        lines = [
-            "# Lucius Fox Audit Report",
-            f"**Date:** {datetime.now().strftime('%Y-%m-%d %H:%M')}",
-            f"**Version:** {self.version}",
-            f"**Findings:** {len(self.findings)}",
-            "",
-            "## Summary",
-            "",
-        ]
-        for sev in ["high", "medium", "low", "info"]:
-            count = report["summary"]["by_severity"].get(sev, 0)
-            if count:
-                lines.append(f"- **{sev.upper()}:** {count}")
-        lines.append("")
-        lines.append("## Findings")
-        lines.append("")
-
-        for i, f_item in enumerate(self.findings, 1):
-            sev = f_item.get("severity", "?").upper()
-            lines.append(f"### {i}. [{sev}] {f_item['title']}")
-            lines.append(f"{f_item.get('detail', '')}")
-            lines.append(f"**Recommendation:** {f_item.get('recommendation', 'N/A')}")
-            lines.append("")
-
-        md_file.write_text("\n".join(lines), encoding="utf-8")
-        self.action(f"Audit report written to {report_file.name}")
+        """Write structured audit report -- delegated to lucius_audit_report.py."""
+        from rudy.agents.lucius_audit_report import generate_audit_report  # lucius-exempt
+        report = generate_audit_report(
+            findings=self.findings,
+            status=self.status,
+            version=self.version,
+            audit_dir=self.AUDIT_DIR,
+        )
+        self.action(f"Audit report written: {report['audit_id']}")
         return report
 
 
