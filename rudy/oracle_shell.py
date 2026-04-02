@@ -12,7 +12,7 @@ Eliminates 70% of per-session friction by providing a single import that handles
 - JSON-safe output capture (bypasses DC stdout swallow bug LG-S63-001)
 
 Usage from a session helper script:
-    import sys; sys.path.insert(0, r'C:\\Users\\ccimi\\rudy-workhorse')
+    import sys; sys.path.insert(0, r'C:\\Users\\ccimi\\rudy-workhorse')  # lucius-exempt
     from rudy.oracle_shell import OracleShell
     sh = OracleShell(session=65)
 
@@ -42,10 +42,10 @@ from datetime import datetime
 from pathlib import Path
 
 # Canonical paths (lucius-exempt)
-REPO = Path(r"C:\Users\ccimi\rudy-workhorse")
-PYTHON = r"C:\Python312\python.exe"
-GIT = r"C:\Program Files\Git\cmd\git.exe"
-GH = r"C:\Program Files\GitHub CLI\gh.exe"
+REPO = Path(r"C:\Users\ccimi\rudy-workhorse")  # lucius-exempt: canonical repo path
+PYTHON = r"C:\Python312\python.exe"  # lucius-exempt: canonical tool path
+GIT = r"C:\Program Files\Git\cmd\git.exe"  # lucius-exempt: canonical tool path
+GH = r"C:\Program Files\GitHub CLI\gh.exe"  # lucius-exempt: canonical tool path
 RUFF = [PYTHON, "-m", "ruff"]
 
 
