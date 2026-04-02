@@ -231,16 +231,29 @@ Or via CLI: `python -m rudy.agents.lucius_deletion_gate file1.py file2.py --stri
 
 **Origin:** Session 70 near-deleted robin_cowork_launcher.py (502 lines of active S69 launcher code) based on stale registry claiming 20 lines "DISCARDED." The gate also caught a live import dependency on scripts/rudy/rudy-suno.py. This gate exists because stale metadata kills active code.
 
-### Module Extraction (ADR-005 Phase 2a, Session 70)
+### Module Extraction (ADR-005 Phase 2, Sessions 70-72)
 
 Extracted modules to reduce monolith sizes and prepare MCP-ready components:
 
+**Phase 2a (S70):**
 - `rudy/forensics/phone_forensics.py` -- ForensicPhoneCheck (382L) extracted from phone_check.py
 - `rudy/integrations/mvt_integration.py` -- MVTIntegration (78L) extracted from phone_check.py
 - `human_simulation.py` FingerprintManager slimmed from 191L to ~50L (playwright-stealth delegation)
-- Backward-compat imports preserved -- existing code works via `from rudy.phone_check import ForensicPhoneCheck`
 
-Phase 2 remaining targets: lucius_fox.py (1483->555L), sentinel.py, email consolidation, nlp.py, ocr.py.
+**Phase 2b (S71):**
+- `rudy/agents/lucius_plan_impact.py` -- plan_impact() (198L) extracted from lucius_fox.py
+- `rudy/agents/lucius_diff_review.py` -- review_diff() + review_files() (166L) extracted
+
+**Phase 2b continued (S72):**
+- `rudy/agents/lucius_skills_check.py` -- CAPABILITY_INDEX + skills_check() (226L)
+- `rudy/agents/lucius_reinvention_check.py` -- check_reinvention() + _scan_for_reinvention() (146L)
+- `rudy/agents/lucius_hardcoded_paths.py` -- check_hardcoded_paths() + HARDCODED_PATH_PATTERNS (105L)
+- `rudy/agents/lucius_import_hygiene.py` -- check_import_hygiene() (75L)
+- lucius_fox.py: 1684 -> 1320 (S71) -> 904 lines (S72) -- total reduction 46%
+
+Backward-compat imports preserved. Thin delegation wrappers sync findings back.
+
+**Remaining targets:** session_checkpoint (185L), _audit_dependencies (53L, replace with pip-audit), _audit_branches (53L), _generate_audit_report (64L), sentinel.py (~1500L), email consolidation.
 
 ### Vault-First Institutional Memory (HARD RULE — Session 16)
 
