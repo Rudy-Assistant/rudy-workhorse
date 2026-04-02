@@ -810,6 +810,19 @@ def run_continuous() -> None:
                 # Don't run night shift again for at least 4 hours
                 time.sleep(14400)
 
+            # Session continuity: check if a new Cowork session should launch
+            # (S68 patch: continuous loop was missing this — only Sentinel agent
+            # called _trigger_handoff, but Sentinel agent wasn't running)
+            try:
+                from rudy.robin_cowork_launcher import check_and_launch_if_needed
+                launch_result = check_and_launch_if_needed()
+                if launch_result and launch_result.get("success"):
+                    log.info("Cowork session launched: %s", launch_result.get("handoff_used", "latest"))
+                elif launch_result and launch_result.get("error"):
+                    log.warning("Cowork launch failed: %s", launch_result.get("error"))
+            except Exception as e:
+                log.debug("Cowork launcher check skipped: %s", e)
+
             # Full re-assessment every 12 cycles (1 hour)
             if cycle % 12 == 0:
                 assessment = run_boot_sequence()
