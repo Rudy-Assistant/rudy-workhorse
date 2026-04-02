@@ -229,6 +229,17 @@ Or via CLI: `python -m rudy.agents.lucius_deletion_gate file1.py file2.py --stri
 
 **Origin:** Session 70 near-deleted robin_cowork_launcher.py (502 lines of active S69 launcher code) based on stale registry claiming 20 lines "DISCARDED." The gate also caught a live import dependency on scripts/rudy/rudy-suno.py. This gate exists because stale metadata kills active code.
 
+### Module Extraction (ADR-005 Phase 2a, Session 70)
+
+Extracted modules to reduce monolith sizes and prepare MCP-ready components:
+
+- `rudy/forensics/phone_forensics.py` -- ForensicPhoneCheck (382L) extracted from phone_check.py
+- `rudy/integrations/mvt_integration.py` -- MVTIntegration (78L) extracted from phone_check.py
+- `human_simulation.py` FingerprintManager slimmed from 191L to ~50L (playwright-stealth delegation)
+- Backward-compat imports preserved -- existing code works via `from rudy.phone_check import ForensicPhoneCheck`
+
+Phase 2 remaining targets: lucius_fox.py (1483->555L), sentinel.py, email consolidation, nlp.py, ocr.py.
+
 ### Vault-First Institutional Memory (HARD RULE — Session 16)
 
 All session records, findings, and institutional knowledge MUST be written to the **BatcaveVault** (`vault/`). HandoffWriter handles session records automatically. ADRs → `vault/Architecture/`. Protocols → `vault/Protocols/`. Sessions → `vault/Sessions/`. Never scatter records without also writing to the vault.
