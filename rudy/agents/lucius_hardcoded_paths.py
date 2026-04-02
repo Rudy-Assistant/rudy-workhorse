@@ -18,13 +18,13 @@ from pathlib import Path
 log = logging.getLogger("lucius.hardcoded_paths")
 
 # Patterns that should NEVER appear in committed code
-HARDCODED_PATH_PATTERNS = [
-    r'C:\\Users\\ccimi\\Desktop',
-    r'C:/Users/ccimi/Desktop',
-    r"C:\\\\Users\\\\ccimi",
-    r'~/Desktop/rudy-',
-    r'r"C:\\Users',
-    r"r'C:\\Users",
+HARDCODED_PATH_PATTERNS = [  # SAFETY: detection patterns, not path usage
+    r'C:\\Users\\ccimi\\Desktop',   # lucius-exempt: detection pattern
+    r'C:/Users/ccimi/Desktop',      # lucius-exempt: detection pattern
+    r"C:\\\\Users\\\\ccimi",        # lucius-exempt: detection pattern
+    r'~/Desktop/rudy-',             # lucius-exempt: detection pattern
+    r'r"C:\\Users',                 # lucius-exempt: detection pattern
+    r"r'C:\\Users",                 # lucius-exempt: detection pattern
 ]
 
 # Files that legitimately define/document path patterns
