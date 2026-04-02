@@ -35,6 +35,7 @@ import random
 
 import string
 import time
+from pathlib import Path
 
 from datetime import datetime, timedelta
 from typing import Tuple, List
@@ -786,201 +787,57 @@ class BotDetectionFailsafe:
 #  FINGERPRINT MANAGER — Coherent, persistent browser identity
 # ============================================================================
 
+
 class FingerprintManager:
-    """
-    Maintains consistent browser fingerprints across sessions.
+    """Browser fingerprint management.
 
-    Key insight: Randomizing fingerprints on every session is a
-    stronger bot signal than having a single consistent one.
-    Google and other platforms track fingerprint stability — a
-    "person" whose screen resolution, timezone, and fonts change
-    every day is obviously automated.
-
-    This manager creates ONE coherent identity and sticks with it,
-    only rotating on a 30-day cycle or when forced.
+    Slimmed in ADR-005 Phase 2a: delegates to playwright-stealth
+    for navigator overrides and stealth scripts. Retains rotation
+    logic and identity tracking.
     """
 
-    FINGERPRINT_FILE = LOGS_DIR / "browser-fingerprint.json"
+    def __init__(self, data_dir=None):
+        self.data_dir = data_dir or Path("rudy-data")
+        self._current = None
+        self._rotation_count = 0
+        self._last_rotate = 0
 
-    # Realistic viewport sizes (common resolutions)
-    VIEWPORTS = [
-        (1920, 1080), (1536, 864), (1440, 900), (1366, 768),
-        (2560, 1440), (1680, 1050), (1280, 720),
-    ]
+    def _should_rotate(self, interval_hours=4):
+        """Check if fingerprint rotation is due."""
+        elapsed = time.time() - self._last_rotate
+        return elapsed > interval_hours * 3600
 
-    # Common user-agent components
-    CHROME_VERSIONS = [
-        "120.0.6099.109", "121.0.6167.85", "122.0.6261.57",
-        "123.0.6312.86", "124.0.6367.60", "125.0.6422.76",
-    ]
-
-    PLATFORMS = [
-        ("Windows NT 10.0; Win64; x64", "Win32"),
-        ("Windows NT 11.0; Win64; x64", "Win32"),
-    ]
-
-    def __init__(self):
-        self.fingerprint = _load_json(self.FINGERPRINT_FILE, {})
-        if not self.fingerprint or self._should_rotate():
-            self._generate_fingerprint()
-
-    def _should_rotate(self) -> bool:
-        """Rotate fingerprint every 30 days."""
-        created = self.fingerprint.get("created")
-        if not created:
-            return True
-        try:
-            created_dt = datetime.fromisoformat(created)
-            return (datetime.now() - created_dt).days > 30
-        except Exception:
-            return True
-
-    def _generate_fingerprint(self):
-        """Generate a coherent browser fingerprint."""
-        viewport = random.choice(self.VIEWPORTS)
-        chrome_ver = random.choice(self.CHROME_VERSIONS)
-        platform_info, platform_str = random.choice(self.PLATFORMS)
-
-        self.fingerprint = {
-            "created": datetime.now().isoformat(),
-            "rotation_id": random.randint(1000, 9999),
-            "user_agent": (
-                f"Mozilla/5.0 ({platform_info}) "
-                f"AppleWebKit/537.36 (KHTML, like Gecko) "
-                f"Chrome/{chrome_ver} Safari/537.36"
-            ),
-            "viewport": {"width": viewport[0], "height": viewport[1]},
-            "screen": {
-                "width": viewport[0],
-                "height": viewport[1],
-                "availWidth": viewport[0],
-                "availHeight": viewport[1] - 40,  # Taskbar
-                "colorDepth": 24,
-                "pixelRatio": random.choice([1, 1.25, 1.5, 2]),
-            },
-            "platform": platform_str,
-            "language": "en-US",
-            "languages": ["en-US", "en"],
-            "timezone": "America/Los_Angeles",
-            "timezone_offset": 480 if random.random() < 0.5 else 420,  # PST/PDT
-            "hardware_concurrency": random.choice([4, 8, 12, 16]),
-            "device_memory": random.choice([4, 8, 16]),
-            "max_touch_points": 0,  # Desktop
-            "webgl_vendor": "Google Inc. (Intel)",
-            "webgl_renderer": random.choice([
-                "ANGLE (Intel, Intel(R) UHD Graphics 630, OpenGL 4.5)",
-                "ANGLE (Intel, Intel(R) UHD Graphics 620, OpenGL 4.5)",
-                "ANGLE (Intel, Intel(R) Iris(R) Xe Graphics, OpenGL 4.5)",
-            ]),
-            "do_not_track": None,  # Most real users don't set this
-            "plugins_count": random.randint(3, 5),
-        }
-
-        _save_json(self.FINGERPRINT_FILE, self.fingerprint)
-
-    def get_launch_args(self) -> List[str]:
-        """Get Chromium launch arguments that match our fingerprint."""
-        fp = self.fingerprint
-        vp = fp.get("viewport", {})
-
+    def get_launch_args(self):
+        """Return Chromium launch args for stealth."""
         return [
-            f"--window-size={vp.get('width', 1920)},{vp.get('height', 1080)}",
-            f"--user-agent={fp.get('user_agent', '')}",
-            f"--lang={fp.get('language', 'en-US')}",
             "--disable-blink-features=AutomationControlled",
             "--disable-features=IsolateOrigins,site-per-process",
-            "--disable-infobars",
-            "--no-first-run",
-            "--no-default-browser-check",
+            "--no-first-run", "--no-default-browser-check",
         ]
 
-    def get_stealth_scripts(self) -> List[str]:
+    async def apply_stealth(self, page):
+        """Apply stealth to a playwright page.
+
+        Replaces the old get_stealth_scripts() method.
+        Uses playwright-stealth if available, falls back to minimal overrides.
         """
-        JavaScript snippets to inject for fingerprint coherence.
-        Overrides navigator properties, WebGL, etc.
-        """
-        fp = self.fingerprint
-        screen = fp.get("screen", {})
+        try:
+            from playwright_stealth import stealth_async
+            await stealth_async(page)
+        except ImportError:
+            # Fallback: minimal navigator overrides
+            await page.add_init_script(
+                "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
+            )
+        self._last_rotate = time.time()
+        self._rotation_count += 1
 
-        scripts = []
-
-        # Override navigator.webdriver
-        scripts.append("""
-            Object.defineProperty(navigator, 'webdriver', {
-                get: () => undefined,
-            });
-        """)
-
-        # Override navigator.platform
-        scripts.append(f"""
-            Object.defineProperty(navigator, 'platform', {{
-                get: () => '{fp.get("platform", "Win32")}',
-            }});
-        """)
-
-        # Override navigator.hardwareConcurrency
-        scripts.append(f"""
-            Object.defineProperty(navigator, 'hardwareConcurrency', {{
-                get: () => {fp.get("hardware_concurrency", 8)},
-            }});
-        """)
-
-        # Override navigator.deviceMemory
-        scripts.append(f"""
-            Object.defineProperty(navigator, 'deviceMemory', {{
-                get: () => {fp.get("device_memory", 8)},
-            }});
-        """)
-
-        # Override screen properties
-        scripts.append(f"""
-            Object.defineProperty(screen, 'width', {{ get: () => {screen.get('width', 1920)} }});
-            Object.defineProperty(screen, 'height', {{ get: () => {screen.get('height', 1080)} }});
-            Object.defineProperty(screen, 'availWidth', {{ get: () => {screen.get('availWidth', 1920)} }});
-            Object.defineProperty(screen, 'availHeight', {{ get: () => {screen.get('availHeight', 1040)} }});
-            Object.defineProperty(screen, 'colorDepth', {{ get: () => {screen.get('colorDepth', 24)} }});
-        """)
-
-        # Chrome runtime (missing in headless)
-        scripts.append("""
-            window.chrome = {
-                runtime: {
-                    onMessage: { addListener: function() {} },
-                    sendMessage: function() {},
-                },
-                loadTimes: function() { return {}; },
-                csi: function() { return {}; },
-            };
-        """)
-
-        # Permissions API override
-        scripts.append("""
-            const originalQuery = window.navigator.permissions.query;
-            window.navigator.permissions.query = (parameters) =>
-                parameters.name === 'notifications'
-                    ? Promise.resolve({ state: Notification.permission })
-                    : originalQuery(parameters);
-        """)
-
-        return scripts
-
-    @property
-    def identity_summary(self) -> dict:
-        """Brief summary of current fingerprint identity."""
-        fp = self.fingerprint
+    def identity_summary(self):
+        """Return current identity summary."""
         return {
-            "rotation_id": fp.get("rotation_id"),
-            "created": fp.get("created"),
-            "chrome_version": (fp.get("user_agent", "").split("Chrome/")[1].split(" ")[0]
-                              if "Chrome/" in fp.get("user_agent", "") else "?"),
-            "viewport": f"{fp.get('viewport', {}).get('width')}x{fp.get('viewport', {}).get('height')}",
-            "timezone": fp.get("timezone"),
-            "cores": fp.get("hardware_concurrency"),
+            "rotations": self._rotation_count,
+            "method": "playwright-stealth",
         }
-
-# ============================================================================
-#  HUMAN SIMULATOR — Unified interface for all human behavior
-# ============================================================================
 
 class HumanSimulator:
     """
@@ -1298,32 +1155,5 @@ def create_simulator(session_name: str = "default") -> HumanSimulator:
     """Create a pre-configured HumanSimulator instance."""
     return HumanSimulator(session_name=session_name)
 
-def demo_timing():
-    """Demo the timing engine distributions."""
-    te = TimingEngine()
-    print("Timing Engine Demo — 20 samples per profile:\n")
-    for profile in ["action", "keystroke", "scroll", "page_settle", "think"]:
-        samples = [te.delay(profile) * 1000 for _ in range(20)]
-        mean = sum(samples) / len(samples)
-        std = (sum((s - mean)**2 for s in samples) / len(samples)) ** 0.5
-        print(f"  {profile:15s}  mean={mean:7.1f}ms  std={std:6.1f}ms  "
-              f"range=[{min(samples):6.1f}, {max(samples):7.1f}]")
-    print(f"\n  Timing stats: {te.timing_stats}")
 
-def demo_mouse():
-    """Demo mouse path generation."""
-    me = MouseEngine()
-    path = me.generate_path((100, 100), (800, 500))
-    print(f"Mouse path: {len(path)} points from (100,100) → (800,500)")
-    print(f"  First 5: {path[:5]}")
-    print(f"  Last 5: {path[-5:]}")
-    print(f"  Velocity variance: {me.velocity_variance}")
-
-if __name__ == "__main__":
-    print("Human Behavior Simulation Module\n")
-    demo_timing()
-    print()
-    demo_mouse()
-    print()
-    sim = create_simulator("demo")
-    sim.print_status()
+# demo_timing() and demo_mouse() removed in ADR-005 Phase 2a (unused)
