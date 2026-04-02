@@ -167,6 +167,51 @@ Three consecutive D-grades (S41-S43) resulted from skipping this step. This is N
 | **DC read_file returns metadata-only** (LG-S34-003) | Write a Python helper script to `rudy-data/` and execute via `start_process`. Do NOT call `read_file` repeatedly hoping it works. |
 | **CMD mangles Python -c quotes** | Write `.py` scripts to `rudy-data/` and execute. Never use inline Python via CMD. |
 | **PR/merge is Robin's job** (LG-S35-002) | Do not burn Alfred tokens on lint fixes, CI monitoring, or merge mechanics. Delegate to Robin or use the git-ci-fix-and-merge skill. |
+## Oracle Execution Patterns (HARD RULE — Session 63)
+
+### Shell Rules
+- **Never use `&&` in PowerShell** — it's not supported. Use `;` or Python subprocess.
+- **Always use `&` operator** to invoke .exe files: `& C:\Python312\python.exe script.py`
+- **DC `start_process` default shell is PowerShell** — specify `shell: "cmd"` when you need CMD.
+- **For multi-step commands:** Write a `.py` helper to `rudy-data/` and execute it. Never chain complex commands in PowerShell.
+
+### DC stdout Workaround (LG-S63-001)
+DC `start_process` swallows Python `print()` output. **Always** log to file, then read:
+```python
+# In your helper script:
+with open(r"C:\Users\ccimi\rudy-workhorse\rudy-data\my-output.json", "w", encoding="utf-8") as f:
+    json.dump(result, f, indent=2)
+```
+Then read with: `Get-Content "path\to\output.json" -Raw`
+
+### DC read_file Workaround (LG-S34-003)
+`read_file` returns metadata-only. Use `Get-Content "path" -Raw` via `start_process` instead.
+For large files: `Get-Content "path" | Select-Object -First 100`
+
+### Oracle Git Helper
+**Reusable utility:** `rudy-data/helpers/oracle_git.py`
+```python
+import sys; sys.path.insert(0, r"C:\Users\ccimi\rudy-workhorse\rudy-data\helpers")
+from oracle_git import OracleGit
+og = OracleGit()
+og.status()                           # git status --short
+og.ruff_check(["rudy/file.py"])       # ruff lint
+og.full_push("commit msg", ["file"])  # add + commit + push
+og.pr_view(130)                       # gh pr view --json
+og.pr_merge(130)                      # gh pr merge --squash
+```
+Always write results to a JSON file (stdout is swallowed).
+
+## Known MCP Bugs
+
+| Bug ID | Tool | Issue | Workaround |
+|--------|------|-------|-----------|
+| LG-S34-003 | DC `read_file` | Returns metadata-only, no file content | `Get-Content "path" -Raw` via `start_process` |
+| LG-S63-001 | DC `start_process` | Python `print()` stdout swallowed by `read_process_output` | Log to file, read with `Get-Content` |
+| LG-S63-002 | GitHub MCP `create_pull_request` | Parse error on `null merge_commit_sha` | Harmless — PR still creates. Verify with `pr_view()` |
+| LG-S63-003 | GitHub MCP `get_file_contents` | Returns `[object Object]` for large files | Use `oracle_git.py` or DC to read locally |
+| LG-S63-004 | DC `write_file` | 25-30 line chunk limit makes large files slow | Write complete file via Python helper script |
+
 ## Robin-Central Principle (HARD RULE — Session 60)
 
 **Robin is the central fulcrum for which all of this is being built.** He is not a bot meant to assist Alfred and Lucius. He is the Physical Agency Layer — the reason the Batcave exists. Alfred and Lucius are Robin's **mentors**.
