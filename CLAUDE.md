@@ -115,6 +115,32 @@ Robin's sentinel (PID 17984) picks this up automatically:
 
 **To cancel**: Set directive status to "cancelled" in the directive file,
 or Batman returning naturally supersedes (Robin yields to Alfred).
+### Process Hygiene Protocol (HARD RULE — Session 64)
+
+**Every Alfred/Robin session MUST clean up spawned processes before ending.**
+
+DC `start_process` spawns child processes (python, cmd, powershell, conhost)
+that persist after completion. Without cleanup, autonomous loops accumulate
+hundreds of orphans consuming GB of RAM. S64 audit: 110 python procs = 2GB.
+
+**At session end (before handoff):**
+```python
+from rudy.process_hygiene import cleanup_session_processes
+result = cleanup_session_processes()  # kills idle python/cmd/powershell
+# Log: result["killed"], result["freed_mb"]
+```
+
+**In autonomous/away mode:** Robin's sentinel MUST call `cleanup_session_processes()`
+every 30 minutes when a directive is active.
+
+**In scheduled tasks:** Any task using DC `start_process` must call cleanup after
+completing its work.
+
+**Audit command:** `python -m rudy.process_hygiene --audit`
+**Preview command:** `python -m rudy.process_hygiene --dry-run`
+
+Protected: Ollama, Node (n8n/MCP), RustDesk, Tailscale, SSH. See `rudy/process_hygiene.py`.
+
 ### Finding Capture Protocol (HARD RULE — Session 14)
 
 When any investigation surfaces an issue — **regardless of its origin** — follow this triage:
@@ -196,6 +222,24 @@ PowerShell `&` operator silently drops Python scripts that perform network I/O (
 mcp__Desktop_Commander__start_process(command="C:\Python312\python.exe script.py", shell="cmd")
 ```
 The `Could not find platform independent libraries <prefix>` warning from CMD is harmless.
+
+### GitHub MCP Preference (HARD RULE — Session 64)
+**Always use GitHub MCP tools (`create_pull_request`, `create_issue`, etc.) instead of `gh` CLI via subprocess.**
+The `gh` CLI requires careful environment setup (`GH_GIT_EXECUTABLE`, PATH, shell quoting) and
+fails silently in PowerShell. The MCP tools work directly despite LG-S63-002 (null merge_commit_sha
+parse error — PR still creates). Only fall back to `gh` CLI when MCP lacks the needed operation
+(e.g., `gh pr merge --squash` has no MCP equivalent).
+
+### Fresh Branch Strategy (HARD RULE — Session 64)
+**If `git rebase` fails for ANY reason — locked files, complex conflicts, dirty tree — do NOT retry.**
+Immediately switch to the fresh branch strategy:
+```bash
+git checkout -b fresh-branch origin/main
+git cherry-pick <commit-sha>   # or re-apply changes manually
+```
+Rebasing is fragile on Oracle due to locked files (Robin bridge, logs) and DC process artifacts.
+Cherry-pick onto a fresh branch is always safer and faster than debugging rebase failures.
+The old branch can be deleted after the fresh one is pushed.
 
 ### Oracle Git Helper
 **Reusable utility:** `rudy-data/helpers/oracle_git.py`
