@@ -695,6 +695,7 @@ class InitiativeEngine:
     """
 
     INITIATIVE_PRIORITIES = [
+        {"area": "roadmap_execution", "description": "Execute approved proposals from the Batcave roadmap backlog", "assess": "_assess_roadmap", "value": 11},
         {"area": "reliability", "description": "Improve Robin's tool-calling reliability and error handling", "assess": "_assess_reliability", "value": 10},
         {"area": "alfred_coordination", "description": "Strengthen Robin-Alfred communication protocol", "assess": "_assess_alfred_coordination", "value": 9},
         {"area": "environment_health", "description": "Maintain Oracle's system health and catch issues early", "assess": "_assess_environment", "value": 8},
@@ -861,6 +862,24 @@ pr_review, finding_fix, health_check"""
             "started_at": datetime.now().isoformat(),
             "source": "static_fallback",
         }
+
+    def _assess_roadmap(self):
+        """Check if there are approved proposals waiting for execution."""
+        try:
+            from rudy.proposal_pipeline import get_approved_items
+            items = get_approved_items()
+            if items:
+                top = items[0]
+                return {
+                    "needs_work": True,
+                    "action": f"execute_roadmap_item:{top['roadmap_id'] or top['filename']}",
+                    "rationale": f"Approved proposal '{top['title']}' ({top['priority']}) awaiting execution",
+                }
+        except ImportError:
+            log.debug("[Initiative] proposal_pipeline not available")
+        except Exception as e:
+            log.warning("[Initiative] Roadmap assessment failed: %s", e)
+        return {"needs_work": False, "action": "", "rationale": "No approved proposals pending"}
 
     def _assess_reliability(self):
         error_log = RUDY_LOGS / "robin-agent.log"
