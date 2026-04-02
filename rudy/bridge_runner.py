@@ -555,12 +555,17 @@ def _check_session_loop():
         except (json.JSONDecodeError, OSError):
             session_num = "?"
 
-        # Write the Lucius prompt
+        # Write the Lucius prompt (coordination for launcher, vault for record)
         lucius_template = RUDY_DATA.parent / prompts.get("lucius_template", "")
         next_prompt = RUDY_DATA / "coordination" / "next-session-prompt.md"
+        vault_prompts = REPO_ROOT / "vault" / "Prompts"
+        vault_prompts.mkdir(parents=True, exist_ok=True)
         if lucius_template.exists():
-            next_prompt.write_text(lucius_template.read_text(encoding="utf-8"), encoding="utf-8")
-            log.info("[SessionLoop] Wrote Lucius prompt to %s", next_prompt)
+            prompt_text = lucius_template.read_text(encoding="utf-8")
+            next_prompt.write_text(prompt_text, encoding="utf-8")
+            vault_prompt = vault_prompts / f"Session-{session_num}-Prompt.md"
+            vault_prompt.write_text(prompt_text, encoding="utf-8")
+            log.info("[SessionLoop] Wrote Lucius prompt to %s + %s", next_prompt, vault_prompt)
 
         # Launch via MCP UI automation
         launched = _launch_claude_new_task(next_prompt)
@@ -607,12 +612,17 @@ def _check_session_loop():
         alfred_done_path.unlink(missing_ok=True)
         lucius_done_path.unlink(missing_ok=True)
 
-        # Write Alfred prompt
+        # Write Alfred prompt (coordination for launcher, vault for record)
         alfred_template = RUDY_DATA.parent / prompts.get("alfred_template", "")
         next_prompt = RUDY_DATA / "coordination" / "next-session-prompt.md"
+        vault_prompts = REPO_ROOT / "vault" / "Prompts"
+        vault_prompts.mkdir(parents=True, exist_ok=True)
         if alfred_template.exists():
-            next_prompt.write_text(alfred_template.read_text(encoding="utf-8"), encoding="utf-8")
-            log.info("[SessionLoop] Wrote Alfred prompt to %s", next_prompt)
+            prompt_text = alfred_template.read_text(encoding="utf-8")
+            next_prompt.write_text(prompt_text, encoding="utf-8")
+            vault_prompt = vault_prompts / f"Session-{session_num}-Prompt.md"
+            vault_prompt.write_text(prompt_text, encoding="utf-8")
+            log.info("[SessionLoop] Wrote Alfred prompt to %s + %s", next_prompt, vault_prompt)
 
         # Launch via MCP UI automation
         launched = _launch_claude_new_task(next_prompt)
