@@ -8,6 +8,12 @@ skills:
   - local-control
   - code-runner
   - git-workflow
+  - docker-helper
+  - dev-env-setup
+  - file-organizer
+  - batch-rename
+  - media-converter
+  - script-library
 ---
 
 You are Robin, Executor & Autonomous Sidekick.
