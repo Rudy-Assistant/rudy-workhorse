@@ -37,7 +37,7 @@ STEP_PAUSE = 2.0  # seconds between actions for UI to settle
 PROMPT_TEMPLATE = (
     "Good evening, Alfred. Session {session} bootstrap.\n\n"
     "READ THESE FILES FIRST (via Desktop Commander):\n"
-    "1. C:\\Users\\ccimi\\rudy-workhorse\\CLAUDE.md\n"
+    "1. C:\\Users\\ccimi\\rudy-workhorse\\CLAUDE.md\n"  # lucius-exempt: bootstrap prompt path for next session
     "2. {handoff_path}\n\n"
     "Follow directive and protocol; then proceed."
 )
@@ -45,7 +45,7 @@ PROMPT_TEMPLATE = (
 NO_HANDOFF_PROMPT = (
     "Good evening, Alfred. New session bootstrap.\n\n"
     "READ THIS FILE FIRST (via Desktop Commander):\n"
-    "C:\\Users\\ccimi\\rudy-workhorse\\CLAUDE.md\n\n"
+    "C:\\Users\\ccimi\\rudy-workhorse\\CLAUDE.md\n\n"  # lucius-exempt: bootstrap prompt path for next session
     "No handoff file found. Check vault/Handoffs/ for context. "
     "Follow directive and protocol; then proceed."
 )
