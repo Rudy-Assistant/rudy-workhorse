@@ -5,7 +5,12 @@ Wraps Amnesty International MVT CLI for iOS/Android backup scanning.
 """
 import subprocess
 import logging
+import time
 from pathlib import Path
+
+# Constants carried from phone_check.py
+IOC_DIR = Path('rudy-data') / 'mvt-iocs'
+REPORTS_DIR = Path('rudy-data') / 'phone-reports'
 
 logger = logging.getLogger(__name__)
 
@@ -18,10 +23,10 @@ class MVTIntegration:
         self.ioc_dir = IOC_DIR
 
     def _check_mvt(self) -> bool:
-        _, _, rc = _run("mvt-android version")
+        _, _, rc = subprocess.run("mvt-android version")
         if rc == 0:
             return True
-        _, _, rc = _run("mvt-ios version")
+        _, _, rc = subprocess.run("mvt-ios version")
         return rc == 0
 
     def update_iocs(self) -> dict:
@@ -58,7 +63,7 @@ class MVTIntegration:
                 cmd += f' --iocs "{stix_files[0]}"'
         cmd += f' "{backup_path}"'
 
-        stdout, stderr, rc = _run(cmd, timeout=300)
+        stdout, stderr, rc = subprocess.run(cmd, timeout=300)
         return {
             "success": rc == 0,
             "output_dir": str(output_dir),
@@ -81,7 +86,7 @@ class MVTIntegration:
                 cmd += f' --iocs "{stix_files[0]}"'
         cmd += f' "{backup_path}"'
 
-        stdout, stderr, rc = _run(cmd, timeout=600)
+        stdout, stderr, rc = subprocess.run(cmd, timeout=600)
         return {
             "success": rc == 0,
             "output_dir": str(output_dir),

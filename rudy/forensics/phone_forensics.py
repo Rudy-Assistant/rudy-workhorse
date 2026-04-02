@@ -8,9 +8,13 @@ import subprocess
 import logging
 import json
 import time
+import re
 from pathlib import Path
 from datetime import datetime, timezone
 from typing import List, Dict, Optional
+
+# Constants carried from phone_check.py
+REPORTS_DIR = Path('rudy-data') / 'phone-reports'
 
 logger = logging.getLogger(__name__)
 
