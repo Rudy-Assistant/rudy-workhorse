@@ -788,6 +788,23 @@ def run_continuous() -> None:
                 time.sleep(poll_interval)
             cycle += 1
 
+            # S68: Sentinel heartbeat for liveness watchdog
+            # The liveness watchdog monitors this file to detect a dead sentinel.
+            try:
+                _hb_path = RUDY_DATA / "coordination" / "sentinel-heartbeat.json"
+                _hb_data = {
+                    "pid": os.getpid(),
+                    "cycle": cycle,
+                    "timestamp": datetime.now().isoformat(),
+                    "poll_interval": poll_interval,
+                }
+                _hb_tmp = _hb_path.with_suffix(".tmp")
+                with open(_hb_tmp, "w") as _hf:
+                    json.dump(_hb_data, _hf)
+                _hb_tmp.replace(_hb_path)
+            except Exception:
+                pass  # Never let heartbeat IO crash the loop
+
             # Quick health check every cycle
             phase_1_services(state)
             p3 = phase_3_connectivity(state)

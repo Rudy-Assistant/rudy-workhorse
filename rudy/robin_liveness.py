@@ -311,6 +311,237 @@ def restart_robin() -> dict:
     }
 
 
+
+
+# ---------------------------------------------------------------------------
+# S68: Full nervous system monitoring
+# ---------------------------------------------------------------------------
+# Robin's liveness is NOT just robin_main.py. The sentinel continuous loop
+# is Robin's nervous system — without it, Robin cannot detect inactivity,
+# launch Cowork sessions, or enter night shift. This module monitors ALL
+# critical components.
+
+SENTINEL_HEARTBEAT_FILE = COORD_DIR / "sentinel-heartbeat.json"
+SENTINEL_HEARTBEAT_STALE_SECONDS = 600  # 10 min — sentinel polls every 60-300s
+
+
+def _find_sentinel_processes() -> list:
+    """Find running sentinel continuous processes by command line pattern."""
+    results = []
+    try:
+        if sys.platform == "win32":
+            r = subprocess.run(
+                ["wmic", "process", "where",
+                 "name='python.exe' and commandline like '%robin_sentinel%--continuous%'",
+                 "get", "processid,commandline", "/format:csv"],
+                capture_output=True, text=True, timeout=10,
+            )
+            for line in r.stdout.strip().splitlines():
+                parts = line.strip().split(",")
+                if len(parts) >= 3 and parts[-1].isdigit():
+                    results.append(int(parts[-1]))
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        pass
+    return results
+
+
+def check_sentinel_status() -> dict:
+    """
+    Check Robin sentinel's liveness status.
+
+    The sentinel is Robin's nervous system — the continuous loop that monitors
+    services, detects inactivity, and launches new Cowork sessions. If the
+    sentinel dies, Robin is effectively paralyzed.
+    """
+    result = {
+        "alive": False,
+        "pid": 0,
+        "heartbeat_age_seconds": float("inf"),
+        "details": "",
+        "checked_at": datetime.now().isoformat(),
+    }
+    heartbeat = None
+    try:
+        with open(SENTINEL_HEARTBEAT_FILE) as f:
+            heartbeat = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        pass
+    if heartbeat:
+        result["pid"] = heartbeat.get("pid", 0)
+        ts = heartbeat.get("timestamp", "")
+        if ts:
+            try:
+                last_beat = datetime.fromisoformat(ts)
+                age = (datetime.now() - last_beat).total_seconds()
+                result["heartbeat_age_seconds"] = age
+            except (ValueError, TypeError):
+                pass
+    pid = result["pid"]
+    pid_alive = _is_pid_alive(pid) if pid > 0 else False
+    sentinel_pids = _find_sentinel_processes()
+    if pid_alive and result["heartbeat_age_seconds"] < SENTINEL_HEARTBEAT_STALE_SECONDS:
+        result["alive"] = True
+        result["details"] = (
+            f"Sentinel alive (PID {pid}, heartbeat "
+            f"{result['heartbeat_age_seconds']:.0f}s ago)"
+        )
+    elif sentinel_pids:
+        result["alive"] = True
+        result["pid"] = sentinel_pids[0]
+        if result["heartbeat_age_seconds"] < float("inf"):
+            result["details"] = (
+                f"Sentinel running (PID(s) {sentinel_pids}) "
+                f"but heartbeat stale ({result['heartbeat_age_seconds']:.0f}s)"
+            )
+        else:
+            result["details"] = (
+                f"Sentinel running (PID(s) {sentinel_pids}) but no heartbeat file"
+            )
+    elif pid_alive:
+        result["alive"] = True
+        result["details"] = (
+            f"Sentinel PID {pid} alive but heartbeat stale "
+            f"({result['heartbeat_age_seconds']:.0f}s)"
+        )
+    else:
+        result["alive"] = False
+        result["details"] = (
+            f"Sentinel DOWN - PID {pid} not running, no sentinel process found"
+        )
+    return result
+
+
+def start_sentinel() -> dict:
+    """
+    Start Robin's sentinel continuous loop via Task Scheduler.
+
+    CRITICAL: Uses Start-ScheduledTask so the process is owned by svchost.exe
+    and survives Cowork session endings. Direct subprocess.Popen creates a
+    child process that dies with the session.
+    """
+    log.info("Starting sentinel via Task Scheduler...")
+    try:
+        r = subprocess.run(
+            ["powershell", "-Command",
+             "Start-ScheduledTask -TaskName RobinContinuous"],
+            capture_output=True, text=True, timeout=15,
+        )
+        if r.returncode == 0:
+            log.info("Sentinel started via RobinContinuous scheduled task")
+            return {"started": True, "method": "scheduled_task", "error": ""}
+        else:
+            log.warning("Task Scheduler failed: %s", r.stderr.strip())
+            from rudy.paths import PYTHON_EXE
+            flags = (
+                subprocess.CREATE_NEW_PROCESS_GROUP
+                | subprocess.DETACHED_PROCESS
+            )
+            proc = subprocess.Popen(
+                [str(PYTHON_EXE), "-m", "rudy.agents.robin_sentinel",
+                 "--continuous"],
+                cwd=str(REPO_ROOT),
+                creationflags=flags,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            log.info("Sentinel started directly: PID %d", proc.pid)
+            return {
+                "started": True, "method": "direct",
+                "pid": proc.pid, "error": "",
+            }
+    except Exception as e:
+        log.error("Failed to start sentinel: %s", e)
+        return {"started": False, "method": "none", "error": str(e)}
+
+
+def ensure_sentinel_alive() -> dict:
+    """
+    Check if sentinel is alive; start it if not.
+
+    This is the structural guarantee that Robin's nervous system cannot die
+    silently. The liveness watchdog calls this every 5 minutes.
+    """
+    status = check_sentinel_status()
+    if status["alive"]:
+        log.info("Sentinel is alive: %s", status["details"])
+        return {"status": status, "action": "none"}
+    log.warning("Sentinel is DOWN: %s - starting...", status["details"])
+    start_result = start_sentinel()
+    time.sleep(5)
+    new_status = check_sentinel_status()
+    action = "started" if start_result["started"] else "failed"
+    log.info(
+        "After sentinel restart: alive=%s, PID=%s",
+        new_status["alive"], new_status["pid"],
+    )
+    return {"status": new_status, "action": action, "start_result": start_result}
+
+
+def check_full_nervous_system() -> dict:
+    """
+    Check Robin's COMPLETE nervous system — not just robin_main.
+
+    This is the function Alfred sessions MUST call at start (HARD RULE S68).
+    It checks:
+      1. Robin main process (robin_main.py heartbeat)
+      2. Sentinel continuous loop (sentinel-heartbeat.json)
+      3. Overall health assessment
+    """
+    robin_status = check_status()
+    sentinel_status = check_sentinel_status()
+    overall_healthy = robin_status["alive"] and sentinel_status["alive"]
+    components = {
+        "robin_main": {
+            "alive": robin_status["alive"],
+            "pid": robin_status["pid"],
+            "details": robin_status["details"],
+        },
+        "sentinel": {
+            "alive": sentinel_status["alive"],
+            "pid": sentinel_status["pid"],
+            "details": sentinel_status["details"],
+        },
+    }
+    if overall_healthy:
+        health = "GREEN"
+        summary = "All components operational"
+    elif sentinel_status["alive"] and not robin_status["alive"]:
+        health = "YELLOW"
+        summary = "Sentinel running but robin_main down"
+    elif robin_status["alive"] and not sentinel_status["alive"]:
+        health = "RED"
+        summary = "CRITICAL: Sentinel down - Robin is paralyzed"
+    else:
+        health = "RED"
+        summary = "CRITICAL: Both robin_main and sentinel are down"
+    return {
+        "health": health,
+        "summary": summary,
+        "overall_healthy": overall_healthy,
+        "components": components,
+        "checked_at": datetime.now().isoformat(),
+    }
+
+
+def ensure_full_nervous_system() -> dict:
+    """
+    Ensure Robin's complete nervous system is operational.
+    Starts any component that is down.
+
+    This is what the watchdog scheduled task should call.
+    """
+    robin_result = ensure_alive()
+    sentinel_result = ensure_sentinel_alive()
+    return {
+        "robin_main": robin_result,
+        "sentinel": sentinel_result,
+        "overall_healthy": (
+            robin_result["status"]["alive"]
+            and sentinel_result["status"]["alive"]
+        ),
+    }
+
+
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
@@ -324,6 +555,12 @@ if __name__ == "__main__":
     group.add_argument("--ensure", action="store_true", help="Check + start if needed")
     group.add_argument("--restart", action="store_true", help="Force restart")
     group.add_argument("--stop", action="store_true", help="Stop Robin")
+    group.add_argument("--check-sentinel", action="store_true",
+                       help="Check sentinel status (JSON)")
+    group.add_argument("--check-all", action="store_true",
+                       help="Check full nervous system (JSON)")
+    group.add_argument("--ensure-all", action="store_true",
+                       help="Ensure full nervous system is alive")
     args = parser.parse_args()
 
     if args.check:
@@ -334,5 +571,11 @@ if __name__ == "__main__":
         result = restart_robin()
     elif args.stop:
         result = stop_robin()
+    elif args.check_sentinel:
+        result = check_sentinel_status()
+    elif args.check_all:
+        result = check_full_nervous_system()
+    elif args.ensure_all:
+        result = ensure_full_nervous_system()
 
     print(json.dumps(result, indent=2, default=str))
