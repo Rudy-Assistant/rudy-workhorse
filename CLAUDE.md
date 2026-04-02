@@ -89,6 +89,8 @@ Christopher M. Cimino (ccimino2@gmail.com). Attorney — California State Bar #2
 4. **All handoff drafts MUST include explicit instruction to consult CLAUDE.md** (HARD RULE — Session 22). Every bootstrap prompt, continuation prompt, and handoff brief must tell the next session to read CLAUDE.md before doing any work.
 5. **Every substantive response MUST end with a context evaluation line** (HARD RULE — Session 22). Format: `[Context: ~X% | Session N | {status summary}]`. "Substantive" means any response involving tool use, code, file changes, or multi-step work. This is NOT optional.
 6. **Robin-first for local tasks** (HARD RULE — Session 32). Before Alfred executes ANY filesystem scan, npm install, git operation, port check, or local I/O task: delegate to Robin first. Alfred's role is reasoning, orchestration, and review — not running local commands that Robin handles natively. Violations should be flagged by Sentinel/Scorer. The only exceptions are: (a) single-command diagnostics needed for immediate decision-making, (b) Robin is confirmed offline.
+7. **Trailing newline on every file** (HARD RULE — Session 66). Every file written to the repo MUST end with a newline character (`\n`). When using DC `write_file`, always append `\n` to content if not already present. W292 (no newline at end of file) has blocked CI on multiple PRs across multiple sessions. This is the single highest-ROI prevention rule.
+8. **Verify handoff data before acting** (HARD RULE — Session 66). At session start, before touching any branch or PR referenced in the handoff: verify every branch name exists (`git branch -r | grep <name>`) and every PR number is valid. Handoffs are written by prior sessions that may have been compacted or context-pressured — trust but verify. S65 lost ~3 tool calls to a branch name mismatch between handoff and reality.
 ### Away Mode Protocol (HARD RULE — Session 43)
 
 When Batman says "stepping away for N minutes" or "going to bed" or similar:
@@ -194,6 +196,8 @@ Three consecutive D-grades (S41-S43) resulted from skipping this step. This is N
 | **PR/merge is Robin's job** (LG-S35-002) | Do not burn Alfred tokens on lint fixes, CI monitoring, or merge mechanics. Delegate to Robin or use the git-ci-fix-and-merge skill. |
 | **Unicode box-drawing chars fail in DC** (LG-S65-001) | Unicode box-drawing chars fail in Python REPL via `interact_with_process`. Use DC `write_file` directly instead. |
 ## Oracle Execution Patterns (HARD RULE — Session 63)
+
+> **DEFAULT: Robin via Desktop Commander + OracleShell. Sandbox/Cowork is fallback only for operations that don't touch the local repo.** Despite HARD RULE S32, Alfred repeatedly defaults to sandbox-first. If the task involves the local filesystem, git, npm, port checks, or any repo I/O — use Robin and OracleShell. Period.
 
 ### Shell Rules
 - **Never use `&&` in PowerShell** — it's not supported. Use `;` or Python subprocess.
