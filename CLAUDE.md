@@ -50,7 +50,7 @@ Christopher M. Cimino (ccimino2@gmail.com). Attorney — California State Bar #2
 **MCP Connectors (Cowork):** Gmail ✅ | Google Calendar ✅ | Chrome ✅ | Canva ✅ | Notion ✅ | Google Drive ✅
 **MCP Servers (CLI):** Context7 | Sequential Thinking | Desktop Commander | Windows-MCP | Brave Search | GitHub ✅ | n8n | HuggingFace
 **Plugins:** Engineering | Productivity | Operations | Legal | Finance | Data | Plugin Management
-**Key Skills:** docx, pptx, xlsx, pdf, schedule, skill-creator, oracle-exec + 70+ plugin skills
+**Key Skills:** docx, pptx, xlsx, pdf, schedule, skill-creator, oracle-exec, oracle-shell-executor + 70+ plugin skills
 **Agent Teams:** Enabled (`experimental.agentTeams: true`). Subagent defs: `.claude/agents/{alfred,lucius,robin,sentinel}.md`. Persona source: `rudy/persona_config.yaml`
 **Claude Code:** v2.1.87 | 7 global plugins enabled
 
@@ -168,10 +168,9 @@ Write handoffs HERE and ONLY here. Do NOT write to repo root, `rudy-data/handoff
 
 ## Last Session Score
 
-Alfred Session 60: 3 PRs merged (#126, #127, #128). 2 skill invocations (operations:process-optimization, skill-creator).
-oracle-exec skill created. Robin-central principle established (HARD RULE S60). Batcave thesis rewritten.
-ADR-017 retired scoring pipeline. Agent Teams live delegation tested (Alfred→Robin PASS).
-Previous: S59 (3 PRs, Agent Teams resolved). Full history in vault/Scores/.
+Alfred Session 65: 3 PRs merged (#134, #135, #136). Voice gateway, process hygiene, oracle_shell.py shipped.
+RAG seeded 169/169 (0 failures). 4 RAG skills deployed. ADR-018 written (780 lines).
+Previous: S60 (3 PRs, oracle-exec skill, Robin-central principle). Full history in vault/Scores/.
 
 ### SKILL INVOCATION GATE (HARD RULE — S41, reinforced S44)
 
@@ -193,6 +192,7 @@ Three consecutive D-grades (S41-S43) resulted from skipping this step. This is N
 | **DC read_file returns metadata-only** (LG-S34-003) | Write a Python helper script to `rudy-data/` and execute via `start_process`. Do NOT call `read_file` repeatedly hoping it works. |
 | **CMD mangles Python -c quotes** | Write `.py` scripts to `rudy-data/` and execute. Never use inline Python via CMD. |
 | **PR/merge is Robin's job** (LG-S35-002) | Do not burn Alfred tokens on lint fixes, CI monitoring, or merge mechanics. Delegate to Robin or use the git-ci-fix-and-merge skill. |
+| **Unicode box-drawing chars fail in DC** (LG-S65-001) | Unicode box-drawing chars fail in Python REPL via `interact_with_process`. Use DC `write_file` directly instead. |
 ## Oracle Execution Patterns (HARD RULE — Session 63)
 
 ### Shell Rules
@@ -200,6 +200,17 @@ Three consecutive D-grades (S41-S43) resulted from skipping this step. This is N
 - **Always use `&` operator** to invoke .exe files: `& C:\Python312\python.exe script.py`
 - **DC `start_process` default shell is PowerShell** — specify `shell: "cmd"` when you need CMD.
 - **For multi-step commands:** Write a `.py` helper to `rudy-data/` and execute it. Never chain complex commands in PowerShell.
+
+### CI Lint Rule Set (Session 65)
+The CI workflow uses ruff with these flags:
+```
+ruff check --select E,F,W --ignore E501,E402,F401
+```
+- **E**: pycodestyle errors (except E501 line length, E402 module-level import order)
+- **F**: pyflakes errors (except F401 unused imports)
+- **W**: pycodestyle warnings (W292 trailing newline is the most common blocker)
+
+Use `OracleShell.run_ci_local()` to pre-check before pushing. It runs ruff + py_compile + bandit.
 
 ### DC stdout Workaround (LG-S63-001)
 DC `start_process` swallows Python `print()` output. **Always** log to file, then read:
@@ -241,19 +252,46 @@ Rebasing is fragile on Oracle due to locked files (Robin bridge, logs) and DC pr
 Cherry-pick onto a fresh branch is always safer and faster than debugging rebase failures.
 The old branch can be deleted after the fresh one is pushed.
 
-### Oracle Git Helper
-**Reusable utility:** `rudy-data/helpers/oracle_git.py`
+### Oracle Shell Executor (Session 65)
+**Unified execution layer:** `rudy/oracle_shell.py` (395 lines). Supersedes `rudy-data/helpers/oracle_git.py`.
+Skill docs: `.claude/skills/oracle-shell-executor/SKILL.md`
+
 ```python
-import sys; sys.path.insert(0, r"C:\Users\ccimi\rudy-workhorse\rudy-data\helpers")
-from oracle_git import OracleGit
-og = OracleGit()
-og.status()                           # git status --short
-og.ruff_check(["rudy/file.py"])       # ruff lint
-og.full_push("commit msg", ["file"])  # add + commit + push
-og.pr_view(130)                       # gh pr view --json
-og.pr_merge(130)                      # gh pr merge --squash
+from rudy.oracle_shell import OracleShell
+sh = OracleShell()
+
+# Shell execution
+sh.run("Get-ChildItem C:\\Users")                  # PowerShell (default)
+sh.run("dir C:\\Users", shell="cmd")               # CMD explicitly
+
+# File I/O
+sh.write_file("path/to/file.py", content)          # Write with encoding
+sh.read_file("path/to/file.py")                    # Read via Get-Content
+
+# Git operations (replaces oracle_git.py)
+sh.git_status()                                     # git status --short
+sh.git_add(["rudy/file.py"])                        # git add
+sh.git_commit("commit message")                     # git commit
+sh.git_push()                                       # git push (uses CMD for network I/O)
+sh.git_full_push("msg", ["rudy/file.py"])           # add + commit + push in one call
+
+# CI pre-check (runs ruff + py_compile + bandit)
+sh.run_ci_local(["rudy/file.py"])                   # Catches W292, syntax errors before push
+
+# Pre-flight checks
+sh.preflight_check()                                # Detects locked files, dirty tree, stale branches
+
+# PR operations
+sh.pr_create("title", "body", "branch")            # Create PR via GitHub MCP
+sh.pr_view(137)                                     # View PR details
+
+# Process cleanup (integrates process_hygiene.py)
+sh.cleanup()                                        # Kill orphaned processes
 ```
-Always write results to a JSON file (stdout is swallowed).
+Always write results to a JSON file (stdout is swallowed by DC — see LG-S63-001).
+
+**Legacy note:** `rudy-data/helpers/oracle_git.py` still exists but is deprecated.
+All new sessions should use `OracleShell` exclusively.
 
 ## Known MCP Bugs
 
@@ -262,9 +300,10 @@ Always write results to a JSON file (stdout is swallowed).
 | LG-S34-003 | DC `read_file` | Returns metadata-only, no file content | `Get-Content "path" -Raw` via `start_process` |
 | LG-S63-001 | DC `start_process` | Python `print()` stdout swallowed by `read_process_output` | Log to file, read with `Get-Content` |
 | LG-S63-002 | GitHub MCP `create_pull_request` | Parse error on `null merge_commit_sha` | Harmless — PR still creates. Verify with `pr_view()` |
-| LG-S63-003 | GitHub MCP `get_file_contents` | Returns `[object Object]` for large files | Use `oracle_git.py` or DC to read locally |
+| LG-S63-003 | GitHub MCP `get_file_contents` | Returns `[object Object]` for large files | Use `OracleShell.read_file()` or DC to read locally |
 | LG-S63-004 | DC `write_file` | 25-30 line chunk limit makes large files slow | Write complete file via Python helper script |
 | LG-S64-001 | DC `start_process` | PowerShell `&` silently drops long-running Python scripts (~>1s network I/O); exits code 0, no output file written | Use `shell: "cmd"` parameter for any script with network operations (git push, API calls) |
+| LG-S65-001 | DC `write_file` | Unicode box-drawing chars fail in Python REPL via `interact_with_process` | Use DC `write_file` directly |
 
 ## Robin-Central Principle (HARD RULE — Session 60)
 
@@ -302,20 +341,20 @@ See `docs/MISSION.md` for the full architectural rationale.
 | **Repo** | `Rudy-Assistant/rudy-workhorse` (private) |
 | **URL** | https://github.com/Rudy-Assistant/rudy-workhorse |
 | **Branch** | main (all changes through feature branches + PRs) |
-| **CI/CD** | lint (ruff + py_compile), smoke tests, release (tag-based) + pre-commit hook |
+| **CI/CD** | lint (`ruff check --select E,F,W --ignore E501,E402,F401` + py_compile), smoke tests, release (tag-based) + pre-commit hook |
 | **gh CLI** | v2.88.1, authenticated as Rudy-Assistant |
 | **PAT** | Classic PAT (ghp_), expires 2026-06-27 |
 
-## Current Sprint (Session 60)
+## Current Sprint (Session 65)
 
-1. PR #126 merged: `oracle-exec` skill — 3 patterns (CMD quotes, Cowork mount I/O, DC read_file) + rudy API quick-reference
-2. PR #127 merged: Robin-central principle — reframed Robin as central fulcrum, Alfred/Lucius as mentors. HARD RULE S60.
-3. PR #128 merged: Batcave System thesis — complete MISSION.md rewrite (Andrew as design constraint, Sentinel as learning engine)
-4. ADR-016 retrospective: S55–S59 avg 1.6 PRs/session, finding age ~1.0. Fix-first working.
-5. ADR-017: Retired scoring pipeline. Replaced by Agent Teams real-time governance.
-6. Agent Teams live delegation: Alfred→Robin via `claude -p` — PASS.
-7. Sentinel reframed from anomaly detection → Observation & Learning Engine
-8. HEAD at `0d98dd0` on main
+1. PR #134 merged: voice_gateway.py + W292 fix
+2. PR #135 merged: process_hygiene.py + 3 HARD RULES + W292 fix
+3. PR #136 merged: oracle_shell.py — unified execution layer (395 lines, 8/8 smoke tests)
+4. RAG seed verification: 169/169 success, 0 failures
+5. 4 RAG skills deployed: rag-query, rag-upload, rag-explore, rag-status
+6. ADR-018 written: LightRAG Integration (780 lines)
+7. Lucius protocol proposal filed (context evaluation + improvement suggestions)
+8. HEAD at `9e30551` on main
 ## Lucius Gate — Session Governance (ADR-004 v2.1, reformed by ADR-016)
 
 **Core module:** `rudy/agents/lucius_gate.py`
