@@ -390,96 +390,133 @@ def _parse_snapshot_elements(snapshot_text):
     return elements
 
 
-def _launch_claude_new_task(prompt_path):
-    """Use Robin's MCP client to open a new Claude task with the given prompt.
+def _launch_claude_cli(prompt_text: str, timeout_sec: int = 600) -> bool:
+    """Launch a headless Claude Code session using the ``claude -p`` CLI.
 
-    Connects to Windows-MCP, takes a Snapshot to find UI element coordinates,
-    then clicks 'New task' and types the prompt.  Falls back to
-    wake_via_claude_app() if Windows-MCP is unavailable.
+    This is the **primary** session-launch mechanism (S62).  The pattern is
+    proven in ``email_poller.py``, ``rudy-listener.py``, and
+    ``rudy-gmail-api.py``.  It avoids all UI automation fragility.
+
+    Args:
+        prompt_text: The full bootstrap prompt to send to Claude.
+        timeout_sec: Max seconds to wait for Claude to finish (default 10 min).
+
+    Returns:
+        True if Claude exited successfully with output.
+    """
+    import subprocess
+
+    if not prompt_text.strip():
+        log.error("[SessionLoop] Empty prompt \u2014 refusing to launch headless session")
+        return False
+
+    log.info("[SessionLoop] Launching Claude CLI session (%d chars prompt)", len(prompt_text))
+    try:
+        result = subprocess.run(
+            ["claude", "-p", prompt_text, "--output-format", "text"],
+            capture_output=True,
+            text=True,
+            timeout=timeout_sec,
+            cwd=str(REPO_ROOT),
+        )
+        response = result.stdout.strip()
+        if result.returncode != 0:
+            log.warning(
+                "[SessionLoop] Claude CLI exited %d: %s",
+                result.returncode,
+                (result.stderr or "")[:500],
+            )
+        if response:
+            log.info("[SessionLoop] Claude CLI session completed (%d chars output)", len(response))
+            return True
+        else:
+            log.warning("[SessionLoop] Claude CLI returned empty output")
+            return result.returncode == 0
+    except subprocess.TimeoutExpired:
+        log.warning("[SessionLoop] Claude CLI timed out after %ds", timeout_sec)
+        return False
+    except FileNotFoundError:
+        log.error("[SessionLoop] 'claude' not found on PATH \u2014 is Claude Code installed?")
+        return False
+    except Exception as e:
+        log.error("[SessionLoop] Claude CLI launch failed: %s", e)
+        return False
+
+
+def _launch_claude_bat(prompt_path) -> bool:
+    """Launch a session via the robin-session-launcher.bat script.
+
+    Fallback for environments where ``claude -p`` is not on PATH but the
+    batch script has been configured with the full path to the Claude
+    executable.
+
+    Returns True if the script exited successfully.
+    """
+    import subprocess
+
+    bat_path = REPO_ROOT / "scripts" / "robin-session-launcher.bat"
+    if not bat_path.exists():
+        log.warning("[SessionLoop] Batch launcher not found at %s", bat_path)
+        return False
+
+    prompt_file = str(prompt_path) if hasattr(prompt_path, '__fspath__') else str(prompt_path)
+    log.info("[SessionLoop] Launching via batch script: %s", bat_path)
+    try:
+        result = subprocess.run(
+            [str(bat_path), prompt_file],
+            capture_output=True,
+            text=True,
+            timeout=120,
+            cwd=str(REPO_ROOT),
+        )
+        return result.returncode == 0
+    except Exception as e:
+        log.error("[SessionLoop] Batch launcher failed: %s", e)
+        return False
+
+
+def _launch_claude_new_task(prompt_path):
+    """Launch a new Claude session for the session loop.
+
+    Strategy (S62 \u2014 reliability-first):
+      1. ``claude -p`` CLI  \u2014 proven pattern, no UI fragility
+      2. Batch script fallback \u2014 for PATH issues
+      3. UI automation (legacy) \u2014 last resort only
 
     Returns True if the launch succeeded.
     """
-    try:
-        from rudy.robin_mcp_client import MCPServerRegistry
-        registry = MCPServerRegistry()
+    # Read the prompt text
+    prompt_text = ""
+    if hasattr(prompt_path, 'exists') and prompt_path.exists():
+        prompt_text = prompt_path.read_text(encoding="utf-8")
+    elif isinstance(prompt_path, str):
+        p = Path(prompt_path)
+        if p.exists():
+            prompt_text = p.read_text(encoding="utf-8")
 
-        if not registry.connect("windows-mcp"):
-            log.warning("[SessionLoop] Windows-MCP unavailable, falling back")
-            from rudy.robin_wake_alfred import wake_via_claude_app
-            return wake_via_claude_app()
+    if not prompt_text.strip():
+        log.error("[SessionLoop] No prompt text found at %s", prompt_path)
+        return False
 
-        import time as _time
-
-        # Step 1: Launch/focus Claude app
-        registry.call_tool("windows-mcp.App", {"mode": "launch", "name": "Claude"})
-        _time.sleep(2.0)
-
-        # Step 2: Take Snapshot to find UI element coordinates
-        snap_result = registry.call_tool("windows-mcp.Snapshot", {})
-        snap_text = snap_result.content if snap_result else ""
-        elements = _parse_snapshot_elements(snap_text)
-        log.info("[SessionLoop] Snapshot parsed: %d elements found", len(elements))
-
-        # Step 3: Find and click "New task"
-        new_task_coords = elements.get("new task")
-        if not new_task_coords:
-            log.error("[SessionLoop] Could not find 'New task' in Snapshot elements")
-            registry.disconnect_all()
-            return False
-
-        log.info("[SessionLoop] Clicking 'New task' at %s", new_task_coords)
-        registry.call_tool("windows-mcp.Click", {"loc": list(new_task_coords)})
-        _time.sleep(2.0)
-
-        # Step 4: Take another Snapshot to find the input field
-        snap_result2 = registry.call_tool("windows-mcp.Snapshot", {})
-        snap_text2 = snap_result2.content if snap_result2 else ""
-        elements2 = _parse_snapshot_elements(snap_text2)
-
-        # Find the prompt input field
-        input_coords = None
-        for name, coords in elements2.items():
-            if "write your prompt" in name or "message" in name:
-                input_coords = coords
-                break
-        # Fallback: look for any Edit control in Claude
-        if not input_coords:
-            for name, coords in elements2.items():
-                if "reply" in name or "prompt" in name:
-                    input_coords = coords
-                    break
-
-        if not input_coords:
-            log.error("[SessionLoop] Could not find input field after clicking New task")
-            registry.disconnect_all()
-            return False
-
-        # Step 5: Type the prompt
-        prompt_text = prompt_path.read_text(encoding="utf-8") if prompt_path.exists() else ""
-        if prompt_text:
-            # Truncate if very long (Type has practical limits)
-            if len(prompt_text) > 4000:
-                prompt_text = prompt_text[:4000] + "\n\n[Prompt truncated for UI paste]"
-
-            log.info("[SessionLoop] Typing prompt (%d chars) at %s", len(prompt_text), input_coords)
-            registry.call_tool("windows-mcp.Type", {
-                "loc": list(input_coords),
-                "text": prompt_text,
-                "press_enter": True,
-            })
-            log.info("[SessionLoop] Prompt sent to new Claude task")
-
-        registry.disconnect_all()
+    # --- Strategy 1: claude -p CLI (primary) ---
+    if _launch_claude_cli(prompt_text):
+        log.info("[SessionLoop] Session launched via Claude CLI (primary path)")
         return True
 
-    except Exception as e:
-        log.error("[SessionLoop] MCP launch failed: %s", e)
-        try:
-            from rudy.robin_wake_alfred import wake_via_claude_app
-            return wake_via_claude_app()
-        except Exception:
-            return False
+    # --- Strategy 2: Batch script fallback ---
+    log.info("[SessionLoop] CLI failed, trying batch script fallback...")
+    if _launch_claude_bat(prompt_path):
+        log.info("[SessionLoop] Session launched via batch script (fallback)")
+        return True
 
+    # --- Strategy 3: Legacy UI automation (last resort) ---
+    log.warning("[SessionLoop] All reliable methods failed. Trying legacy UI automation...")
+    try:
+        from rudy.robin_wake_alfred import wake_via_claude_app
+        return wake_via_claude_app()
+    except Exception as e:
+        log.error("[SessionLoop] All launch methods exhausted. Last error: %s", e)
+        return False
 
 def _check_session_loop():
     """Orchestrate the Alfred/Lucius session loop.

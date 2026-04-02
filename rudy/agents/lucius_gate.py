@@ -1094,6 +1094,21 @@ def session_start_gate(
     except Exception as e:
         log.warning(f"Findings load failed: {e}")
 
+    # Scan for pending proposals (S62: Alfred->Lucius pipeline)
+    try:
+        from rudy.proposal_pipeline import scan_proposals
+        pending_proposals = scan_proposals()
+        if pending_proposals:
+            titles = [p["title"] for p in pending_proposals[:5]]
+            result.recommendations.append(
+                f"\U0001f4cb {len(pending_proposals)} pending proposal(s) for review: "
+                + ", ".join(titles)
+            )
+    except ImportError:
+        pass
+    except Exception as e:
+        log.warning(f"Proposal scan failed: {e}")
+
     log.info(result.summary())
     return result
 

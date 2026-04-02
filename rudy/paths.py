@@ -89,6 +89,10 @@ OPENSPACE_DIR = HOME / "OpenSpace"
 # Vault Handoffs: canonical handoff location inside Obsidian (most-used folder)
 VAULT_HANDOFFS = BATCAVE_VAULT / "Handoffs"
 
+# Vault Roadmap: strategic items and proposals (S62)
+VAULT_ROADMAP = BATCAVE_VAULT / "Roadmap"
+PROPOSALS_DIR = VAULT_ROADMAP / "Proposals"
+
 # Agent avatar assets
 ROBIN_AVATAR = RUDY_DATA / "assets" / "robin-avatar.png"
 
@@ -96,7 +100,7 @@ ROBIN_AVATAR = RUDY_DATA / "assets" / "robin-avatar.png"
 # Ensure critical directories exist at import time
 # ---------------------------------------------------------------------------
 
-for _d in [RUDY_DATA, RUDY_LOGS, RUDY_COMMANDS, ROBIN_INBOX, SCREENSHOT_DIR, LUCIUS_AUDITS, INBOXES_DIR, ALFRED_INBOX, LUCIUS_INBOX, ROBIN_INBOX_V2, HANDOFFS_DIR, BATCAVE_VAULT, VAULT_HANDOFFS]:
+for _d in [RUDY_DATA, RUDY_LOGS, RUDY_COMMANDS, ROBIN_INBOX, SCREENSHOT_DIR, LUCIUS_AUDITS, INBOXES_DIR, ALFRED_INBOX, LUCIUS_INBOX, ROBIN_INBOX_V2, HANDOFFS_DIR, BATCAVE_VAULT, VAULT_HANDOFFS, VAULT_ROADMAP, PROPOSALS_DIR]:
     _d.mkdir(parents=True, exist_ok=True)
 
 # Scaffold BatcaveVault Home.md if missing (per-Oracle, gitignored)
