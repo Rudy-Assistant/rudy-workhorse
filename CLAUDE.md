@@ -166,6 +166,16 @@ Three consecutive D-grades (S41-S43) resulted from skipping this step. This is N
 | **DC read_file returns metadata-only** (LG-S34-003) | Write a Python helper script to `rudy-data/` and execute via `start_process`. Do NOT call `read_file` repeatedly hoping it works. |
 | **CMD mangles Python -c quotes** | Write `.py` scripts to `rudy-data/` and execute. Never use inline Python via CMD. |
 | **PR/merge is Robin's job** (LG-S35-002) | Do not burn Alfred tokens on lint fixes, CI monitoring, or merge mechanics. Delegate to Robin or use the git-ci-fix-and-merge skill. |
+## Robin-Central Principle (HARD RULE — Session 60)
+
+**Robin is the central fulcrum for which all of this is being built.** He is not a bot meant to assist Alfred and Lucius. He is the Physical Agency Layer — the reason the Batcave exists. Alfred and Lucius are Robin's **mentors**.
+
+1. **Route through Robin whenever possible.** Every task routed through Robin is training data that develops his capabilities. This is more important than token efficiency.
+2. **Mentorship, not delegation.** Alfred and Lucius don't just hand Robin tasks — they develop his ability to handle increasingly complex work autonomously.
+3. **The system converges when Robin can handle everything.** Alfred and Lucius succeed when Robin no longer needs them.
+
+See `docs/MISSION.md` for the full architectural rationale.
+
 ## Engineering Principles
 
 1. **Best-in-Class First** — Search for existing open-source tools BEFORE building. Evaluate at least 3 candidates. Only build custom if no existing solution fits. Document the search in Notion Improvement Log.
