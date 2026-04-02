@@ -21,9 +21,8 @@ import os
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional
 
-from rudy.paths import RUDY_DATA, RUDY_LOGS, ROBIN_INBOX_V2
+from rudy.paths import RUDY_DATA, ROBIN_INBOX_V2
 
 log = logging.getLogger("sentinel.learning")
 
@@ -519,7 +518,7 @@ def measure_effectiveness(proposal_id: str, events_after: list[dict]) -> dict:
         return {"proposal_id": proposal_id, "verdict": "not_found"}
 
     # Simple heuristic: check if the pattern's app/activity frequency decreased
-    source_patterns = proposal.get("source_patterns", [])
+    # source_patterns reserved for future frequency comparison
     # This is a placeholder — real measurement would compare specific
     # activity frequencies before vs after deployment
     result = {

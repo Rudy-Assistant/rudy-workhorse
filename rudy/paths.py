@@ -13,7 +13,7 @@ Detection strategy:
        can override this entirely.
 
 This means:
-    - Clone to ~/Desktop/rudy-workhorse  →  data lives at ~/Desktop/rudy-data
+    - Clone to ~/Desktop/rudy-workhorse  # lucius-exempt: docstring example  →  data lives at ~/Desktop/rudy-data
     - Clone to C:/Projects/rudy-workhorse →  data lives at C:/Projects/rudy-data
     - Set BATCAVE_DATA=D:/batcave-data    →  data lives at D:/batcave-data
 """
@@ -149,7 +149,7 @@ def find_exe(name: str, fallbacks: tuple[str, ...] = ()) -> str:
 PYTHON_EXE = find_exe("python", (
     r"C:\Python312\python.exe",
     r"C:\Python311\python.exe",
-    r"C:\Users\ccimi\AppData\Local\Programs\Python\Python312\python.exe",
+    r"C:\Users\ccimi\AppData\Local\Programs\Python\Python312\python.exe",  # lucius-exempt: canonical path lookup
 ))
 
 GIT_EXE = find_exe("git", (

@@ -1075,7 +1075,7 @@ class Sentinel(AgentBase):
                 self._observe(
                     "behavioral_learning",
                     f"Learning cycle: {events} events, {patterns} patterns, {proposals} proposals"
-                    + (f" (full analysis)" if result.get("full_analysis") else " (quick)"),
+                    + (" (full analysis)" if result.get("full_analysis") else " (quick)"),
                     actionable=proposals > 0,
                 )
             elif result.get("result") == "no_events_available":

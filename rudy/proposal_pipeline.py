@@ -17,7 +17,6 @@ Usage:
     )
 """
 
-import json
 import logging
 import re
 from datetime import datetime
@@ -173,7 +172,7 @@ def mark_proposal(filename: str, new_status: str, reviewer: str = "Lucius",
                 review_header,
                 f"{review_header}\n\n"
                 f"**Reviewer:** {reviewer}  \n"
-                f"**Date:** {_today()}  \n"
+                f"**Date:** {datetime.now().strftime("%Y-%m-%d")}  \n"
                 f"**Decision:** {new_status}  \n"
                 f"**Notes:** {notes}\n",
             )
