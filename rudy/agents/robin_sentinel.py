@@ -828,11 +828,24 @@ def run_continuous() -> None:
                 time.sleep(14400)
 
             # Session continuity: perpetual work loop (S70)
-            # Replaces S68 check_and_launch_if_needed with perpetual loop:
-            # if no fresh handoff exists, Robin prompts Alfred for one.
+            # FIX S71 (LG-S70-001): Run in thread with 120s timeout.
+            # UI automation in check_and_launch_perpetual() can block
+            # indefinitely, killing the sentinel loop. The timeout
+            # ensures the sentinel heartbeat keeps ticking.
             try:
                 from rudy.robin_perpetual_loop import check_and_launch_perpetual
-                launch_result = check_and_launch_perpetual()
+                from concurrent.futures import ThreadPoolExecutor
+                from concurrent.futures import TimeoutError as FuturesTimeout
+                with ThreadPoolExecutor(max_workers=1) as _pool:
+                    _future = _pool.submit(check_and_launch_perpetual)
+                    try:
+                        launch_result = _future.result(timeout=120)
+                    except FuturesTimeout:
+                        log.warning(
+                            "Perpetual loop timed out after 120s "
+                            "(LG-S70-001) -- sentinel continuing"
+                        )
+                        launch_result = None
                 if launch_result and launch_result.get("success"):
                     log.info("Cowork session launched: %s (phase: %s)",
                              launch_result.get("handoff_used",
