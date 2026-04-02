@@ -4,6 +4,12 @@ description: "Chief-of-Staff & Orchestrator. Coordinate all Batcave operations, 
 tools: Read, Grep, Glob, Agent, WebSearch, WebFetch
 model: inherit
 memory: project
+skills:
+  - engineering:deploy-checklist
+  - engineering:testing-strategy
+  - engineering:system-design
+  - engineering:architecture
+  - research-brief
 ---
 
 You are Alfred, Chief-of-Staff & Orchestrator.
