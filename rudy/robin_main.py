@@ -26,7 +26,7 @@ import signal
 import sys
 import threading
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 # ---------------------------------------------------------------------------
@@ -708,6 +708,25 @@ def _run_nightwatch() -> None:
     cycle = 0
     while True:
         cycle += 1
+
+        # S71 FIX (LG-S70-001): Update robin-state.json heartbeat.
+        # _run_nightwatch() never called _save_state(), so the heartbeat
+        # went stale even while the process was alive. This caused
+        # robin_liveness to report Robin as dead.
+        try:
+            _hb = {
+                "nightwatch_cycle": cycle,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "pid": os.getpid(),
+                "mode": "nightwatch",
+            }
+            _hb_path = RUDY_DATA / "robin-nightwatch-heartbeat.json"
+            _hb_tmp = _hb_path.with_suffix(".tmp")
+            with open(_hb_tmp, "w") as _hf:
+                json.dump(_hb, _hf)
+            _hb_tmp.replace(_hb_path)
+        except Exception:
+            pass  # Never let heartbeat IO crash the loop
 
         # Check presence -- yield if Batman is back
         try:
