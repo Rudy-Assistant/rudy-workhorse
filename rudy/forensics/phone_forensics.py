@@ -10,6 +10,7 @@ import json
 import time
 from pathlib import Path
 from datetime import datetime, timezone
+from typing import List, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
