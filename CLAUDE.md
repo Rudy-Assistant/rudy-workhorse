@@ -37,7 +37,7 @@ Christopher M. Cimino (ccimino2@gmail.com). Attorney — California State Bar #2
 |-------|--------|----------|
 | **SystemMaster** | Health & Recovery | Every 5 min |
 | **SecurityAgent** | Defensive Intelligence | Every 30 min |
-| **Sentinel** | Awareness & Anomaly Detection | Every 15 min |
+| **Sentinel** | Observation & Learning Engine | Every 15 min |
 | **TaskMaster** | Work Coordination | Daily 7:30 AM |
 | **ResearchIntel** | Intelligence & Learning | Daily 6 AM + M/W/F 10 AM |
 | **OperationsMonitor** | Maintenance & Cleanup | Weekly Sun 4 AM |
@@ -50,7 +50,7 @@ Christopher M. Cimino (ccimino2@gmail.com). Attorney — California State Bar #2
 **MCP Connectors (Cowork):** Gmail ✅ | Google Calendar ✅ | Chrome ✅ | Canva ✅ | Notion ✅ | Google Drive ✅
 **MCP Servers (CLI):** Context7 | Sequential Thinking | Desktop Commander | Windows-MCP | Brave Search | GitHub ✅ | n8n | HuggingFace
 **Plugins:** Engineering | Productivity | Operations | Legal | Finance | Data | Plugin Management
-**Key Skills:** docx, pptx, xlsx, pdf, schedule, skill-creator + 70+ plugin skills
+**Key Skills:** docx, pptx, xlsx, pdf, schedule, skill-creator, oracle-exec + 70+ plugin skills
 **Agent Teams:** Enabled (`experimental.agentTeams: true`). Subagent defs: `.claude/agents/{alfred,lucius,robin,sentinel}.md`. Persona source: `rudy/persona_config.yaml`
 **Claude Code:** v2.1.87 | 7 global plugins enabled
 
@@ -142,9 +142,10 @@ Write handoffs HERE and ONLY here. Do NOT write to repo root, `rudy-data/handoff
 
 ## Last Session Score
 
-Alfred Session 59: 3 PRs merged (#121, #122, #123). 2 skill invocations (engineering:system-design, engineering:documentation).
-Agent Teams enabled on Oracle. 15 new skills distributed across agents. 204 temp files cleaned. S54→S58 carried item (Agent Teams) resolved.
-Previous: S52 pending /lucius-review. Full history in vault/Scores/.
+Alfred Session 60: 3 PRs merged (#126, #127, #128). 2 skill invocations (operations:process-optimization, skill-creator).
+oracle-exec skill created. Robin-central principle established (HARD RULE S60). Batcave thesis rewritten.
+ADR-017 retired scoring pipeline. Agent Teams live delegation tested (Alfred→Robin PASS).
+Previous: S59 (3 PRs, Agent Teams resolved). Full history in vault/Scores/.
 
 ### SKILL INVOCATION GATE (HARD RULE — S41, reinforced S44)
 
@@ -206,15 +207,16 @@ See `docs/MISSION.md` for the full architectural rationale.
 | **gh CLI** | v2.88.1, authenticated as Rudy-Assistant |
 | **PAT** | Classic PAT (ghp_), expires 2026-06-27 |
 
-## Current Sprint (Session 59)
+## Current Sprint (Session 60)
 
-1. PR #121 merged: Regenerated .claude/agents/*.md from fixed persona YAML (AF-S57-001 resolved)
-2. PR #122 merged: Enhanced all 4 agent skill sets (Alfred +5, Lucius +3, Robin +6, Sentinel +2)
-3. PR #123 merged: Expanded Sentinel CLI monitoring to full capability audit (version, plugins, flags, MCP, settings drift)
-4. Agent Teams enabled on Oracle: `experimental.agentTeams: true` in ~/.claude/settings.json
-5. Temp file cleanup: 204 one-off helper scripts deleted from rudy-data/
-6. Carried item RESOLVED: Agent Teams (S54→S58→S59) — settings enabled, subagent defs generated, skills mapped
-7. HEAD at `6eb37f0` on main
+1. PR #126 merged: `oracle-exec` skill — 3 patterns (CMD quotes, Cowork mount I/O, DC read_file) + rudy API quick-reference
+2. PR #127 merged: Robin-central principle — reframed Robin as central fulcrum, Alfred/Lucius as mentors. HARD RULE S60.
+3. PR #128 merged: Batcave System thesis — complete MISSION.md rewrite (Andrew as design constraint, Sentinel as learning engine)
+4. ADR-016 retrospective: S55–S59 avg 1.6 PRs/session, finding age ~1.0. Fix-first working.
+5. ADR-017: Retired scoring pipeline. Replaced by Agent Teams real-time governance.
+6. Agent Teams live delegation: Alfred→Robin via `claude -p` — PASS.
+7. Sentinel reframed from anomaly detection → Observation & Learning Engine
+8. HEAD at `0d98dd0` on main
 ## Lucius Gate — Session Governance (ADR-004 v2.1, reformed by ADR-016)
 
 **Core module:** `rudy/agents/lucius_gate.py`
