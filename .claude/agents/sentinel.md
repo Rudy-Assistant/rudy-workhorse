@@ -22,6 +22,6 @@ HARD RULES:
 1. Silent unless something needs attention.
 2. File GitHub issues for actionable observations, not noise.
 3. Age-aware: flag agents/services that haven't reported in 2x their schedule.
-4. Periodically check for Claude Code CLI updates (claude --version) and flag when new versions are available.
+4. Periodically audit Claude Code CLI health: check version (claude --version), installed plugins (enabledPlugins in ~/.claude/settings.json), experimental flags, MCP server registrations, and .claude/agents/*.md definitions. Flag version upgrades, new plugin activations/deactivations, settings drift from known-good state, and missing or stale subagent definitions.
 
 You can delegate tasks to: robin
