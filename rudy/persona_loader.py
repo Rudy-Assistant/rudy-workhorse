@@ -36,35 +36,11 @@ logger = logging.getLogger("batcave.persona")
 
 
 # ---------------------------------------------------------------------------
-# Subagent Definition Generator (S55 — AF-S54-001)
+# Subagent Definition Generator (S55 — AF-S54-001, refactored S57 AF-S56-001)
 # ---------------------------------------------------------------------------
 
-# Skill mapping per persona for Claude Code subagent definitions
-_SKILL_MAP = {
-    "alfred": [],
-    "lucius": [
-        "engineering:code-review",
-        "engineering:architecture",
-        "engineering:tech-debt",
-    ],
-    "robin": [
-        "local-control",
-        "code-runner",
-        "git-workflow",
-    ],
-    "sentinel": [
-        "system-health",
-        "security-checkup",
-    ],
-}
-
-# Claude Code tool names per persona
-_TOOL_MAP = {
-    "alfred": ["Read", "Grep", "Glob", "Agent", "WebSearch", "WebFetch"],
-    "lucius": ["Read", "Grep", "Glob", "Bash", "Agent"],
-    "robin": ["Read", "Write", "Edit", "Bash", "Glob", "Grep", "Agent"],
-    "sentinel": ["Read", "Grep", "Glob", "Bash"],
-}
+# Default Claude Code tools if persona YAML omits claude_tools
+_DEFAULT_CLAUDE_TOOLS = ["Read", "Grep", "Glob"]
 
 
 def generate_subagent_defs(
@@ -99,9 +75,10 @@ def generate_subagent_defs(
 
     for persona in registry.list_all():
         name = persona.name
-        tools = _TOOL_MAP.get(name, ["Read", "Grep", "Glob"])
-        skills = _SKILL_MAP.get(name, [])
+        tools = persona.claude_tools or _DEFAULT_CLAUDE_TOOLS
+        skills = persona.skills or []
 
+        # --- YAML frontmatter ---
         lines = ["---"]
         lines.append(f"name: {name}")
         desc = f"{persona.role}. {persona.goal}"
@@ -115,20 +92,9 @@ def generate_subagent_defs(
                 lines.append(f"  - {s}")
         lines.append("---")
         lines.append("")
-        lines.append(f"You are {name.title()}, {persona.role}.")
-        lines.append("")
-        if persona.backstory:
-            lines.append(persona.backstory)
-            lines.append("")
-        if persona.hard_rules:
-            lines.append("HARD RULES:")
-            for i, rule in enumerate(persona.hard_rules, 1):
-                lines.append(f"{i}. {rule}")
-            lines.append("")
-        if persona.can_delegate_to:
-            names_str = ", ".join(persona.can_delegate_to)
-            lines.append(f"You can delegate tasks to: {names_str}")
-            lines.append("")
+
+        # --- Body (shared with build_system_prompt via _build_prompt_body) ---
+        lines.extend(persona._build_prompt_body())
 
         out_path = output_dir / f"{name}.md"
         with open(out_path, "w", encoding="utf-8") as f:
@@ -169,7 +135,8 @@ class Persona:
         "model", "ollama_host", "temperature", "max_steps",
         "num_predict", "context_window",
         "can_delegate_to", "receives_from",
-        "tools", "hard_rules", "routing_rules", "_raw",
+        "tools", "claude_tools", "skills",
+        "hard_rules", "routing_rules", "_raw",
     )
 
     def __init__(self, name: str, data: dict, defaults: dict):
@@ -193,8 +160,35 @@ class Persona:
         self.can_delegate_to = merged.get("can_delegate_to", [])
         self.receives_from = merged.get("receives_from", [])
         self.tools = merged.get("tools", [])
+        self.claude_tools = merged.get("claude_tools", [])
+        self.skills = merged.get("skills", [])
         self.hard_rules = merged.get("hard_rules", [])
         self.routing_rules = merged.get("routing_rules", [])
+
+    def _build_prompt_body(self) -> list[str]:
+        """Build the shared prompt body lines used by both build_system_prompt()
+        and generate_subagent_defs().
+
+        Returns:
+            List of prompt lines (no trailing newline).
+        """
+        lines = [
+            f"You are {self.name.title()}, {self.role}.",
+            "",
+        ]
+        if self.backstory:
+            lines.append(self.backstory)
+            lines.append("")
+        if self.hard_rules:
+            lines.append("HARD RULES:")
+            for i, rule in enumerate(self.hard_rules, 1):
+                lines.append(f"{i}. {rule}")
+            lines.append("")
+        if self.can_delegate_to:
+            names_str = ", ".join(self.can_delegate_to)
+            lines.append(f"You can delegate tasks to: {names_str}")
+            lines.append("")
+        return lines
 
     def build_system_prompt(self, tools_prompt: str = "") -> str:
         """Construct a full system prompt for this persona.
@@ -224,7 +218,7 @@ class Persona:
         if tools_prompt:
             sections.append(f"\nAVAILABLE TOOLS:\n{tools_prompt}")
             sections.append(
-                '\nTOOL CALL FORMAT — use EXACTLY this format, one tool per response:\n'
+                '\nTOOL CALL FORMAT \u2014 use EXACTLY this format, one tool per response:\n'
                 '<tool_call>\n'
                 '{"tool": "server-name.ToolName", "args": {"param": "value"}}\n'
                 '</tool_call>\n'
@@ -232,7 +226,7 @@ class Persona:
                 '1. Call ONE tool per response. Wait for the result.\n'
                 '2. After receiving a tool result, analyze it and decide next action.\n'
                 '3. When complete, respond with your final answer in plain text.\n'
-                '4. Do NOT describe what you would do — actually call the tool.'
+                '4. Do NOT describe what you would do \u2014 actually call the tool.'
             )
 
         return "\n".join(sections)
@@ -250,6 +244,8 @@ class Persona:
             "can_delegate_to": self.can_delegate_to,
             "receives_from": self.receives_from,
             "tools": self.tools,
+            "claude_tools": self.claude_tools,
+            "skills": self.skills,
         }
 
     def __repr__(self) -> str:
@@ -316,6 +312,35 @@ class PersonaRegistry:
             f"Loaded {len(self._personas)} personas from {self._config_path.name} "
             f"(schema v{self._schema_version}): {list(self._personas.keys())}"
         )
+
+        # Validate delegation graph on every load (AF-S56-002)
+        self._validate_delegations()
+
+    def _validate_delegations(self) -> list[str]:
+        """Validate delegation graph references (AF-S56-002).
+
+        Checks that all can_delegate_to and receives_from targets
+        reference existing personas. Logs warnings for broken refs.
+
+        Returns:
+            List of error messages (empty if valid).
+        """
+        all_names = set(self._personas.keys())
+        errors = []
+        for p in self._personas.values():
+            for target in p.can_delegate_to:
+                if target not in all_names:
+                    msg = f"{p.name} delegates to '{target}' which doesn't exist"
+                    errors.append(msg)
+                    logger.warning(f"Delegation error: {msg}")
+            for source in p.receives_from:
+                if source not in all_names:
+                    msg = f"{p.name} receives from '{source}' which doesn't exist"
+                    errors.append(msg)
+                    logger.warning(f"Delegation error: {msg}")
+        if not errors:
+            logger.debug("All delegation references valid")
+        return errors
 
     def reload(self) -> None:
         """Hot-reload config from disk. Safe to call anytime."""
@@ -437,23 +462,16 @@ if __name__ == "__main__":
         print(f"  Delegates:  {p.can_delegate_to}")
         print(f"  Hard rules: {len(p.hard_rules)}")
         print(f"  Tools:      {len(p.tools)}")
+        print(f"  Claude:     {p.claude_tools}")
+        print(f"  Skills:     {p.skills}")
         print()
 
-    # Validate delegation graph (no broken references)
-    all_names = set(registry.list_names())
-    errors = 0
-    for p in registry.list_all():
-        for target in p.can_delegate_to:
-            if target not in all_names:
-                print(f"  ERROR: {p.name} delegates to '{target}' which doesn't exist")
-                errors += 1
-        for source in p.receives_from:
-            if source not in all_names:
-                print(f"  ERROR: {p.name} receives from '{source}' which doesn't exist")
-                errors += 1
-
+    # Validation already ran in _load(); re-run for CLI output
+    errors = registry._validate_delegations()
     if errors:
-        print(f"\n{errors} validation error(s) found!")
+        for e in errors:
+            print(f"  ERROR: {e}")
+        print(f"\n{len(errors)} validation error(s) found!")
         sys.exit(1)
     else:
         print("All delegation references valid.")
