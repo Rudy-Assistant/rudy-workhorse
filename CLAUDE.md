@@ -210,6 +210,25 @@ Before writing ANY new module, Alfred MUST: (1) Research whether a maintained op
 
 Custom code is a **liability**, not an asset. Every line we write is a line we must maintain. Standard tools get maintained by their communities for free.
 
+### Deletion Gate (HARD RULE — Session 70, ADR-005 Mandate 5)
+
+**No file shall be deleted from the repository without passing the Lucius Deletion Gate.**
+
+Before deleting ANY file, Alfred/Robin MUST run:
+```python
+from rudy.agents.lucius_deletion_gate import assess_deletion
+result = assess_deletion("path/to/file.py")
+# result["verdict"] must be "SAFE_TO_DELETE" to proceed
+```
+
+Or via CLI: `python -m rudy.agents.lucius_deletion_gate file1.py file2.py --strict`
+
+**Gate checks:** (1) Import analysis — is anything importing this? (2) Config references — is it in CLAUDE.md, registry.json, workflows? (3) HARD RULE proximity — is it mentioned near a HARD RULE? (4) Robin nervous system — absolute block on robin_main, robin_liveness, robin_autonomy, robin_cowork_launcher, etc. (5) Recency — when was it last committed?
+
+**Verdicts:** SAFE_TO_DELETE (proceed), REVIEW_REQUIRED (human confirms), BLOCKED (cannot delete).
+
+**Origin:** Session 70 near-deleted robin_cowork_launcher.py (502 lines of active S69 launcher code) based on stale registry claiming 20 lines "DISCARDED." The gate also caught a live import dependency on scripts/rudy/rudy-suno.py. This gate exists because stale metadata kills active code.
+
 ### Vault-First Institutional Memory (HARD RULE — Session 16)
 
 All session records, findings, and institutional knowledge MUST be written to the **BatcaveVault** (`vault/`). HandoffWriter handles session records automatically. ADRs → `vault/Architecture/`. Protocols → `vault/Protocols/`. Sessions → `vault/Sessions/`. Never scatter records without also writing to the vault.
