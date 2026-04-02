@@ -17,7 +17,6 @@ Lucius Gate: LG-049 - No new deps. stdlib + flask (installed).
 """
 
 import json
-import os
 import sys
 import time
 import urllib.error
@@ -26,7 +25,7 @@ from datetime import datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from rudy.paths import RUDY_DATA, RUDY_LOGS  # noqa: E402
+from rudy.paths import RUDY_DATA  # noqa: E402
 
 from flask import Flask, request, jsonify, Response  # noqa: E402
 from flask import stream_with_context, send_file  # noqa: E402
