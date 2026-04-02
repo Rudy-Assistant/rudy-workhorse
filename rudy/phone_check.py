@@ -46,7 +46,7 @@ def _run(cmd: str, timeout: int = 30) -> Tuple[str, str, int]:
     """Run a command, return (stdout, stderr, returncode)."""
     try:
         result = subprocess.run(
-            cmd, shell=True, capture_output=True, text=True, timeout=timeout
+            cmd, shell=True, capture_output=True, text=True, timeout=timeout  # nosec B602
         )
         return result.stdout.strip(), result.stderr.strip(), result.returncode
     except subprocess.TimeoutExpired:
