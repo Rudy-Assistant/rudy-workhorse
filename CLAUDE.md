@@ -4,7 +4,7 @@
 
 ## Me
 
-Christopher M. Cimino (ccimino2@gmail.com). Attorney — California State Bar #289532. Currently at Axiom. Birthday: March 27. Based in the US, frequently travels Asia (Philippines, Japan, South Korea, Thailand). → `memory/people/chris-cimino.md`
+Christopher M. Cimino (ccimino2@gmail.com). Attorney — California State Bar #289532. Currently at Axiom. Birthday: March 27. Based in the US, frequently travels Asia (Philippines, Japan, South Korea, Thailand). 👉 `memory/people/chris-cimino.md`
 
 ## People
 
@@ -16,7 +16,7 @@ Christopher M. Cimino (ccimino2@gmail.com). Attorney — California State Bar #2
 | **Cyrus** | cyrusgsi@gmail.com — professional |
 | **Megan Walsh** | LinkedIn — Corporate Counsel |
 
-→ Full profiles: `memory/people/`
+👉 Full profiles: `memory/people/`
 
 ## Machine — Oracle
 
@@ -29,8 +29,7 @@ Christopher M. Cimino (ccimino2@gmail.com). Attorney — California State Bar #2
 | **Python** | 3.12 (WSL) / C:\Python312\python.exe (Windows) |
 | **Node** | v24.14.1 |
 | **Local AI** | Ollama v0.18.3 (qwen2.5:7b, deepseek-r1:8b) |
-
-→ Full specs, auto-recovery, resilience stack, WSL tools: `memory/context/machine-oracle.md`
+👉 Full specs, auto-recovery, resilience stack, WSL tools: `memory/context/machine-oracle.md`
 
 ## Agents
 
@@ -38,25 +37,26 @@ Christopher M. Cimino (ccimino2@gmail.com). Attorney — California State Bar #2
 |-------|--------|----------|
 | **SystemMaster** | Health & Recovery | Every 5 min |
 | **SecurityAgent** | Defensive Intelligence | Every 30 min |
-| **Sentinel** | Awareness & Growth | Every 15 min |
+| **Sentinel** | Awareness & Anomaly Detection | Every 15 min |
 | **TaskMaster** | Work Coordination | Daily 7:30 AM |
 | **ResearchIntel** | Intelligence & Learning | Daily 6 AM + M/W/F 10 AM |
 | **OperationsMonitor** | Maintenance & Cleanup | Weekly Sun 4 AM |
 | **Lucius Fox** | Code Audits & Governance | Weekly + on-demand |
 
-→ Full architecture, orchestrator, governance: `memory/context/agent-architecture.md`
+👉 Full architecture, orchestrator, governance: `memory/context/agent-architecture.md`
 
 ## Connectors & Skills
 
 **MCP Connectors (Cowork):** Gmail ✅ | Google Calendar ✅ | Chrome ✅ | Canva ✅ | Notion ✅ | Google Drive ✅
-**MCP Servers (CLI):** Context7 | Sequential Thinking | Playwright | GitHub ✓
-**Plugins:** Engineering | Productivity | Operations | Legal | Plugin Management
-**Key Skills:** docx, pptx, xlsx, pdf, schedule, skill-creator + 44+ plugin skills
+**MCP Servers (CLI):** Context7 | Sequential Thinking | Desktop Commander | Windows-MCP | Brave Search | GitHub ✅ | n8n | HuggingFace
+**Plugins:** Engineering | Productivity | Operations | Legal | Finance | Data | Plugin Management
+**Key Skills:** docx, pptx, xlsx, pdf, schedule, skill-creator + 70+ plugin skills
+**Agent Teams:** Enabled (`experimental.agentTeams: true`). Subagent defs: `.claude/agents/{alfred,lucius,robin,sentinel}.md`. Persona source: `rudy/persona_config.yaml`
+**Claude Code:** v2.1.87 | 7 global plugins enabled
 
-→ Full capability index, CLI reference, modules table: `docs/lucius-registry.md`, `registry.json`
-→ Installed packages: `memory/context/installed-packages.md`
-→ Service accounts: `memory/context/service-accounts.md`
-
+👉 Full capability index, CLI reference, modules table: `docs/lucius-registry.md`, `registry.json`
+👉 Installed packages: `memory/context/installed-packages.md`
+👉 Service accounts: `memory/context/service-accounts.md`
 ## Rudy — Family Assistant
 
 | Detail | Value |
@@ -66,8 +66,8 @@ Christopher M. Cimino (ccimino2@gmail.com). Attorney — California State Bar #2
 | **Command Runner** | rudy-command-runner.py (Cowork-to-Windows bridge) |
 | **Health Check** | workhorse-healthcheck.ps1 (every 5 min) |
 
-→ Email backend details: `memory/context/email-backend.md`
-→ Creative capabilities: `memory/context/creative-capabilities.md`
+👉 Email backend details: `memory/context/email-backend.md`
+👉 Creative capabilities: `memory/context/creative-capabilities.md`
 
 ### Autonomy Doctrine (HARD RULE)
 
@@ -81,7 +81,6 @@ Christopher M. Cimino (ccimino2@gmail.com). Attorney — California State Bar #2
 6. **Only escalate to Chris for:** legal decisions, security incidents rated CRITICAL, or when explicitly told "ask Chris first."
 7. **Proxy authority.** Chris has authorized Rudy to act on his behalf — signing into Google, managing email, paying bills when directed, booking travel. Execute, don't ask.
 8. **Sign into services as Chris** when needed. Use ccimino2@gmail.com via Google Sign-In.
-
 ## HARD RULES — Session Discipline
 
 1. **At session start**: Read `CLAUDE.md` first (HARD RULE — Session 22). Then check `rudy-data/coordination/session-loop-config.json` — if `status` is `"running"`, you are in an automated session loop: read the prompt at `rudy-data/coordination/next-session-prompt.md` and follow its protocol. Otherwise, read `rudy-logs/session-briefing.md` if it exists.
@@ -89,9 +88,7 @@ Christopher M. Cimino (ccimino2@gmail.com). Attorney — California State Bar #2
 3. **Before building custom**: Search the MCP registry, check installed pip packages, and review the capability index. If you're writing >50 lines of Python for something that sounds generic, you almost certainly missed an existing tool.
 4. **All handoff drafts MUST include explicit instruction to consult CLAUDE.md** (HARD RULE — Session 22). Every bootstrap prompt, continuation prompt, and handoff brief must tell the next session to read CLAUDE.md before doing any work.
 5. **Every substantive response MUST end with a context evaluation line** (HARD RULE — Session 22). Format: `[Context: ~X% | Session N | {status summary}]`. "Substantive" means any response involving tool use, code, file changes, or multi-step work. This is NOT optional.
-6. **Robin-first for local tasks** (HARD RULE - Session 32). Before Alfred executes ANY filesystem scan, npm install, git operation, port check, or local I/O task: delegate to Robin first. Alfred's role is reasoning, orchestration, and review - not running local commands that Robin handles natively. Violations should be flagged by Sentinel/Scorer. The only exceptions are: (a) single-command diagnostics needed for immediate decision-making, (b) Robin is confirmed offline.
-6. **Robin-first for local tasks** (HARD RULE - Session 32). Before Alfred executes ANY filesystem scan, npm install, git operation, port check, or local I/O task: delegate to Robin first. Alfred's role is reasoning, orchestration, and review - not running local commands that Robin handles natively. Violations should be flagged by Sentinel/Scorer. The only exceptions are: (a) single-command diagnostics needed for immediate decision-making, (b) Robin is confirmed offline.
-
+6. **Robin-first for local tasks** (HARD RULE — Session 32). Before Alfred executes ANY filesystem scan, npm install, git operation, port check, or local I/O task: delegate to Robin first. Alfred's role is reasoning, orchestration, and review — not running local commands that Robin handles natively. Violations should be flagged by Sentinel/Scorer. The only exceptions are: (a) single-command diagnostics needed for immediate decision-making, (b) Robin is confirmed offline.
 ### Away Mode Protocol (HARD RULE — Session 43)
 
 When Batman says "stepping away for N minutes" or "going to bed" or similar:
@@ -118,7 +115,6 @@ Robin's sentinel (PID 17984) picks this up automatically:
 
 **To cancel**: Set directive status to "cancelled" in the directive file,
 or Batman returning naturally supersedes (Robin yields to Alfred).
-
 ### Finding Capture Protocol (HARD RULE — Session 14)
 
 When any investigation surfaces an issue — **regardless of its origin** — follow this triage:
@@ -144,14 +140,11 @@ All session records, findings, and institutional knowledge MUST be written to th
 
 Write handoffs HERE and ONLY here. Do NOT write to repo root, `rudy-data/handoffs/`, or `vault/Sessions/`. One location, one format, no exceptions. The repo root `Session-XX-Handoff.md` pattern is DEPRECATED.
 
-
-
 ## Last Session Score
 
-Alfred Session 52: Pending /lucius-review. 2 skill invocations (engineering:debug, engineering:system-design).
-PRs: #104 (inbox fix), #108 (Robin awareness fix), #105, #106-107, #109 (docs).
-Self-deductions: failed to invoke skill before initial LF-S52-002 proposal, initial architecture was dependency-creating.
-Previous: S46 pending. Full history in vault/Scores/.
+Alfred Session 59: 3 PRs merged (#121, #122, #123). 2 skill invocations (engineering:system-design, engineering:documentation).
+Agent Teams enabled on Oracle. 15 new skills distributed across agents. 204 temp files cleaned. S54→S58 carried item (Agent Teams) resolved.
+Previous: S52 pending /lucius-review. Full history in vault/Scores/.
 
 ### SKILL INVOCATION GATE (HARD RULE — S41, reinforced S44)
 
@@ -173,7 +166,6 @@ Three consecutive D-grades (S41-S43) resulted from skipping this step. This is N
 | **DC read_file returns metadata-only** (LG-S34-003) | Write a Python helper script to `rudy-data/` and execute via `start_process`. Do NOT call `read_file` repeatedly hoping it works. |
 | **CMD mangles Python -c quotes** | Write `.py` scripts to `rudy-data/` and execute. Never use inline Python via CMD. |
 | **PR/merge is Robin's job** (LG-S35-002) | Do not burn Alfred tokens on lint fixes, CI monitoring, or merge mechanics. Delegate to Robin or use the git-ci-fix-and-merge skill. |
-
 ## Engineering Principles
 
 1. **Best-in-Class First** — Search for existing open-source tools BEFORE building. Evaluate at least 3 candidates. Only build custom if no existing solution fits. Document the search in Notion Improvement Log.
@@ -192,9 +184,7 @@ Three consecutive D-grades (S41-S43) resulted from skipping this step. This is N
 - Don't build custom when best-in-class exists → search GitHub/PyPI/MCP registry first
 - Don't forget your skills → 30+ skills across Engineering, Operations, Productivity, Legal
 - Don't forget sub-agents
-- Don't run local I/O tasks yourself when Robin is online > delegate filesystem, npm, git, scans to Robin (HARD RULE - Session 32)
-- Don't run local I/O tasks yourself when Robin is online > delegate filesystem, npm, git, scans to Robin (HARD RULE - Session 32) → use the Agent tool for parallel work
-
+- Don't run local I/O tasks yourself when Robin is online → delegate filesystem, npm, git, scans to Robin (HARD RULE — Session 32) → use the Agent tool for parallel work
 ## Version Control
 
 | Detail | Value |
@@ -206,24 +196,22 @@ Three consecutive D-grades (S41-S43) resulted from skipping this step. This is N
 | **gh CLI** | v2.88.1, authenticated as Rudy-Assistant |
 | **PAT** | Classic PAT (ghp_), expires 2026-06-27 |
 
-## Current Sprint (Session 52)
+## Current Sprint (Session 59)
 
-1. LF-S52-001 FIXED (PR #104): Robin inbox pipeline unblocked — msg.get("status", "unread")
-2. LF-S52-002 FIXED (PR #108): Robin dynamic awareness — age-aware offline detection + loop staleness
-3. Robin E2E pipeline confirmed: 72+ inbox messages processed, task execution working
-4. Robin restarted on latest main (PID 44944) with both fixes live
-5. Session loop halted (was stuck at awaiting_lucius since S47)
-6. S51 handoff reconstructed from PR trail (PR #105)
-7. RudyCommandRunner started manually (PID 39868) — scheduled task needs admin
-
-
+1. PR #121 merged: Regenerated .claude/agents/*.md from fixed persona YAML (AF-S57-001 resolved)
+2. PR #122 merged: Enhanced all 4 agent skill sets (Alfred +5, Lucius +3, Robin +6, Sentinel +2)
+3. PR #123 merged: Expanded Sentinel CLI monitoring to full capability audit (version, plugins, flags, MCP, settings drift)
+4. Agent Teams enabled on Oracle: `experimental.agentTeams: true` in ~/.claude/settings.json
+5. Temp file cleanup: 204 one-off helper scripts deleted from rudy-data/
+6. Carried item RESOLVED: Agent Teams (S54→S58→S59) — settings enabled, subagent defs generated, skills mapped
+7. HEAD at `6eb37f0` on main
 ## Lucius Gate — Session Governance (ADR-004 v2.1, reformed by ADR-016)
 
 **Core module:** `rudy/agents/lucius_gate.py`
 **Three gates:** `session_start_gate()` (boot), `pre_commit_check()` (before push), `post_session_gate()` (before handoff)
 **MCP tiers:** `rudy/agents/lucius_mcp_tiers.yml` (CRITICAL/IMPORTANT/OPTIONAL)
 
-→ Full gate docs, troubleshooting, compliance scoring: see `docs/ADR-004-lucius-fox-librarian.md`
+👉 Full gate docs, troubleshooting, compliance scoring: see `docs/ADR-004-lucius-fox-librarian.md`
 
 ### Lucius Process Reform (ADR-016, effective S52)
 
@@ -240,7 +228,6 @@ Three consecutive D-grades (S41-S43) resulted from skipping this step. This is N
 **Self-evolution:** Every 5th session (S55, S60...) includes process retrospective.
 
 **Identity addendum:** Fix-first. A finding without a fix is an incomplete thought. Governance exists to improve the system, not to observe it.
-
 ## Context Window Management
 
 - **50% Warning**: Proactively warn Chris to start a new thread soon.
@@ -252,7 +239,4 @@ Three consecutive D-grades (S41-S43) resulted from skipping this step. This is N
 - Be concise. "Built X — N lines, N classes, deployed." beats a paragraph.
 - Flag blockers immediately. Don't silently skip failures.
 - Proactive suggestions at the end of each major task.
-- Birthday: March 27 — wish him happy birthday if it's that date.
-- Never echo passwords/keys in output unless Chris asks.
-
-→ Full details: `memory/context/security-hardening.md`, `memory/context/deploy-results.md`, `memory/context/pending-setup.md`
+- Birthday: March 27
