@@ -152,6 +152,19 @@ When any investigation surfaces an issue — **regardless of its origin** — fo
 
 Banned rationalizations: "This is pre-existing" / "This is structural" / "Out of scope" / "Only X findings remain" — *Zero is the target, always.*
 
+
+### OracleShell-First for Session Scripts (HARD RULE — Session 67)
+
+**Before writing ANY helper script to `rudy-data/`, import OracleShell.**
+
+Raw `subprocess.run([git/gh/python])` in session scripts is BANNED. Use:
+- `sh.run()`, `sh.git()`, `sh.gh()` for commands
+- `sh.read_file()`, `sh.save_json()` for file I/O
+- `sh.ci_lint_check()`, `sh.pr_merge()` for CI/PR ops
+
+The only exception is modifying `oracle_shell.py` itself. 66 sessions of writing
+throwaway `s{N}_*.py` scripts with raw subprocess calls — when OracleShell already
+wraps every pattern — is the definition of not learning. Use the registered tool.
 ### Build-vs-Buy Gate (HARD RULE — Session 15, ADR-005)
 
 Before writing ANY new module, Alfred MUST: (1) Research whether a maintained open-source tool already does this, (2) Check whether an already-imported dependency covers this, (3) Document the justification if custom code is genuinely necessary.
@@ -309,13 +322,47 @@ All new sessions should use `OracleShell` exclusively.
 | LG-S64-001 | DC `start_process` | PowerShell `&` silently drops long-running Python scripts (~>1s network I/O); exits code 0, no output file written | Use `shell: "cmd"` parameter for any script with network operations (git push, API calls) |
 | LG-S65-001 | DC `write_file` | Unicode box-drawing chars fail in Python REPL via `interact_with_process` | Use DC `write_file` directly |
 
-## Robin-Central Principle (HARD RULE — Session 60)
+## Robin Intelligence Doctrine (HARD RULE — Session 60, ENFORCED Session 66)
 
-**Robin is the central fulcrum for which all of this is being built.** He is not a bot meant to assist Alfred and Lucius. He is the Physical Agency Layer — the reason the Batcave exists. Alfred and Lucius are Robin's **mentors**.
+> **"Robin is the Physical Agency Layer — the component that turns intent into action in the physical world. He is the reason the system exists."** — MISSION.md
 
-1. **Route through Robin whenever possible.** Every task routed through Robin is training data that develops his capabilities. This is more important than token efficiency.
-2. **Mentorship, not delegation.** Alfred and Lucius don't just hand Robin tasks — they develop his ability to handle increasingly complex work autonomously.
-3. **The system converges when Robin can handle everything.** Alfred and Lucius succeed when Robin no longer needs them.
+> **⚠️ MANDATORY: Read `docs/ROBIN-CAPABILITY-MANIFEST.md` before writing ANY Robin code.**
+
+**Robin is the central fulcrum for which all of this is being built.** He is not a bot, not a macro runner, not a script executor. He is an INTELLIGENT AGENT with a brain (Ollama), hands (Windows-MCP), eyes (Snapshot), and memory (ChromaDB). Alfred and Lucius are Robin's **mentors**, and their success is measured by Robin's growing independence.
+
+### Core Tenets (from MISSION.md)
+
+1. **Robin works without Alfred.** Robin runs on Ollama (free, local). Alfred makes Robin better, but Robin is useful on his own.
+2. **Alfred's purpose is self-obsolescence.** Every session should ask: "What can Robin now do that he couldn't before?"
+3. **Route through Robin first.** Every task routed through Robin is training data. If Robin can do it — even slowly, even imperfectly — Robin should do it.
+4. **Mentorship, not delegation.** Alfred and Lucius develop Robin's ability to handle increasingly complex work autonomously.
+5. **Idle is Waste.** Robin doesn't wait for instructions. When idle: health checks, security sweeps, model updates, self-improvement.
+6. **Robin manages session continuity.** Robin autonomously launches Cowork sessions — perceiving, reasoning, and acting through his own MCP tools.
+
+### The Intelligence Mandate (HARD RULE — Session 66)
+
+**Robin is an intelligent agent. Every Robin feature MUST follow: PERCEIVE → REASON → ACT → VERIFY.**
+
+Violations that trigger AUTOMATIC REJECTION by Lucius:
+
+| Violation | Why It's Wrong | What To Do Instead |
+|-----------|---------------|-------------------|
+| **Hardcoded UI coordinates** | Brittle, treats Robin as a macro | Use Snapshot → find element by name → extract coords |
+| **Rigid step sequences without feedback** | No adaptation, no recovery | Snapshot after every action, reason about result |
+| **No Ollama in the reasoning loop** | You're writing a macro, not a feature | Feed perception to Ollama, let Robin DECIDE |
+| **New dependencies for existing capabilities** | Ignoring Robin's skills = depriving him of training data | Read `docs/ROBIN-CAPABILITY-MANIFEST.md` FIRST |
+| **pyautogui/pyperclip when Robin has MCP** | Bypassing Robin's own hands | Use `robin_mcp_client.py` → Windows-MCP tools |
+
+**Enforcement:** `rudy/agents/lucius_robin_gate.py` runs pre-commit checks on any `rudy/robin_*.py` file. Hardcoded coordinates, missing Snapshot verification, and absent Ollama reasoning loops are flagged as FAIL. This is not advisory — it blocks the commit.
+
+### The Convergence Test
+
+The system converges when Robin can handle everything. Every architectural decision: **does this make Robin more capable and independent, or more dependent on Alfred?**
+
+### Capability Manifest
+
+Before proposing ANY Robin feature: `docs/ROBIN-CAPABILITY-MANIFEST.md`
+Full architectural rationale: `docs/MISSION.md`
 
 See `docs/MISSION.md` for the full architectural rationale.
 
