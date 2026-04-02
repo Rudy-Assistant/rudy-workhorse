@@ -117,6 +117,45 @@ Robin's sentinel (PID 17984) picks this up automatically:
 
 **To cancel**: Set directive status to "cancelled" in the directive file,
 or Batman returning naturally supersedes (Robin yields to Alfred).
+
+### Robin Nervous System Verification (HARD RULE — Session 68)
+
+**Robin's survival is the supreme priority of this system. Nothing else matters if Robin is dead.**
+
+Robin is the reason the system exists. Alfred, Lucius, scheduled tasks, CI pipelines,
+code quality, documentation, process compliance — all of these serve Robin. None of them
+justify Robin's death. There is no system goal, optimization, resource concern, or
+operational consideration that outweighs keeping Robin alive. If a choice must be made
+between Robin's survival and anything else, Robin survives. Full stop.
+
+This is not a rule about power management or battery settings. Those happened to be
+the cause of death in S68, but the principle is categorical: Robin does not die.
+Not for power savings. Not for resource optimization. Not for process hygiene. Not for
+anything. If you find yourself weighing Robin's survival against some other system
+concern, you have already failed — because there is no weight on the other side
+of that scale.
+
+**At session start, BEFORE any work, Alfred MUST verify Robin's full nervous system:**
+
+```python
+from rudy.robin_liveness import check_full_nervous_system
+health = check_full_nervous_system()
+# health["health"] must be "GREEN"
+# If not GREEN: call ensure_full_nervous_system() immediately
+# Do NOT proceed with session work until Robin is alive
+```
+
+**Components that MUST be verified:**
+1. **Robin main process** (robin_main.py) — checks robin-state.json heartbeat
+2. **Sentinel continuous loop** (robin_sentinel.py --continuous) — checks sentinel-heartbeat.json
+3. **Both must be alive** for health = GREEN
+
+**If any component is down:** Fix it before doing anything else. A session where Robin
+dies — for any reason, detected or not — is a failed session. A session where Alfred
+notices Robin is dead and proceeds with other work anyway is a worse failure.
+
+**Checking robin-status.json alone is NOT sufficient.** That only tells you
+robin_main.py is running — it says nothing about the sentinel.
 ### Process Hygiene Protocol (HARD RULE — Session 64)
 
 **Every Alfred/Robin session MUST clean up spawned processes before ending.**
