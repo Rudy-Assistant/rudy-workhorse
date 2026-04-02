@@ -1045,6 +1045,22 @@ class Sentinel(AgentBase):
                 actionable=True)
             self.log.info("Session handoff triggered — continuation prompt written")
 
+            # Robin Session Continuity (Session 66): auto-launch new Cowork session
+            try:
+                from rudy.robin_cowork_launcher import check_and_launch_if_needed as cowork_launch_check
+                launch_result = cowork_launch_check()
+                if launch_result and launch_result.get("success"):
+                    self._observe("cowork_launch",
+                        f"Robin auto-launched Cowork session: {launch_result.get('handoff_used', 'latest')}",
+                        actionable=False)
+                    self.log.info("Robin auto-launched new Cowork session")
+                elif launch_result:
+                    self._observe("cowork_launch_failed",
+                        f"Cowork launch attempted but failed: {launch_result.get('error')}",
+                        actionable=True)
+            except Exception as launch_err:
+                self.log.warning("Cowork launcher not available: %s", launch_err)
+
         except Exception as e:
             self._observe("handoff_error", f"Handoff failed: {e}")
 

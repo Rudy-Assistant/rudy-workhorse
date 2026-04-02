@@ -49,6 +49,7 @@ from rudy.paths import (  # noqa: E402
     BATCAVE_VAULT, GIT_EXE, HANDOFFS_DIR, LUCIUS_AUDITS, REPO_ROOT,
     RUDY_DATA, RUDY_LOGS,
 )
+from rudy.robin_cowork_launcher import launch_cowork_session
 
 COORD_DIR = RUDY_DATA / "coordination"
 ALFRED_INBOX = RUDY_DATA / "alfred-inbox"
@@ -1040,6 +1041,27 @@ class AutonomyEngine:
         details = plan["details"]
         directive_text = details["directive"]
         pct = details["progress_pct"]
+
+        # Robin Session Continuity (Session 66): if directive scope is
+        # "handoff-continuation-only", Robin's job is to launch a new
+        # Cowork session — not to process the directive via Ollama.
+        directive_obj = self.directive_tracker.get_directive()
+        if directive_obj and directive_obj.get("scope") == "handoff-continuation-only":
+            log.info("[Autonomy] Directive scope is handoff-continuation-only — launching Cowork session")
+            try:
+                result = launch_cowork_session()  # auto-finds latest handoff
+                if result.get("success"):
+                    self.directive_tracker.record_progress(100, "Cowork session launched successfully")
+                    self.alfred.report_to_alfred(
+                        "Session Continuity",
+                        f"Robin launched new Cowork session with handoff: {result.get('handoff_used', 'latest')}",
+                    )
+                    return {"success": True, "summary": f"Cowork session launched: {result.get('handoff_used', 'latest')}"}
+                else:
+                    log.warning("[Autonomy] Cowork launch failed: %s", result.get("error"))
+                    # Fall through to generic directive handling as fallback
+            except Exception as e:
+                log.warning("[Autonomy] Cowork launcher error: %s — falling back to generic handler", e)
         checkpoint = details.get("checkpoint")
         prompt = f"You are working on a directive from Batman: '{directive_text}'\nProgress: {pct:.0f}% of time budget elapsed.\n"
         if details.get("time_remaining"):
