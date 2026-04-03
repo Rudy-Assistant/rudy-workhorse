@@ -487,16 +487,31 @@ class NightShift:
         return is_night or is_inactive
 
     def _detect_last_batman_activity(self) -> Optional[datetime]:
-        """Detect when Batman was last active by checking various signals."""
+        """Detect when Batman was last active by checking various signals.
+
+        S76 FIX: Added HID (keyboard/mouse) detection via GetLastInputInfo.
+        Previously only checked command files, returning None after reboot
+        which made inactive_hours=inf and NightShift activate instantly.
+        """
         signals = []
 
-        # Check rudy-commands for recent .py/.ps1 files (dispatched by Cowork)
+        # PRIMARY: HID (keyboard/mouse) activity via Win32 API
+        try:
+            from rudy.robin_presence_guard import get_idle_seconds
+            idle = get_idle_seconds()
+            if idle < float("inf"):
+                signals.append(
+                    datetime.now() - timedelta(seconds=idle))
+        except ImportError:
+            pass
+
+        # SECONDARY: Check rudy-commands for recent files
         if RUDY_COMMANDS.exists():
             for f in RUDY_COMMANDS.iterdir():
                 if f.suffix in (".py", ".ps1", ".result"):
                     signals.append(datetime.fromtimestamp(f.stat().st_mtime))
 
-        # Check rudy-logs for recent agent activity triggered by Cowork
+        # TERTIARY: Check cowork activity marker
         cowork_marker = RUDY_LOGS / "last-cowork-activity.txt"
         if cowork_marker.exists():
             signals.append(datetime.fromtimestamp(cowork_marker.stat().st_mtime))
@@ -834,8 +849,17 @@ def run_continuous() -> None:
                 and datetime.now() < _nightshift_cooldown_until
             )
             if not _in_cooldown:
-                ns = NightShift(state, online)
-                if ns.should_activate():
+                # S76: Check presence guard before night shift too
+                try:
+                    from rudy.robin_presence_guard import is_robin_paused
+                    if is_robin_paused():
+                        log.info("Night shift skipped: Robin paused (kill switch)")
+                        _in_cooldown = True  # reuse flag to skip block
+                except ImportError:
+                    pass
+                if not _in_cooldown:
+                    ns = NightShift(state, online)
+                if not _in_cooldown and ns.should_activate():
                     log.info("Night shift conditions detected — activating")
                     ns.run()
                     _write_heartbeat(cycle, poll_interval)  # refresh after long op
@@ -846,31 +870,36 @@ def run_continuous() -> None:
 
             # Session continuity: perpetual work loop (S70)
             # FIX S71 (LG-S70-001): Run in thread with 120s timeout.
-            # UI automation in check_and_launch_perpetual() can block
-            # indefinitely, killing the sentinel loop. The timeout
-            # ensures the sentinel heartbeat keeps ticking.
+            # FIX S76 (LG-S76-003): PRESENCE GUARD -- never automate Claude
+            # while Batman is active at keyboard/mouse. Robin was fighting
+            # Batman for control of Claude Desktop. Kill switch support added.
             try:
-                from rudy.robin_perpetual_loop import check_and_launch_perpetual
-                from concurrent.futures import ThreadPoolExecutor
-                from concurrent.futures import TimeoutError as FuturesTimeout
-                with ThreadPoolExecutor(max_workers=1) as _pool:
-                    _future = _pool.submit(check_and_launch_perpetual)
-                    try:
-                        launch_result = _future.result(timeout=120)
-                    except FuturesTimeout:
-                        log.warning(
-                            "Perpetual loop timed out after 120s "
-                            "(LG-S70-001) -- sentinel continuing"
-                        )
-                        launch_result = None
-                if launch_result and launch_result.get("success"):
-                    log.info("Cowork session launched: %s (phase: %s)",
-                             launch_result.get("handoff_used",
-                                               launch_result.get("phase", "?")),
-                             launch_result.get("phase", "?"))
-                elif launch_result and launch_result.get("error"):
-                    log.warning("Cowork launch failed: %s",
-                                launch_result.get("error"))
+                from rudy.robin_presence_guard import should_robin_act
+                if not should_robin_act():
+                    log.info("Presence guard: Batman active or Robin paused "
+                             "-- skipping UI automation this cycle")
+                else:
+                    from rudy.robin_perpetual_loop import check_and_launch_perpetual
+                    from concurrent.futures import ThreadPoolExecutor
+                    from concurrent.futures import TimeoutError as FuturesTimeout
+                    with ThreadPoolExecutor(max_workers=1) as _pool:
+                        _future = _pool.submit(check_and_launch_perpetual)
+                        try:
+                            launch_result = _future.result(timeout=120)
+                        except FuturesTimeout:
+                            log.warning(
+                                "Perpetual loop timed out after 120s "
+                                "(LG-S70-001) -- sentinel continuing"
+                            )
+                            launch_result = None
+                    if launch_result and launch_result.get("success"):
+                        log.info("Cowork session launched: %s (phase: %s)",
+                                 launch_result.get("handoff_used",
+                                                   launch_result.get("phase", "?")),
+                                 launch_result.get("phase", "?"))
+                    elif launch_result and launch_result.get("error"):
+                        log.warning("Cowork launch failed: %s",
+                                    launch_result.get("error"))
             except Exception as e:
                 log.debug("Perpetual loop check skipped: %s", e)
 
