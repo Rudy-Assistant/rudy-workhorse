@@ -130,16 +130,23 @@ def find_exe(name: str, fallbacks: tuple[str, ...] = ()) -> str:
 
     Returns:
         Full path to the executable, or bare *name* as last resort.
+
+    S76 FIX (LG-S75-005): Check curated fallbacks FIRST, then PATH.
+    shutil.which("python") was finding a broken Python 3.9 on the system
+    PATH before the working C:\\Python312\\python.exe in fallbacks.
+    robin_main crashed with STATUS_DLL_NOT_FOUND (0xC0000135) for 10+ sessions.
     """
     import shutil
     import sys as _sys
 
-    found = shutil.which(name)
-    if found:
-        return found
+    # Curated fallbacks first — these are known-good, vetted paths
     for fb in fallbacks:
         if Path(fb).exists():
             return fb
+    # Then try system PATH
+    found = shutil.which(name)
+    if found:
+        return found
     # Last resort: if we're looking for Python, use our own interpreter
     if name.lower() in ("python", "python3"):
         return _sys.executable or name

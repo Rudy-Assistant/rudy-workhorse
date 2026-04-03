@@ -211,6 +211,15 @@ def start_robin() -> dict:
     python_exe = PYTHON_EXE
 
     try:
+        # S76 FIX: Log stdout/stderr to a file instead of DEVNULL.
+        # robin_main was crashing silently (DLL_NOT_FOUND from wrong Python)
+        # and we had zero diagnostics. Never silence a detached process.
+        crash_log = RUDY_LOGS / "robin-main-launch.log"
+        _log_fh = open(crash_log, "a", encoding="utf-8")
+        _log_fh.write(f"\n--- robin_main launch at {datetime.now().isoformat()} ---\n")
+        _log_fh.write(f"    python_exe: {python_exe}\n")
+        _log_fh.flush()
+
         if sys.platform == "win32":
             # Start detached (CREATE_NEW_PROCESS_GROUP + DETACHED_PROCESS)
             flags = subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS
@@ -218,16 +227,16 @@ def start_robin() -> dict:
                 [python_exe, "-m", "rudy.robin_main", "--nightwatch"],
                 cwd=str(REPO_ROOT),
                 creationflags=flags,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
+                stdout=_log_fh,
+                stderr=subprocess.STDOUT,
             )
         else:
             proc = subprocess.Popen(
                 [python_exe, "-m", "rudy.robin_main", "--nightwatch"],
                 cwd=str(REPO_ROOT),
                 start_new_session=True,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
+                stdout=_log_fh,
+                stderr=subprocess.STDOUT,
             )
 
         log.info("Robin started: PID %d", proc.pid)
