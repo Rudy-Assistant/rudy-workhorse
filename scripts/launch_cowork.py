@@ -233,7 +233,10 @@ def assess_state(elements):
             return ScreenState.CLAUDE_WORKING, {"indicator": el}
 
     # Ready to start new task?
-    new_task = find(claude_elements, "New task")
+    # NOTE: The sidebar always has a "New task" Link — do NOT match it.
+    # Only match a Button, which appears on the landing/empty state.
+    # For active sessions that ended, the IDLE→escalation path handles it.
+    new_task = find(claude_elements, "New task", control_type="Button")
     if new_task:
         return ScreenState.CLAUDE_READY, {"new_task": new_task}
 
@@ -889,7 +892,9 @@ def run_loop(wmcp, interval_min, handoff_path=None):
 
         # Claude ready or not found — time to launch
         if state in (ScreenState.CLAUDE_READY, ScreenState.CLAUDE_NOT_FOUND,
-                     ScreenState.CLAUDE_UNFOCUSED, ScreenState.UNKNOWN):
+                     ScreenState.CLAUDE_UNFOCUSED, ScreenState.UNKNOWN,
+                     ScreenState.CLAUDE_COWORK_SELECT,
+                     ScreenState.CLAUDE_PROMPT_READY):
             log.info("No active session — launching...")
             result = launch(wmcp, handoff_path)
             if result["success"]:
