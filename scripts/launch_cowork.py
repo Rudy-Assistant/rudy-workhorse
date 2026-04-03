@@ -183,6 +183,7 @@ class ScreenState:
     CLAUDE_READY = "claude_ready"           # "New task" visible, ready to launch
     CLAUDE_COWORK_SELECT = "cowork_select"  # Mode selection visible
     CLAUDE_PROMPT_READY = "prompt_ready"    # Prompt input visible
+    CLAUDE_IDLE = "claude_idle"             # Session open, Alfred done, awaiting input
     CLAUDE_WORKING = "claude_working"       # Session active (Stop/Thinking/etc)
     CLAUDE_MOUNT_PROMPT = "mount_prompt"    # Allow/Deny dialog
     CLAUDE_UNFOCUSED = "claude_unfocused"   # Claude window exists but not focused
@@ -237,13 +238,27 @@ def assess_state(elements):
     if cowork_radio:
         return ScreenState.CLAUDE_COWORK_SELECT, {"cowork": cowork_radio}
 
-    # Prompt input visible?
+    # Prompt input visible? This means Alfred finished responding.
+    # Distinguish: new-task prompt (during launch flow) vs idle session.
     prompt_input = (
         find(claude_elements, "Write your prompt")
         or find(claude_elements, "", control_type="Edit")
     )
     if prompt_input:
-        return ScreenState.CLAUDE_PROMPT_READY, {"prompt_input": prompt_input}
+        # If we see session context indicators (Progress, Context, etc.)
+        # this is an active session where Alfred stopped — IDLE, needs goading.
+        # If we see "Start task" button, this is a fresh task form.
+        start_task = find(claude_elements, "Start task", control_type="Button")
+        context_btn = find(claude_elements, "Context")
+        stop_btn = find(claude_elements, "Stop")
+        if start_task:
+            # Fresh new-task form
+            return ScreenState.CLAUDE_PROMPT_READY, {"prompt_input": prompt_input}
+        elif context_btn and not stop_btn:
+            # Session open, Alfred done responding, input awaiting
+            return ScreenState.CLAUDE_IDLE, {"prompt_input": prompt_input}
+        else:
+            return ScreenState.CLAUDE_PROMPT_READY, {"prompt_input": prompt_input}
 
     # Claude exists but we can't identify the state
     # Check if Claude is in the window list but maybe behind other windows
@@ -332,6 +347,13 @@ def find_latest_handoff():
     return handoffs[0] if handoffs else None
 
 
+GOAD_PROMPT = (
+    "Please continue if context is below 50 percent. "
+    "Otherwise, please draft a handoff to "
+    "vault/Handoffs/ and end the session."
+)
+
+
 def build_prompt(handoff_path=None):
     """Build the session prompt."""
     if not handoff_path:
@@ -343,12 +365,20 @@ def build_prompt(handoff_path=None):
         return (
             f"C:\\Users\\ccimi\\rudy-workhorse ; "
             f"Good evening, Alfred. Read {handoff_rel} and follow "
-            f"protocols, then proceed."
+            f"protocols, then proceed. IMPORTANT: Before you stop "
+            f"responding, you MUST write a handoff to vault/Handoffs/. "
+            f"If context is below 50 percent, keep working. "
+            f"If context is above 70 percent, write the handoff "
+            f"immediately. Robin will launch the next session."
         )
     return (
         r"C:\Users\ccimi\rudy-workhorse ; "
         "Good evening, Alfred. Read CLAUDE.md and follow protocols, "
-        "then proceed."
+        "then proceed. IMPORTANT: Before you stop responding, you "
+        "MUST write a handoff to vault/Handoffs/. If context is "
+        "below 50 percent, keep working. If context is above 70 "
+        "percent, write the handoff immediately. Robin will launch "
+        "the next session."
     )
 
 
@@ -712,6 +742,21 @@ def run_loop(wmcp, interval_min, handoff_path=None):
         if state == ScreenState.CLAUDE_MOUNT_PROMPT:
             click(wmcp, detail["allow"], "Allow mount (loop)")
             time.sleep(5)
+            continue
+
+        # Session idle — Alfred stopped but didn't end. Goad him.
+        if state == ScreenState.CLAUDE_IDLE:
+            prompt_input = detail.get("prompt_input")
+            if prompt_input:
+                log.info("GOAD: Alfred appears idle — sending continuation prompt")
+                type_text(wmcp, prompt_input, GOAD_PROMPT, clear=True)
+                time.sleep(1)
+                shortcut(wmcp, "enter")
+                log.info("GOAD: Sent. Sleeping %d min", interval_min)
+                _interruptible_sleep(interval_min * 60)
+            else:
+                log.warning("GOAD: Idle but no prompt input found")
+                _interruptible_sleep(60)
             continue
 
         # Claude ready or not found — time to launch
