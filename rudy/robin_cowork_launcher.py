@@ -209,9 +209,11 @@ def _click_element(wmcp, element: dict, label: str) -> bool:
     """Click an element and log the action."""
     log.info("ACT: Clicking '%s' at (%d, %d)",
              label, element["x"], element["y"])
-    result = wmcp("Click", {"x": element["x"], "y": element["y"]})
+    result = wmcp("Click", {"loc": [element["x"], element["y"]]})
+    if not result.success:
+        log.error("ACT: Click FAILED on '%s': %s", label, result.error)
     time.sleep(STEP_PAUSE)
-    return getattr(result, 'success', True)
+    return result.success
 
 
 def _find_and_click(wmcp, brain, elements: list, name: str,
@@ -297,7 +299,7 @@ def _handle_mount_prompt(wmcp, brain, result):
             if still_there:
                 log.warning("VERIFY: Allow button still visible "
                             "-- trying Enter shortcut")
-                wmcp("Shortcut", {"keys": ["enter"]})
+                wmcp("Shortcut", {"shortcut": "enter"})
                 time.sleep(STEP_PAUSE)
 
             result.setdefault("reasoning_log", []).append({
@@ -345,7 +347,7 @@ def _handle_mount_prompt(wmcp, brain, result):
             # Last resort: Enter key (Allow is the default action)
             log.info("ACT: Deny visible but Allow not matched "
                      "-- pressing Enter (default action)")
-            wmcp("Shortcut", {"keys": ["enter"]})
+            wmcp("Shortcut", {"shortcut": "enter"})
             time.sleep(STEP_PAUSE)
             result.setdefault("reasoning_log", []).append({
                 "step": "mount_prompt",
@@ -520,13 +522,17 @@ def launch_cowork_session(
             result["error"] = "Cannot find prompt input field"
             return result
 
-        log.info("ACT: Clicking prompt input at (%d, %d)",
-                 prompt_input["x"], prompt_input["y"])
-        _click_element(wmcp, prompt_input, "prompt input")
-        time.sleep(0.3)
-
-        log.info("ACT: Typing prompt (%d chars)", len(prompt))
-        wmcp("Type", {"text": prompt})
+        log.info("ACT: Typing prompt (%d chars) at (%d, %d)",
+                 len(prompt), prompt_input["x"], prompt_input["y"])
+        type_result = wmcp("Type", {
+            "loc": [prompt_input["x"], prompt_input["y"]],
+            "text": prompt,
+            "clear": True,
+        })
+        if not type_result.success:
+            log.error("ACT: Type FAILED: %s", type_result.error)
+            result["error"] = f"Type failed: {type_result.error}"
+            return result
         time.sleep(0.5)
 
         # === STEP 4: REASON + ACT - Find Submit button by name ===
@@ -547,7 +553,7 @@ def launch_cowork_session(
         else:
             # Fallback: Enter key (less reliable, but functional)
             log.info("ACT: No Send button found -- using Enter key")
-            wmcp("Shortcut", {"keys": ["enter"]})
+            wmcp("Shortcut", {"shortcut": "enter"})
         time.sleep(STEP_PAUSE)
 
         # === STEP 5: HANDLE MOUNT PROMPT - Auto-approve directory ===
@@ -584,11 +590,13 @@ def launch_cowork_session(
                     result["success"] = True
                 else:
                     log.warning("VERIFY: Ollama uncertain about launch")
-                    result["success"] = True  # optimistic -- prompt was sent
+                    result["success"] = False
+                    result["error"] = "No activity indicators, Ollama uncertain"
             else:
-                log.info("VERIFY: No activity indicators, "
-                         "but prompt was sent. Assuming success.")
-                result["success"] = True
+                log.warning("VERIFY: No activity indicators found. "
+                            "Launch may have failed.")
+                result["success"] = False
+                result["error"] = "No activity indicators after launch"
 
         registry.disconnect_all()
 

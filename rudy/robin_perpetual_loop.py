@@ -336,10 +336,13 @@ def perpetual_loop_handoff(dry_run=False):
 
         # Type the handoff request
         handoff_prompt = _build_handoff_prompt(session_info)
-        log.info("ACT: Clicking prompt input and typing handoff request")
-        _click_element(wmcp, prompt_input, "prompt input")
-        time.sleep(0.3)
-        wmcp("Type", {"text": handoff_prompt})
+        log.info("ACT: Typing handoff request at (%d, %d)",
+                 prompt_input["x"], prompt_input["y"])
+        wmcp("Type", {
+            "loc": [prompt_input["x"], prompt_input["y"]],
+            "text": handoff_prompt,
+            "clear": True,
+        })
         time.sleep(0.5)
 
         # Find and click Send
@@ -354,7 +357,7 @@ def perpetual_loop_handoff(dry_run=False):
         if send_btn:
             _click_element(wmcp, send_btn, "Send button")
         else:
-            wmcp("Shortcut", {"keys": ["enter"]})
+            wmcp("Shortcut", {"shortcut": "enter"})
         time.sleep(STEP_PAUSE)
 
         # === STEP 5: WAIT - Monitor for new handoff file ===
