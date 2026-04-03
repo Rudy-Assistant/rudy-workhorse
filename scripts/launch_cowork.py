@@ -784,6 +784,7 @@ def run_loop(wmcp, interval_min, handoff_path=None):
              interval_min, KILL_SWITCH)
     iteration = 0
     consecutive_popups = 0  # S80: track consecutive popup states
+    consecutive_idles = 0   # S81: track consecutive idle states
 
     while True:
         iteration += 1
@@ -831,6 +832,7 @@ def run_loop(wmcp, interval_min, handoff_path=None):
 
         # If session is active, wait
         if state == ScreenState.CLAUDE_WORKING:
+            consecutive_idles = 0  # Reset idle counter
             log.info("Session active — sleeping %d min", interval_min)
             _interruptible_sleep(interval_min * 60)
             continue
@@ -842,10 +844,35 @@ def run_loop(wmcp, interval_min, handoff_path=None):
             continue
 
         # Session idle — Alfred stopped but didn't end. Goad him.
+        # S81 FIX: after 3 consecutive idles, session is dead — start fresh.
         if state == ScreenState.CLAUDE_IDLE:
+            consecutive_idles += 1
+            if consecutive_idles >= 3:
+                log.info("ESCALATE: %d consecutive idles — session is dead, "
+                         "starting new session", consecutive_idles)
+                # Try clicking "New task" to start fresh
+                new_task = find(elements, "New task", window="Claude")
+                if new_task:
+                    click(wmcp, new_task, "New task (idle escalation)")
+                    consecutive_idles = 0
+                    time.sleep(2)
+                    # Fall through to launch on next iteration
+                else:
+                    log.info("ESCALATE: No 'New task' button — forcing launch")
+                    consecutive_idles = 0
+                    result = launch(wmcp, handoff_path)
+                    if result["success"]:
+                        log.info("Session launched — sleeping %d min",
+                                 interval_min)
+                        _interruptible_sleep(interval_min * 60)
+                    else:
+                        log.error("Launch failed — waiting 2 min before retry")
+                        _interruptible_sleep(120)
+                continue
             prompt_input = detail.get("prompt_input")
             if prompt_input:
-                log.info("GOAD: Alfred appears idle — sending continuation prompt")
+                log.info("GOAD: Alfred appears idle (attempt %d/3) — sending "
+                         "continuation prompt", consecutive_idles)
                 type_text(wmcp, prompt_input, GOAD_PROMPT, clear=True)
                 time.sleep(1)
                 shortcut(wmcp, "enter")
