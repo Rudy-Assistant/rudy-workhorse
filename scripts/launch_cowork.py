@@ -222,8 +222,12 @@ def assess_state(elements):
     if allow_btn and deny_btn:
         return ScreenState.CLAUDE_MOUNT_PROMPT, {"allow": allow_btn}
 
-    # Session active?
-    for indicator in ["Stop", "Progress", "Thinking", "Working", "Generating"]:
+    # Session active? Check for generation indicators.
+    # NOTE: "Progress" is the Cowork sidebar panel header — ALWAYS visible,
+    # NOT an indicator of active generation. Do NOT include it here.
+    # "Stop response" appears only during active generation.
+    # "Working on it" / "Thinking" appear during model processing.
+    for indicator in ["Stop response", "Thinking", "Working on it", "Generating"]:
         el = find(claude_elements, indicator)
         if el:
             return ScreenState.CLAUDE_WORKING, {"indicator": el}
