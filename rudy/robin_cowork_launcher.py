@@ -256,7 +256,7 @@ def _handle_mount_prompt(wmcp, brain, result):
     """Detect and approve the Cowork directory mount prompt.
 
     After a Cowork session starts, Claude Desktop shows a dialog:
-      "Claude would like to Cowork in C:\\Users\\ccimi\\rudy-workh..."
+      "Claude would like to Cowork in <repo-path>..."  # lucius-exempt: docstring describing UI dialog
     with "Allow" (Enter) and "Deny" (Esc) buttons.
 
     Robin polls for this dialog and clicks Allow.
