@@ -523,46 +523,24 @@ SESSION_TIMEOUT_MINUTES = 45
 
 
 def check_and_launch_perpetual():
-    """Sentinel integration: perpetual loop when no fresh handoff exists.
+    """Sentinel integration point — DISABLED S78.
 
-    S77 enhancement: Session lifecycle awareness.
-    1. Fast path: fresh handoff exists → launch immediately
-    2. Session timeout: last launch > 45min ago, no fresh handoff →
-       check if session is still active via UI. If not, launch new.
-    3. Fallback: run full perpetual loop (generate handoff + launch)
+    Session launching is now handled exclusively by the standalone
+    intelligent launcher: scripts/launch_cowork.py --loop
+
+    The sentinel's launcher was unreliable across 78 sessions due to:
+    - Split prompts (Type tool splitting on semicolons)
+    - Race conditions with the standalone launcher
+    - No Snapshot-based state assessment before each action
+    - False-positive session-active detection blocking all launches
+
+    The standalone launcher uses PERCEIVE-REASON-ACT-VERIFY at every
+    step and runs as a separate process with a 2-minute check interval.
     """
-    # Fast path: fresh handoff exists -- delegate to existing launcher
-    fresh = _has_fresh_handoff()
-    if fresh:
-        log.info("Fresh handoff exists: %s -- delegating to launcher",
-                 fresh.name)
-        return launch_cowork_session(handoff_path=fresh)
-
-    # S77: Session timeout detection
-    age = _last_launch_age_minutes()
-    if age < SESSION_TIMEOUT_MINUTES:
-        log.info("Last launch was %.0f min ago (< %d min timeout) "
-                 "-- session likely still active, skipping",
-                 age, SESSION_TIMEOUT_MINUTES)
-        return {"success": False, "skipped": True,
-                "reason": f"session_age_{age:.0f}m"}
-
-    # Session has likely ended (or never launched).
-    # S77: Check UI before launching to avoid duplicate sessions.
-    log.info("Last launch was %.0f min ago -- checking if session "
-             "is still active...", age)
-    try:
-        if _is_cowork_session_active():
-            log.info("Session still active in Claude Desktop "
-                     "-- skipping launch")
-            return {"success": False, "skipped": True,
-                    "reason": "session_still_active"}
-    except Exception as exc:
-        log.debug("Session active check failed (non-fatal): %s", exc)
-
-    # Session ended or can't tell -- run the perpetual loop
-    log.info("Session appears ended -- activating perpetual work loop")
-    return perpetual_loop_handoff()
+    log.info("Session launching disabled in sentinel (S78) -- "
+             "handled by scripts/launch_cowork.py")
+    return {"success": False, "skipped": True,
+            "reason": "disabled_s78_standalone_launcher"}
 
 
 if __name__ == "__main__":
