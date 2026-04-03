@@ -2,48 +2,51 @@
 
 ## HARD RULE: Read CLAUDE.md before doing any work.
 
-## MISSION: Verify Robin's session launcher works. Nothing else matters.
+## ROOT CAUSE FOUND AND FIXED
 
-Batman is away and expects to return to find the system autonomously launching sessions.
-Robin has failed to perpetuate Cowork sessions for 7+ sessions. This session has ONE job:
-verify the launcher actually works through a real session transition.
+The launcher has NEVER worked in Cowork mode because `assess_state()` was broken:
 
-## What Happened in S80-81
+1. **"Progress" false positive**: The Cowork sidebar has a permanent "Progress" panel.
+   `assess_state()` checked for "Progress" as a working indicator → returned
+   `CLAUDE_WORKING` even when the model had stopped responding. Every check,
+   every session, for 7+ sessions.
 
-Three failure modes patched:
-1. **Launcher dies** → watchdog in robin_liveness.py restarts it (every 5 min)
-2. **Popup spam** → nuke_all_error_dialogs() bulk-kills WerFault after 3 consecutive popups
-3. **Claude crashes** → ensure_claude_running() restarts Claude Desktop
-4. **NEW S81**: Idle loop → after 3 consecutive CLAUDE_IDLE detections (6+ min of goading with no response), escalate to "New task" click and fresh session launch
+2. **"New task" sidebar Link**: The sidebar always shows a "New task" Link.
+   After removing "Progress", this would falsely trigger `CLAUDE_READY` between
+   turns in an active conversation.
+
+3. **Missing launch trigger states**: `COWORK_SELECT` and `PROMPT_READY` were
+   not in the loop's launch-trigger set, so after clicking "New task" from
+   idle escalation, those states fell through to "unhandled — wait 60s."
+
+## Fixes Applied (commit 7f1bc67 on s80/session-monitor)
+
+- Removed "Progress" from working indicators
+- Changed "Stop" → "Stop response", "Working" → "Working on it" (more specific)
+- "New task" check now requires `control_type="Button"` (sidebar Link ignored)
+- Added `COWORK_SELECT` + `PROMPT_READY` to launch trigger states
+- Added consecutive idle escalation: 3 goads → click "New task" → launch
+
+## Expected Flow After Session Ends
+
+1. ~2 min: Launcher detects CLAUDE_IDLE (no "Stop response" visible)
+2. ~2 min: First goad sent (continuation prompt)
+3. If model has context: responds → CLAUDE_WORKING → continues working
+4. If context full: goad fails → CLAUDE_IDLE again → 2nd goad → 3rd goad → ESCALATE
+5. ~6-7 min: Click "New task" → COWORK_SELECT/PROMPT_READY → launch()
+6. New session starts with latest handoff from vault/Handoffs/
 
 ## Current State
 
-- Launcher running: PID 46000, `scripts/launch_cowork.py --loop --interval 2`
-- HEAD: `80e329b` on branch `s80/session-monitor` (S81 idle-escalation not yet committed)
-- PR #164 open: s80/session-monitor (3 commits + S81 idle fix pending)
-- Robin nervous system: robin_main + sentinel alive (verified earlier this session)
+- Launcher running with fix (new PID after restart at 10:53)
+- HEAD: 7f1bc67 on s80/session-monitor
+- PR #164 open with 6 commits total
+- Robin nervous system: alive (verified earlier)
 
-## YOUR TASK
+## Priorities for Next Session
 
-1. Check launcher log: `C:\Users\ccimi\rudy-data\logs\launch-cowork.log`
-2. Verify launcher is running: look for `launch_cowork` in process list
-3. If launcher is NOT running, start it:
-   `wscript.exe scripts/hidden-launch.vbs "cmd /c C:\Python312\python.exe C:\Users\ccimi\rudy-workhorse\scripts\launch_cowork.py --loop --interval 2"`
-4. Check if S81 idle-escalation fix is on disk (grep for `consecutive_idles` in launch_cowork.py)
-5. If not committed: commit and push the idle-escalation fix
-6. Merge PR #164 if CI passes
-7. Work on actual priorities from CLAUDE.md if launcher is confirmed working
-
-## KEY FILES
-- `scripts/launch_cowork.py` — THE launcher (now ~985L)
-- `rudy/robin_liveness.py` — watchdog for launcher
-- `C:\Users\ccimi\rudy-data\logs\launch-cowork.log` — THE log
-- `C:\Users\ccimi\rudy-data\coordination\simple-launcher-state.json` — last launch state
-
-## DO NOT
-- Build new modules
-- Refactor existing code
-- Add features unrelated to making the launcher work
-
-## SUCCESS CRITERIA
-When a Cowork session ends, a new one starts within 5 minutes.
+1. Verify the launcher actually launched THIS session (check log)
+2. If it did: merge PR #164, declare victory
+3. If it didn't: check log, diagnose which step failed, fix
+4. Clean rudy-data/ (100+ stale helper scripts)
+5. Update CLAUDE.md with launcher fix docs
