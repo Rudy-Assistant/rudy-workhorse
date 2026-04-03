@@ -279,9 +279,9 @@ Write handoffs HERE and ONLY here. Do NOT write to repo root, `rudy-data/handoff
 
 ## Last Session Score
 
-Alfred Session 73: PR #152 merged (docs), PR #153 merged (ADR-005 Phase 2b extractions).
-Robin nervous system recovery. Shared-mode stealth installed.
-Previous: S65 (3 PRs, voice gateway, oracle_shell.py). Full history in vault/Scores/.
+Alfred Session 81: PR #164 merged — ROOT CAUSE of 7-session launcher failure found and fixed.
+Robin successfully launched this session autonomously (first ever Cowork auto-launch).
+Previous: S73 (PR #152, #153, ADR-005 Phase 2b). Full history in vault/Scores/.
 
 ### SKILL INVOCATION GATE (HARD RULE — S41, reinforced S44)
 
@@ -492,14 +492,17 @@ See `docs/MISSION.md` for the full architectural rationale.
 | **gh CLI** | v2.88.1, authenticated as Rudy-Assistant |
 | **PAT** | Classic PAT (ghp_), expires 2026-06-27 |
 
-## Current Sprint (Session 74)
+## Current Sprint (Session 81)
 
-1. PR #154 opened: sentinel heartbeat fix (LG-S73-001) + ADR-005 Phase 2b extractions
-2. Sentinel heartbeat: replaced 4hr monolithic sleep with timestamp cooldown
-3. lucius_fox.py: 766 -> 578 lines (3 new extraction modules)
-4. nightwatch_activity_summary.py created (LG-S73-004 fix)
-5. Robin nervous system restored (robin_main PID 20300)
-6. HEAD at `849feea` on s74/heartbeat-fix-and-extractions
+1. **PR #164 MERGED**: Robin session launcher ROOT CAUSE fix
+   - `assess_state()` matched permanent "Progress" sidebar panel as working indicator
+   - Launcher saw CLAUDE_WORKING on every check, could never detect session end
+   - Fix: removed "Progress", tightened indicators, added COWORK_SELECT/PROMPT_READY triggers
+   - Added consecutive idle escalation (3 goads → "New task" click → fresh launch)
+   - Added launcher_watchdog.py, session_monitor.py, popup nuke, Claude restart
+2. Robin autonomously launched Session 81 (first successful auto-launch)
+3. Session launcher flow: end → IDLE → goad (or COWORK_SELECT) → launch → verify
+4. HEAD on main after squash merge of s80/session-monitor (8 commits)
 ## Lucius Gate — Session Governance (ADR-004 v2.1, reformed by ADR-016)
 
 **Core module:** `rudy/agents/lucius_gate.py`
