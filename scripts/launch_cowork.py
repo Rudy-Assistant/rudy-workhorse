@@ -316,6 +316,78 @@ def dismiss_popup(wmcp, detail):
     return click(wmcp, btn, "dismiss popup")
 
 
+def nuke_all_error_dialogs():
+    """Kill ALL python.exe System Error dialogs at once. S80 fix.
+
+    When multiple Python processes crash, each spawns its own error dialog.
+    Clicking OK one at a time takes minutes. This kills them in bulk.
+    """
+    import subprocess as _sp
+    try:
+        # Kill WerFault.exe (Windows Error Reporting) — these spawn the dialogs
+        _sp.run(["taskkill", "/f", "/im", "WerFault.exe"],
+                capture_output=True, timeout=10)
+        log.info("NUKE: Killed WerFault.exe error dialog processes")
+    except Exception as exc:
+        log.warning("NUKE: WerFault kill failed: %s", exc)
+
+    try:
+        # Also kill any orphaned python processes that are in error state
+        # Only kill those with no command line (zombie/crashed processes)
+        _sp.run(
+            ["powershell", "-Command",
+             "Get-WmiObject Win32_Process -Filter \"Name='python.exe'\" | "
+             "Where-Object { $_.CommandLine -eq $null } | "
+             "ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }"],
+            capture_output=True, text=True, timeout=15
+        )
+        log.info("NUKE: Cleaned up zombie Python processes")
+    except Exception as exc:
+        log.warning("NUKE: Zombie cleanup failed: %s", exc)
+
+
+def ensure_claude_running():
+    """Start Claude Desktop if it's not running. S80 fix."""
+    import subprocess as _sp
+    try:
+        r = _sp.run(
+            ["powershell", "-Command",
+             "Get-Process -Name 'Claude' -ErrorAction SilentlyContinue | "
+             "Select-Object Id | ConvertTo-Json"],
+            capture_output=True, text=True, timeout=10
+        )
+        if r.stdout.strip() and r.stdout.strip() != "null":
+            log.info("CLAUDE: Already running")
+            return True
+    except Exception:
+        pass
+
+    log.info("CLAUDE: Not running — starting Claude Desktop")
+    try:
+        claude_path = os.path.expandvars(
+            r"%LOCALAPPDATA%\AnthropicClaude\Claude.exe"
+        )
+        if os.path.exists(claude_path):
+            _sp.Popen([claude_path], creationflags=0x00000008)
+            log.info("CLAUDE: Started from %s", claude_path)
+            time.sleep(8)  # Give Claude time to initialize
+            return True
+        # Try alternate location
+        alt_path = os.path.expandvars(
+            r"%LOCALAPPDATA%\Programs\claude-desktop\Claude.exe"
+        )
+        if os.path.exists(alt_path):
+            _sp.Popen([alt_path], creationflags=0x00000008)
+            log.info("CLAUDE: Started from %s", alt_path)
+            time.sleep(8)
+            return True
+        log.error("CLAUDE: Cannot find Claude.exe")
+        return False
+    except Exception as exc:
+        log.error("CLAUDE: Start failed: %s", exc)
+        return False
+
+
 def focus_claude(wmcp, elements):
     """Try to bring Claude to the foreground."""
     # Method 1: Click Claude on taskbar
@@ -328,6 +400,11 @@ def focus_claude(wmcp, elements):
     log.info("FOCUS: Trying Alt-Tab")
     shortcut(wmcp, "alt+tab")
     time.sleep(1)
+    # Method 3 (S80): If Claude not found anywhere, start it
+    elements2 = snapshot(wmcp)
+    if elements2 and not find(elements2, "Claude", window="Taskbar"):
+        log.info("FOCUS: Claude not on taskbar — starting it")
+        ensure_claude_running()
     return True
 
 
@@ -706,6 +783,7 @@ def run_loop(wmcp, interval_min, handoff_path=None):
     log.info("LOOP MODE: interval=%d min, kill switch=%s",
              interval_min, KILL_SWITCH)
     iteration = 0
+    consecutive_popups = 0  # S80: track consecutive popup states
 
     while True:
         iteration += 1
@@ -727,10 +805,29 @@ def run_loop(wmcp, interval_min, handoff_path=None):
         log.info("Loop state: %s", state)
 
         # Dismiss any popups even in loop idle
+        # S80 FIX: escalate after 3 consecutive popup iterations
         if state == ScreenState.POPUP_BLOCKING:
-            dismiss_popup(wmcp, detail)
+            consecutive_popups += 1
+            if consecutive_popups >= 3:
+                log.info("ESCALATE: %d consecutive popups — nuking all "
+                         "error dialogs at once", consecutive_popups)
+                nuke_all_error_dialogs()
+                time.sleep(3)
+                # After nuking, check if Claude is still alive
+                elements2 = snapshot(wmcp)
+                if elements2:
+                    claude_visible = find(elements2, "Claude", window="Taskbar")
+                    if not claude_visible:
+                        log.info("ESCALATE: Claude not visible after popup "
+                                 "nuke — starting Claude Desktop")
+                        ensure_claude_running()
+                consecutive_popups = 0  # Reset after escalation
+            else:
+                dismiss_popup(wmcp, detail)
             time.sleep(5)
             continue
+        else:
+            consecutive_popups = 0  # Reset when not in popup state
 
         # If session is active, wait
         if state == ScreenState.CLAUDE_WORKING:
