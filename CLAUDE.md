@@ -251,9 +251,21 @@ Extracted modules to reduce monolith sizes and prepare MCP-ready components:
 - `rudy/agents/lucius_import_hygiene.py` -- check_import_hygiene() (75L)
 - lucius_fox.py: 1684 -> 1320 (S71) -> 904 lines (S72) -- total reduction 46%
 
+**Phase 2b continued (S73):**
+- `rudy/agents/lucius_audit_report.py` -- generate_audit_report() (104L)
+- `rudy/agents/lucius_proposal_review.py` -- review_proposal() (85L)
+- `rudy/agents/lucius_dependency_audit.py` -- audit_dependencies() via pip-audit (134L)
+- lucius_fox.py: 904 -> 766 lines (S73) -- total reduction 54.5%
+
+**Phase 2b continued (S74):**
+- `rudy/agents/lucius_audit_inventory.py` -- code inventory + duplication audit (130L)
+- `rudy/agents/lucius_audit_governance.py` -- agent health + docs + branch audit (207L)
+- `rudy/agents/lucius_session_checkpoint.py` -- context eval line generator (73L)
+- lucius_fox.py: 766 -> 578 lines (S74) -- total reduction 65.7%
+
 Backward-compat imports preserved. Thin delegation wrappers sync findings back.
 
-**Remaining targets:** session_checkpoint (185L), _audit_dependencies (53L, replace with pip-audit), _audit_branches (53L), _generate_audit_report (64L), sentinel.py (~1500L), email consolidation.
+**Remaining targets:** sentinel.py (~1500L), email consolidation.
 
 ### Vault-First Institutional Memory (HARD RULE — Session 16)
 
@@ -267,9 +279,9 @@ Write handoffs HERE and ONLY here. Do NOT write to repo root, `rudy-data/handoff
 
 ## Last Session Score
 
-Alfred Session 65: 3 PRs merged (#134, #135, #136). Voice gateway, process hygiene, oracle_shell.py shipped.
-RAG seeded 169/169 (0 failures). 4 RAG skills deployed. ADR-018 written (780 lines).
-Previous: S60 (3 PRs, oracle-exec skill, Robin-central principle). Full history in vault/Scores/.
+Alfred Session 73: PR #152 merged (docs), PR #153 merged (ADR-005 Phase 2b extractions).
+Robin nervous system recovery. Shared-mode stealth installed.
+Previous: S65 (3 PRs, voice gateway, oracle_shell.py). Full history in vault/Scores/.
 
 ### SKILL INVOCATION GATE (HARD RULE — S41, reinforced S44)
 
@@ -480,16 +492,14 @@ See `docs/MISSION.md` for the full architectural rationale.
 | **gh CLI** | v2.88.1, authenticated as Rudy-Assistant |
 | **PAT** | Classic PAT (ghp_), expires 2026-06-27 |
 
-## Current Sprint (Session 65)
+## Current Sprint (Session 74)
 
-1. PR #134 merged: voice_gateway.py + W292 fix
-2. PR #135 merged: process_hygiene.py + 3 HARD RULES + W292 fix
-3. PR #136 merged: oracle_shell.py — unified execution layer (395 lines, 8/8 smoke tests)
-4. RAG seed verification: 169/169 success, 0 failures
-5. 4 RAG skills deployed: rag-query, rag-upload, rag-explore, rag-status
-6. ADR-018 written: LightRAG Integration (780 lines)
-7. Lucius protocol proposal filed (context evaluation + improvement suggestions)
-8. HEAD at `9e30551` on main
+1. PR #154 opened: sentinel heartbeat fix (LG-S73-001) + ADR-005 Phase 2b extractions
+2. Sentinel heartbeat: replaced 4hr monolithic sleep with timestamp cooldown
+3. lucius_fox.py: 766 -> 578 lines (3 new extraction modules)
+4. nightwatch_activity_summary.py created (LG-S73-004 fix)
+5. Robin nervous system restored (robin_main PID 20300)
+6. HEAD at `849feea` on s74/heartbeat-fix-and-extractions
 ## Lucius Gate — Session Governance (ADR-004 v2.1, reformed by ADR-016)
 
 **Core module:** `rudy/agents/lucius_gate.py`

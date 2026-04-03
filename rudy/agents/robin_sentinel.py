@@ -45,7 +45,7 @@ try:
     TASKQUEUE_AVAILABLE = True
 except ImportError:
     TASKQUEUE_AVAILABLE = False
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Optional
 
@@ -745,6 +745,25 @@ def run_continuous() -> None:
 
     # Continuous monitoring loop
     cycle = 0
+    _nightshift_cooldown_until = None  # timestamp-based cooldown (S74 fix)
+
+    def _write_heartbeat(cyc, interval=300):
+        """Write sentinel heartbeat — extracted to avoid stale heartbeat (LG-S73-001)."""
+        try:
+            _hb_path = RUDY_DATA / "coordination" / "sentinel-heartbeat.json"
+            _hb_data = {
+                "pid": os.getpid(),
+                "cycle": cyc,
+                "timestamp": datetime.now().isoformat(),
+                "poll_interval": interval,
+            }
+            _hb_tmp = _hb_path.with_suffix(".tmp")
+            with open(_hb_tmp, "w") as _hf:
+                json.dump(_hb_data, _hf)
+            _hb_tmp.replace(_hb_path)
+        except Exception:
+            pass  # Never let heartbeat IO crash the loop
+
     while True:
         try:
             # Poll faster (60s) when a directive is active, normal (300s) otherwise
@@ -789,21 +808,9 @@ def run_continuous() -> None:
             cycle += 1
 
             # S68: Sentinel heartbeat for liveness watchdog
-            # The liveness watchdog monitors this file to detect a dead sentinel.
-            try:
-                _hb_path = RUDY_DATA / "coordination" / "sentinel-heartbeat.json"
-                _hb_data = {
-                    "pid": os.getpid(),
-                    "cycle": cycle,
-                    "timestamp": datetime.now().isoformat(),
-                    "poll_interval": poll_interval,
-                }
-                _hb_tmp = _hb_path.with_suffix(".tmp")
-                with open(_hb_tmp, "w") as _hf:
-                    json.dump(_hb_data, _hf)
-                _hb_tmp.replace(_hb_path)
-            except Exception:
-                pass  # Never let heartbeat IO crash the loop
+            # S74 FIX (LG-S73-001): extracted to _write_heartbeat() and called
+            # at top of loop + after any long operation to prevent stale heartbeat.
+            _write_heartbeat(cycle, poll_interval)
 
             # Quick health check every cycle
             phase_1_services(state)
@@ -820,12 +827,22 @@ def run_continuous() -> None:
                 assessment["online"] = False
 
             # Check for night shift activation every cycle
-            ns = NightShift(state, online)
-            if ns.should_activate():
-                log.info("Night shift conditions detected — activating")
-                ns.run()
-                # Don't run night shift again for at least 4 hours
-                time.sleep(14400)
+            # S74 FIX (LG-S73-001): replaced monolithic 4-hour sleep with
+            # timestamp-based cooldown so heartbeat keeps ticking.
+            _in_cooldown = (
+                _nightshift_cooldown_until is not None
+                and datetime.now() < _nightshift_cooldown_until
+            )
+            if not _in_cooldown:
+                ns = NightShift(state, online)
+                if ns.should_activate():
+                    log.info("Night shift conditions detected — activating")
+                    ns.run()
+                    _write_heartbeat(cycle, poll_interval)  # refresh after long op
+                    # Cooldown: don't run night shift again for 4 hours
+                    _nightshift_cooldown_until = datetime.now() + timedelta(hours=4)
+                    log.info("Night shift cooldown until %s",
+                             _nightshift_cooldown_until.isoformat())
 
             # Session continuity: perpetual work loop (S70)
             # FIX S71 (LG-S70-001): Run in thread with 120s timeout.
@@ -856,6 +873,9 @@ def run_continuous() -> None:
                                 launch_result.get("error"))
             except Exception as e:
                 log.debug("Perpetual loop check skipped: %s", e)
+
+            # Refresh heartbeat after potentially long operations (S74)
+            _write_heartbeat(cycle, poll_interval)
 
             # Full re-assessment every 12 cycles (1 hour)
             if cycle % 12 == 0:

@@ -214,54 +214,24 @@ class LuciusFox(AgentBase):
     # ================================================================
 
     def _audit_code_inventory(self):
-        """Scan all Python files, categorize, measure."""
-        self.log.info("Auditing code inventory...")
-        inventory = {"modules": {}, "total_files": 0, "total_lines": 0}
-
-        for root, dirs, files in os.walk(self.RUDY_PKG):
-            dirs[:] = [d for d in dirs if d != "__pycache__" and not d.startswith(".")]
-            for f in files:
-                if not f.endswith(".py"):
-                    continue
-                fp = Path(root) / f
-                try:
-                    content = fp.read_text(encoding="utf-8", errors="replace")
-                    lines = content.count("\n") + 1
-                    doc = ""
-                    if '"""' in content:
-                        parts = content.split('"""')
-                        if len(parts) >= 3:
-                            doc = parts[1].strip()[:200]
-
-                    rel = str(fp.relative_to(self.CODEBASE_ROOT))
-                    inventory["modules"][rel] = {
-                        "lines": lines,
-                        "size_bytes": fp.stat().st_size,
-                        "docstring": doc,
-                        "has_tests": "test" in f.lower() or "assert" in content,
-                        "imports": self._extract_imports(content),
-                        "last_modified": datetime.fromtimestamp(fp.stat().st_mtime).isoformat(),
-                    }
-                    inventory["total_files"] += 1
-                    inventory["total_lines"] += lines
-                except Exception as e:
-                    self.warn(f"Could not read {fp}: {e}")
-
+        """Scan all Python files -- delegated to lucius_audit_inventory.py (S74)."""
+        from rudy.agents.lucius_audit_inventory import audit_code_inventory  # lucius-exempt
+        inventory = audit_code_inventory(
+            rudy_pkg=self.RUDY_PKG,
+            codebase_root=self.CODEBASE_ROOT,
+            log=self.log,
+            warn_fn=self.warn,
+        )
         self.status["code_inventory"] = {
             "files": inventory["total_files"],
             "lines": inventory["total_lines"],
         }
         self._inventory = inventory
-        self.log.info(f"Inventory: {inventory['total_files']} files, {inventory['total_lines']} lines")
 
     def _extract_imports(self, content):
-        """Extract import statements from Python file."""
-        imports = []
-        for line in content.split("\n"):
-            line = line.strip()
-            if line.startswith("import ") or line.startswith("from "):
-                imports.append(line.split("#")[0].strip())
-        return imports
+        """Extract imports -- delegated to lucius_audit_inventory.py (S74)."""
+        from rudy.agents.lucius_audit_inventory import extract_imports  # lucius-exempt
+        return extract_imports(content)
 
     def _locate_artifact(self, query: str) -> dict:
         """Find files, docs, or agents matching a query string.
@@ -361,38 +331,10 @@ class LuciusFox(AgentBase):
         return results
 
     def _audit_duplication(self):
-        """Find files with overlapping purpose or duplicated code."""
-        self.log.info("Auditing for duplication...")
-        if not hasattr(self, "_inventory"):
-            return
-
-        name_groups = {}
-        for path in self._inventory["modules"]:
-            base = Path(path).stem.lower()
-            key = base.replace("robin_", "").replace("rudy_", "")
-            name_groups.setdefault(key, []).append(path)
-
-        for key, paths in name_groups.items():
-            if len(paths) > 1:
-                self.findings.append({
-                    "type": "duplication_suspect",
-                    "severity": "medium",
-                    "title": f"Possible duplication: {key}",
-                    "detail": f"Multiple files with similar purpose: {paths}",
-                    "recommendation": "Review for consolidation or document why both are needed",
-                    "paths": paths,
-                })
-
-        for path, info in self._inventory["modules"].items():
-            for imp in info["imports"]:
-                if "robin_sentinel" in imp and "agents/sentinel" in path:
-                    self.findings.append({
-                        "type": "import_overlap",
-                        "severity": "low",
-                        "title": "Cross-import between sentinel variants",
-                        "detail": f"{path} imports from robin_sentinel",
-                        "recommendation": "Consolidate sentinel functionality",
-                    })
+        """Find duplication -- delegated to lucius_audit_inventory.py (S74)."""
+        from rudy.agents.lucius_audit_inventory import audit_duplication  # lucius-exempt
+        inventory = self._inventory if hasattr(self, "_inventory") else None
+        self.findings.extend(audit_duplication(inventory, log=self.log))
 
     def _audit_dependencies(self):
         """Check Python package dependencies -- delegated to lucius_dependency_audit.py."""
@@ -402,80 +344,21 @@ class LuciusFox(AgentBase):
         self.findings.extend(dep_findings)
 
     def _audit_agent_health(self):
-        """Check status of all known agents."""
-        self.log.info("Auditing agent health...")
-
-        for agent_name in self.KNOWN_AGENTS:
-            status = self.read_status(agent_name)
-            if status.get("status") == "unknown":
-                self.findings.append({
-                    "type": "agent_status",
-                    "severity": "low",
-                    "title": f"Agent '{agent_name}' has no status file",
-                    "detail": "Either never run or status file missing",
-                    "recommendation": "Verify agent is scheduled and functioning",
-                })
-            elif status.get("status") == "error":
-                self.findings.append({
-                    "type": "agent_error",
-                    "severity": "high",
-                    "title": f"Agent '{agent_name}' in error state",
-                    "detail": f"Last run: {status.get('last_run')}. Alerts: {status.get('critical_alerts', [])}",
-                    "recommendation": "Investigate crash dumps and fix root cause",
-                })
-            else:
-                last_run = status.get("last_run", "")
-                if last_run:
-                    try:
-                        lr = datetime.fromisoformat(last_run)
-                        age_hours = (datetime.now() - lr).total_seconds() / 3600
-                        if age_hours > 24:
-                            self.findings.append({
-                                "type": "agent_stale",
-                                "severity": "medium",
-                                "title": f"Agent '{agent_name}' stale ({age_hours:.0f}h since last run)",
-                                "detail": f"Last run: {last_run}",
-                                "recommendation": "Check Task Scheduler or trigger manual run",
-                            })
-                    except (ValueError, TypeError):
-                        pass
+        """Check agent health -- delegated to lucius_audit_governance.py (S74)."""
+        from rudy.agents.lucius_audit_governance import audit_agent_health  # lucius-exempt
+        self.findings.extend(audit_agent_health(
+            known_agents=self.KNOWN_AGENTS,
+            read_status_fn=self.read_status,
+            log=self.log,
+        ))
 
     def _audit_documentation(self):
-        """Check documentation freshness and completeness."""
-        self.log.info("Auditing documentation...")
-
-        for rel_path, desc in REQUIRED_DOCS:
-            path = self.CODEBASE_ROOT / rel_path
-            if path.exists():
-                age_hours = (datetime.now() - datetime.fromtimestamp(path.stat().st_mtime)).total_seconds() / 3600
-                lines = path.read_text(errors="replace").count("\n")
-                if age_hours > 168:  # 1 week
-                    self.findings.append({
-                        "type": "doc_stale",
-                        "severity": "medium",
-                        "title": f"{desc} is stale ({age_hours / 24:.0f} days old)",
-                        "detail": f"{rel_path}: {lines} lines, last modified {age_hours / 24:.0f}d ago",
-                        "recommendation": "Review and update documentation",
-                    })
-            else:
-                self.findings.append({
-                    "type": "doc_missing",
-                    "severity": "high" if "README" in rel_path else "medium",
-                    "title": f"Missing documentation: {desc}",
-                    "detail": f"Expected at {rel_path}",
-                    "recommendation": "Create this documentation",
-                })
-
-        # Also check BatcaveVault
-        vault_home = BATCAVE_VAULT / "Home.md"
-        if not vault_home.exists():
-            self.findings.append({
-                "type": "doc_missing",
-                "severity": "medium",
-                "title": "BatcaveVault Home.md missing",
-                "detail": f"Expected at {vault_home}",
-                "recommendation": "Initialize BatcaveVault with Home.md",
-            })
+        """Check docs -- delegated to lucius_audit_governance.py (S74)."""
+        from rudy.agents.lucius_audit_governance import audit_documentation  # lucius-exempt
+        self.findings.extend(audit_documentation(
+            codebase_root=self.CODEBASE_ROOT,
+            log=self.log,
+        ))
 
     # ================================================================
     # MANDATE 2: THE GATE — Nothing Merges Without Review
@@ -508,45 +391,14 @@ class LuciusFox(AgentBase):
         return result
 
     def _audit_branches(self) -> dict:
-        """Audit git branch state -- stale branches and governance."""
-        self.log.info("Auditing branch governance...")
-        result = {"branches": [], "warnings": []}
-        try:
-            git_result = subprocess.run(
-                ["git", "branch", "-a",
-                 "--format=%(refname:short) %(committerdate:iso8601)"],
-                capture_output=True, text=True,
-                cwd=str(self.CODEBASE_ROOT),
-                timeout=30, encoding="utf-8", errors="replace",
-            )
-            if git_result.returncode != 0:
-                self.warn(f"git branch failed: {git_result.stderr}")
-                return result
-            for line in git_result.stdout.strip().split("\n"):
-                if not line.strip():
-                    continue
-                parts = line.strip().split(" ", 1)
-                branch_name = parts[0]
-                result["branches"].append(branch_name)
-                date_str = parts[1] if len(parts) > 1 else ""
-                if date_str and branch_name not in PROTECTED_BRANCHES:
-                    try:
-                        branch_date = datetime.fromisoformat(
-                            date_str.strip().replace(" ", "T")[:19]
-                        )
-                        age_days = (datetime.now() - branch_date).days
-                        if age_days > 7:
-                            self.findings.append({
-                                "type": "stale_branch",
-                                "severity": "low",
-                                "title": f"Stale branch: {branch_name} ({age_days}d old)",
-                                "detail": f"Last commit: {date_str}",
-                                "recommendation": "Merge or delete if no longer needed",
-                            })
-                    except (ValueError, TypeError):
-                        pass
-        except (subprocess.TimeoutExpired, FileNotFoundError) as e:
-            self.warn(f"Git not available for branch audit: {e}")
+        """Audit branches -- delegated to lucius_audit_governance.py (S74)."""
+        from rudy.agents.lucius_audit_governance import audit_branches  # lucius-exempt
+        result, findings = audit_branches(
+            codebase_root=self.CODEBASE_ROOT,
+            log=self.log,
+            warn_fn=self.warn,
+        )
+        self.findings.extend(findings)
         self.action(f"Branch audit: {len(result['branches'])} branches found")
         return result
 
@@ -652,55 +504,15 @@ class LuciusFox(AgentBase):
         context_pct: float,
         status: str = "",
     ) -> str:
-        """Generate and log a context evaluation line.
-
-        HARD RULE #5: Every substantive Alfred response must end with a
-        context evaluation line. This method formats it, logs it, and
-        returns the string for Alfred to append to the response.
-
-        If context_pct >= 50, emits a warning.
-        If context_pct >= 70, emits a handoff directive.
-
-        Args:
-            session_number: Current session number.
-            context_pct: Estimated context window consumption (0-100).
-            status: Brief status summary for the line.
-
-        Returns:
-            Formatted context evaluation string, ready to paste.
-        """
-        if context_pct >= 70:
-            prefix = "HANDOFF REQUIRED"
-        elif context_pct >= 50:
-            prefix = "APPROACHING LIMIT"
-        else:
-            prefix = ""
-
-        line = f"[Context: ~{int(context_pct)}% | Session {session_number} | {status}]"
-        if prefix:
-            line = f"**{prefix}** — {line}"
-
-        # Log checkpoint
-        self.log.info(
-            f"Session checkpoint: {context_pct}% context, session {session_number}"
+        """Generate context eval line -- delegated to lucius_session_checkpoint.py (S74)."""
+        from rudy.agents.lucius_session_checkpoint import session_checkpoint as _checkpoint  # lucius-exempt
+        return _checkpoint(
+            session_number=session_number,
+            context_pct=context_pct,
+            status=status,
+            audit_dir=self.AUDIT_DIR,
+            log=self.log,
         )
-
-        # Write checkpoint to status file for post-session gate
-        try:
-            checkpoint_file = self.AUDIT_DIR / "session-checkpoints.jsonl"
-            import json as _json
-            entry = {
-                "session": session_number,
-                "context_pct": context_pct,
-                "status": status,
-                "timestamp": datetime.now().isoformat(),
-            }
-            with open(checkpoint_file, "a", encoding="utf-8") as f:
-                f.write(_json.dumps(entry) + "\n")
-        except Exception as e:
-            self.log.warning(f"Failed to write checkpoint: {e}")
-
-        return line
 
     # ================================================================
     # ADR-004 TOOLKIT: lucius:skills-check (extracted S72)
