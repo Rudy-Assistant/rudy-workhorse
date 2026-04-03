@@ -40,6 +40,7 @@ RUDY_DATA = REPO.parent / "rudy-data"
 COORD_DIR = RUDY_DATA / "coordination"
 STATE_FILE = COORD_DIR / "simple-launcher-state.json"
 KILL_SWITCH = COORD_DIR / "robin-pause.flag"
+LAST_LAUNCH_TS = COORD_DIR / "last-launch-timestamp"
 LOG_FILE = RUDY_DATA / "logs" / "launch-cowork.log"
 
 # ---------------------------------------------------------------------------
@@ -773,6 +774,7 @@ def launch(wmcp, handoff_path=None, force=False):
     if result["success"]:
         log.info("LAUNCH SUCCESS — steps: %s", result["steps"])
         save_state(True, f"steps={result['steps']}")
+        _touch_launch_timestamp()
     else:
         log.error("LAUNCH FAILED after %d attempts — detail: %s",
                   MAX_LAUNCH_RETRIES + 1, result["detail"])
@@ -789,6 +791,9 @@ def run_loop(wmcp, interval_min, handoff_path=None):
     """Run perpetually, launching new sessions when needed."""
     log.info("LOOP MODE: interval=%d min, kill switch=%s",
              interval_min, KILL_SWITCH)
+    # S83: Seed launch timestamp so handoff watcher has a baseline
+    if not LAST_LAUNCH_TS.exists():
+        _touch_launch_timestamp()
     iteration = 0
     consecutive_popups = 0  # S80: track consecutive popup states
     consecutive_idles = 0   # S81: track consecutive idle states
@@ -910,8 +915,32 @@ def run_loop(wmcp, interval_min, handoff_path=None):
         _interruptible_sleep(60)
 
 
+def _has_new_handoff():
+    """Check if a new handoff file appeared since last launch."""
+    try:
+        if not LAST_LAUNCH_TS.exists():
+            return False
+        launch_time = LAST_LAUNCH_TS.stat().st_mtime
+        for hf in VAULT_HANDOFFS.glob("Session-*-Handoff.md"):
+            if hf.stat().st_mtime > launch_time:
+                log.info("New handoff detected: %s", hf.name)
+                return True
+    except Exception:
+        pass
+    return False
+
+
+def _touch_launch_timestamp():
+    """Record the current time as last launch timestamp."""
+    try:
+        LAST_LAUNCH_TS.parent.mkdir(parents=True, exist_ok=True)
+        LAST_LAUNCH_TS.write_text(datetime.now().isoformat())
+    except Exception:
+        pass
+
+
 def _interruptible_sleep(seconds):
-    """Sleep in 30-second chunks, checking kill switch each time."""
+    """Sleep in 30-second chunks, checking kill switch and new handoffs."""
     remaining = seconds
     while remaining > 0:
         chunk = min(30, remaining)
@@ -919,6 +948,9 @@ def _interruptible_sleep(seconds):
         remaining -= chunk
         if is_killed():
             log.info("Kill switch detected during sleep — aborting")
+            return
+        if _has_new_handoff():
+            log.info("Handoff trigger — waking launcher early")
             return
 
 
