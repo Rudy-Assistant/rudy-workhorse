@@ -12,17 +12,41 @@ import shutil
 import socket
 import subprocess
 import sys
+import time
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 from rudy.paths import (
+    HOME,
     REPO_ROOT as RUDY_ROOT,
     RUDY_DATA,
     RUDY_LOGS,
+    RUDY_COMMANDS,
 )
 from rudy.agents.sentinel_immune_memory import load_immune_memory
 
 log = logging.getLogger("robin_sentinel")
+
+ESCALATION_LOG = RUDY_DATA / "robin-escalation.log"
+
+
+def _escalate(message: str) -> None:
+    """Write to escalation log and attempt desktop notification."""
+    log.critical("ESCALATION: %s", message)
+    with open(ESCALATION_LOG, "a") as f:
+        f.write(f"{datetime.now().isoformat()} | {message}\n")
+    try:
+        subprocess.run(
+            ["powershell", "-Command",
+             f'[System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms"); '
+             f'[System.Windows.Forms.MessageBox]::Show("{message}", "Robin Alert", "OK", "Warning")'],
+            capture_output=True, timeout=5,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
+    except Exception:
+        pass
+
 
 # ---------------------------------------------------------------------------
 

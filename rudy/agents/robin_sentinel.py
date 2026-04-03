@@ -91,7 +91,7 @@ log = logging.getLogger("robin_sentinel")
 # Backward compatibility: immune memory extracted to sentinel_immune_memory.py (S79)
 from rudy.agents.sentinel_immune_memory import (  # noqa: F401
     DEFAULT_KNOWN_GOOD, load_known_good, save_known_good,
-    load_immune_memory, record_fix, KNOWN_GOOD_STATE, IMMUNE_MEMORY,
+    load_immune_memory, record_fix,
 )
 # ---------------------------------------------------------------------------
 # Phase 0: Am I alive?

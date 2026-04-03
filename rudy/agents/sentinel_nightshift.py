@@ -20,6 +20,7 @@ from rudy.paths import (
     RUDY_LOGS,
     RUDY_COMMANDS,
 )
+from rudy.agents.sentinel_immune_memory import load_immune_memory
 
 # Task queue for autonomous operation
 try:
