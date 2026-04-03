@@ -532,15 +532,40 @@ def check_full_nervous_system() -> dict:
     }
 
 
-def _ensure_launcher_loop() -> dict:
-    """Ensure launch_cowork.py --loop is running. S80 fix.
+def _check_launcher_state() -> dict:
+    """Read simple-launcher-state.json for launcher health. S86 addition."""
+    state_file = COORD_DIR / "simple-launcher-state.json"
+    try:
+        with open(state_file) as f:
+            state = json.load(f)
+        last_launch = state.get("last_launch", "")
+        success = state.get("success", False)
+        if last_launch:
+            age = (datetime.now() - datetime.fromisoformat(last_launch))
+            age_min = age.total_seconds() / 60
+        else:
+            age_min = float("inf")
+        return {
+            "has_state": True,
+            "success": success,
+            "age_minutes": round(age_min, 1),
+            "detail": state.get("detail", ""),
+        }
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {"has_state": False, "success": False, "age_minutes": float("inf")}
 
-    The launcher loop is Robin's ability to start new Cowork sessions.
+
+def _ensure_launcher_loop() -> dict:
+    """Ensure launch_cowork.py --watch is running. S80 fix, S86 watch mode.
+
+    The launcher watch mode is Robin's ability to start new Cowork sessions.
+    It monitors vault/Handoffs/ for new handoff files and launches instantly.
     Without it, Robin is alive but unable to act. This is checked every
     5 minutes by the RobinLivenessWatchdog scheduled task.
     """
     import subprocess as _sp
 
+    # Check if launcher process is running
     try:
         r = _sp.run(
             ["powershell", "-Command",
@@ -550,16 +575,18 @@ def _ensure_launcher_loop() -> dict:
             capture_output=True, text=True, timeout=15
         )
         if r.stdout.strip() and r.stdout.strip() != "null":
-            return {"launcher_loop": "running"}
+            # Process exists — also check state file for health
+            state = _check_launcher_state()
+            return {"launcher_loop": "running", "state": state}
     except Exception:
         pass
 
-    # Not running — start it
+    # Not running — start in --watch mode (S86: replaces --loop)
     vbs_path = REPO_ROOT / "scripts" / "hidden-launch.vbs"
     cmd = (
         "cmd /c C:\\Python312\\python.exe "
         "C:\\Users\\ccimi\\rudy-workhorse\\scripts\\launch_cowork.py "  # lucius-exempt: launcher path
-        "--loop --interval 2"
+        "--watch"
     )
     try:
         if vbs_path.exists():
@@ -571,11 +598,11 @@ def _ensure_launcher_loop() -> dict:
             _sp.Popen(
                 ["C:\\Python312\\python.exe",
                  str(REPO_ROOT / "scripts" / "launch_cowork.py"),
-                 "--loop", "--interval", "2"],
+                 "--watch"],
                 cwd=str(REPO_ROOT),
                 creationflags=0x00000008  # DETACHED_PROCESS
             )
-        return {"launcher_loop": "restarted"}
+        return {"launcher_loop": "restarted", "mode": "watch"}
     except Exception as exc:
         return {"launcher_loop": "restart_failed", "error": str(exc)}
 

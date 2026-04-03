@@ -37,6 +37,7 @@ PROTECTED_NAMES = {
     "node",  # n8n, MCP servers
     "rustdesk", "tailscaled",  # remote access
     "sshd", "conhost",  # SSH and terminal hosts (kill via parent)
+    "windows-mcp",  # Windows-MCP server — Robin's hands (S86 fix)
 }
 
 # Only kill these process names (DC session children)
