@@ -855,44 +855,41 @@ def run_loop(wmcp, interval_min, handoff_path=None):
             time.sleep(5)
             continue
 
-        # Session idle — Alfred stopped but didn't end. Goad him.
-        # S81 FIX: after 3 consecutive idles, session is dead — start fresh.
+        # Session idle — only act if a NEW handoff file exists.
+        # S83 FIX: Never goad an active session. Batman may be between
+        # messages. Only escalate when Alfred actually wrote a handoff,
+        # signaling the session is truly done.
         if state == ScreenState.CLAUDE_IDLE:
-            consecutive_idles += 1
-            if consecutive_idles >= 3:
-                log.info("ESCALATE: %d consecutive idles — session is dead, "
-                         "starting new session", consecutive_idles)
-                # Try clicking "New task" to start fresh
-                new_task = find(elements, "New task", window="Claude")
-                if new_task:
-                    click(wmcp, new_task, "New task (idle escalation)")
-                    consecutive_idles = 0
-                    time.sleep(2)
-                    # Fall through to launch on next iteration
-                else:
-                    log.info("ESCALATE: No 'New task' button — forcing launch")
-                    consecutive_idles = 0
-                    result = launch(wmcp, handoff_path)
-                    if result["success"]:
-                        log.info("Session launched — sleeping %d min",
-                                 interval_min)
-                        _interruptible_sleep(interval_min * 60)
+            if _has_new_handoff():
+                consecutive_idles += 1
+                log.info("IDLE + new handoff detected (attempt %d/3)",
+                         consecutive_idles)
+                if consecutive_idles >= 3:
+                    log.info("ESCALATE: %d consecutive idles with handoff — "
+                             "session is done, starting new", consecutive_idles)
+                    new_task = find(elements, "New task", window="Claude")
+                    if new_task:
+                        click(wmcp, new_task, "New task (idle escalation)")
+                        consecutive_idles = 0
+                        time.sleep(2)
                     else:
-                        log.error("Launch failed — waiting 2 min before retry")
-                        _interruptible_sleep(120)
-                continue
-            prompt_input = detail.get("prompt_input")
-            if prompt_input:
-                log.info("GOAD: Alfred appears idle (attempt %d/3) — sending "
-                         "continuation prompt", consecutive_idles)
-                type_text(wmcp, prompt_input, GOAD_PROMPT, clear=True)
-                time.sleep(1)
-                shortcut(wmcp, "enter")
-                log.info("GOAD: Sent. Sleeping %d min", interval_min)
-                _interruptible_sleep(interval_min * 60)
+                        log.info("ESCALATE: No 'New task' — forcing launch")
+                        consecutive_idles = 0
+                        result = launch(wmcp, handoff_path)
+                        if result["success"]:
+                            _interruptible_sleep(interval_min * 60)
+                        else:
+                            _interruptible_sleep(120)
+                else:
+                    log.info("IDLE with handoff — waiting for session to "
+                             "fully end (attempt %d/3)", consecutive_idles)
+                    _interruptible_sleep(60)
             else:
-                log.warning("GOAD: Idle but no prompt input found")
-                _interruptible_sleep(60)
+                # No new handoff — session is still active, Batman is
+                # between messages. Do NOT goad. Just wait.
+                log.info("IDLE but no new handoff — session still active, "
+                         "waiting %d min", interval_min)
+                _interruptible_sleep(interval_min * 60)
             continue
 
         # Claude ready or not found — time to launch
@@ -955,6 +952,108 @@ def _interruptible_sleep(seconds):
 
 
 # ---------------------------------------------------------------------------
+# Watch Mode — Event-Driven Instant Launch on Handoff
+# ---------------------------------------------------------------------------
+
+def run_watch(wmcp):
+    """
+    Watch vault/Handoffs/ for new files. Launch INSTANTLY when one appears.
+    No polling, no idle detection, no goading. Pure event-driven.
+    """
+    from watchdog.observers import Observer
+    from watchdog.events import FileSystemEventHandler
+    import threading
+
+    log.info("WATCH MODE: monitoring %s for new handoffs", VAULT_HANDOFFS)
+    VAULT_HANDOFFS.mkdir(parents=True, exist_ok=True)
+
+    launch_event = threading.Event()
+    handoff_file = [None]  # mutable container for the handler
+
+    class HandoffHandler(FileSystemEventHandler):
+        def on_created(self, event):
+            if event.is_directory:
+                return
+            name = Path(event.src_path).name
+            if name.startswith("Session-") and name.endswith("-Handoff.md"):
+                log.info("HANDOFF DETECTED: %s", name)
+                handoff_file[0] = event.src_path
+                launch_event.set()
+
+        def on_modified(self, event):
+            if event.is_directory:
+                return
+            name = Path(event.src_path).name
+            if name.startswith("Session-") and name.endswith("-Handoff.md"):
+                if not launch_event.is_set():
+                    log.info("HANDOFF MODIFIED: %s", name)
+                    handoff_file[0] = event.src_path
+                    launch_event.set()
+
+    observer = Observer()
+    observer.schedule(HandoffHandler(), str(VAULT_HANDOFFS), recursive=False)
+    observer.start()
+    log.info("Watchdog observer started — waiting for handoff files")
+
+    try:
+        while True:
+            if is_killed():
+                log.info("Kill switch active — exiting watch mode")
+                break
+
+            # Block until a handoff file appears (or check kill every 30s)
+            triggered = launch_event.wait(timeout=30)
+            if not triggered:
+                continue  # Just a timeout — loop back to check kill switch
+
+            # Handoff detected — launch immediately
+            launch_event.clear()
+            hf = handoff_file[0]
+            log.info("LAUNCHING from handoff: %s", hf)
+
+            # Small delay to let the file finish writing
+            time.sleep(2)
+
+            # Attempt launch
+            for attempt in range(3):
+                result = launch(wmcp, hf)
+                if result["success"]:
+                    log.info("WATCH: Session launched successfully")
+                    break
+                log.warning("WATCH: Launch attempt %d failed — retrying "
+                            "in 10s", attempt + 1)
+                time.sleep(10)
+
+            # After launch, wait for session to end before watching again
+            # (check every 60s if the session is still active)
+            log.info("WATCH: Waiting for session to complete...")
+            while True:
+                if is_killed():
+                    break
+                time.sleep(60)
+                elements = snapshot(wmcp)
+                if not elements:
+                    continue
+                state, _ = assess_state(elements)
+                if state not in (ScreenState.CLAUDE_WORKING,
+                                 ScreenState.CLAUDE_IDLE):
+                    log.info("WATCH: Session ended (state: %s) — "
+                             "resuming watch", state)
+                    break
+                # If idle, check if there's ANOTHER new handoff
+                if state == ScreenState.CLAUDE_IDLE and _has_new_handoff():
+                    log.info("WATCH: Session idle + new handoff — "
+                             "will launch on next trigger")
+                    break
+
+    except KeyboardInterrupt:
+        log.info("Watch mode interrupted")
+    finally:
+        observer.stop()
+        observer.join()
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 
@@ -972,6 +1071,8 @@ def main():
                         help="Remove kill switch to resume")
     parser.add_argument("--force", action="store_true",
                         help="Launch even if a session appears active")
+    parser.add_argument("--watch", action="store_true",
+                        help="Event-driven: launch instantly on new handoff")
     parser.add_argument("--dry-run", action="store_true",
                         help="Take snapshot and assess state without acting")
     args = parser.parse_args()
@@ -1011,7 +1112,9 @@ def main():
                 print(f"  [{el['control_type']}] '{el['name']}' at ({el['x']}, {el['y']})")
             return
 
-        if args.loop:
+        if args.watch:
+            run_watch(wmcp)
+        elif args.loop:
             run_loop(wmcp, args.interval, args.handoff)
         else:
             result = launch(wmcp, args.handoff, force=args.force)
