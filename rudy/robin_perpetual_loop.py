@@ -408,12 +408,128 @@ def perpetual_loop_handoff(dry_run=False):
     return result
 
 
+def _last_launch_age_minutes() -> float:
+    """How many minutes since the last successful Cowork launch.
+
+    Returns float("inf") if no launch recorded or state unreadable.
+    """
+    try:
+        if not STATE_FILE.exists():
+            return float("inf")
+        state = json.loads(STATE_FILE.read_text(encoding="utf-8"))
+        ts = state.get("last_launch", {}).get("timestamp")
+        if not ts:
+            return float("inf")
+        last_dt = datetime.fromisoformat(ts)
+        delta = datetime.now() - last_dt
+        return delta.total_seconds() / 60.0
+    except Exception:
+        return float("inf")
+
+
+def _is_cowork_session_active(wmcp_factory=None) -> bool:
+    """Detect if a Cowork session is currently active in Claude Desktop.
+
+    PERCEIVE: Takes a Snapshot and checks for session indicators.
+    A session is active if we see activity indicators (Stop, Working,
+    Thinking, etc.) or if we do NOT see the "New task" button (meaning
+    we're inside a session, not on the start screen).
+
+    Returns True if a session appears active, False otherwise.
+    If Windows-MCP is unavailable, returns False (conservative).
+    """
+    if wmcp_factory is None:
+        try:
+            from rudy.robin_mcp_client import MCPServerRegistry
+            registry = MCPServerRegistry()
+            if not registry.connect("windows-mcp"):
+                return False
+
+            def wmcp(tool, args):
+                return registry.call_tool(f"windows-mcp.{tool}", args)
+            result = _is_cowork_session_active_inner(wmcp)
+            registry.disconnect_all()
+            return result
+        except Exception as exc:
+            log.debug("Session active check failed: %s", exc)
+            return False
+    return _is_cowork_session_active_inner(wmcp_factory)
+
+
+def _is_cowork_session_active_inner(wmcp) -> bool:
+    """Inner implementation for session detection.
+
+    S77 principle: FALSE NEGATIVES ARE SAFE, FALSE POSITIVES ARE FATAL.
+    A false negative (session active but we think it ended) = we launch
+    a new tab = harmless. A false positive (session ended but we think
+    it's active) = we NEVER launch again = system death.
+    """
+    elements = _snapshot(wmcp)
+    if not elements:
+        log.info("Session check: Snapshot empty -- treating as NOT active")
+        return False
+
+    # Check Claude window exists at all
+    claude_elements = [e for e in elements
+                       if "claude" in e.get("window", "").lower()]
+    if not claude_elements:
+        log.info("Session check: No Claude window found -- NOT active")
+        return False
+
+    # POSITIVE: Active indicators = session is doing something
+    activity = (
+        find_element(elements, "Stop", window="Claude")
+        or find_element(elements, "Working", window="Claude")
+        or find_element(elements, "Thinking", window="Claude")
+        or find_element(elements, "Generating", window="Claude")
+        or find_element(elements, "Progress", window="Claude")
+    )
+    if activity:
+        log.info("Session ACTIVE: found '%s'", activity.get("name", "?"))
+        return True
+
+    # NEGATIVE: Start screen = no session
+    new_task = find_element(elements, "New task", window="Claude")
+    if new_task:
+        log.info("Session NOT active: 'New task' visible (start screen)")
+        return False
+
+    # No clear signal -- check for reply/input field which suggests
+    # we're inside a session (even if idle)
+    prompt_field = (
+        find_element(elements, "Reply", window="Claude")
+        or find_element(elements, "Write your prompt", window="Claude")
+    )
+    if prompt_field:
+        log.debug("Session appears active: input field visible")
+        return True
+
+    # S77 FIX: Default to NOT active. A false-negative here (thinking
+    # session ended when it hasn't) just launches a harmless new tab.
+    # A false-positive (thinking session active when it ended) blocks
+    # all future launches indefinitely — which is catastrophic.
+    # The sentinel log showed 5+ hours of "Session still active"
+    # because this defaulted to True. Never again.
+    log.info("Session status ambiguous (no indicators, no start screen, "
+             "no input field) -- treating as ENDED to allow launch")
+    return False
+
+
+# S77: Session timeout -- how long to wait for a session to end before
+# launching a new one anyway. If the last launch was > this many minutes
+# ago and no fresh handoff has appeared, the session has likely ended
+# (or crashed) and Robin should start a new one.
+SESSION_TIMEOUT_MINUTES = 45
+
+
 def check_and_launch_perpetual():
     """Sentinel integration: perpetual loop when no fresh handoff exists.
 
-    Replaces check_and_launch_if_needed() in the sentinel's continuous
-    loop. First tries fast path (existing handoff), then falls back to
-    the full perpetual loop protocol.
+    S77 enhancement: Session lifecycle awareness.
+    1. Fast path: fresh handoff exists → launch immediately
+    2. Session timeout: last launch > 45min ago, no fresh handoff →
+       check if session is still active via UI. If not, launch new.
+    3. Fallback: run full perpetual loop (generate handoff + launch)
     """
     # Fast path: fresh handoff exists -- delegate to existing launcher
     fresh = _has_fresh_handoff()
@@ -422,8 +538,30 @@ def check_and_launch_perpetual():
                  fresh.name)
         return launch_cowork_session(handoff_path=fresh)
 
-    # No fresh handoff: run the perpetual loop
-    log.info("No fresh handoff -- activating perpetual work loop")
+    # S77: Session timeout detection
+    age = _last_launch_age_minutes()
+    if age < SESSION_TIMEOUT_MINUTES:
+        log.info("Last launch was %.0f min ago (< %d min timeout) "
+                 "-- session likely still active, skipping",
+                 age, SESSION_TIMEOUT_MINUTES)
+        return {"success": False, "skipped": True,
+                "reason": f"session_age_{age:.0f}m"}
+
+    # Session has likely ended (or never launched).
+    # S77: Check UI before launching to avoid duplicate sessions.
+    log.info("Last launch was %.0f min ago -- checking if session "
+             "is still active...", age)
+    try:
+        if _is_cowork_session_active():
+            log.info("Session still active in Claude Desktop "
+                     "-- skipping launch")
+            return {"success": False, "skipped": True,
+                    "reason": "session_still_active"}
+    except Exception as exc:
+        log.debug("Session active check failed (non-fatal): %s", exc)
+
+    # Session ended or can't tell -- run the perpetual loop
+    log.info("Session appears ended -- activating perpetual work loop")
     return perpetual_loop_handoff()
 
 
