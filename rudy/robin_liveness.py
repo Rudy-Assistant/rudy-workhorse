@@ -423,7 +423,7 @@ def start_sentinel() -> dict:
     try:
         r = subprocess.run(
             ["powershell", "-Command",
-             "Start-ScheduledTask -TaskName RobinContinuous"],
+             "Start-ScheduledTask -TaskPath '\\Batcave\\' -TaskName 'RobinContinuous'"],
             capture_output=True, text=True, timeout=15,
         )
         if r.returncode == 0:

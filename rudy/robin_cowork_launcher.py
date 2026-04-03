@@ -245,6 +245,125 @@ def _find_and_click(wmcp, brain, elements: list, name: str,
 
 
 # ---------------------------------------------------------------------------
+# MOUNT PROMPT: Auto-approve Cowork directory access
+# ---------------------------------------------------------------------------
+
+MOUNT_PROMPT_MAX_POLLS = 8    # Check up to 8 times
+MOUNT_PROMPT_POLL_INTERVAL = 3  # seconds between polls
+
+
+def _handle_mount_prompt(wmcp, brain, result):
+    """Detect and approve the Cowork directory mount prompt.
+
+    After a Cowork session starts, Claude Desktop shows a dialog:
+      "Claude would like to Cowork in <repo-path>..."  # lucius-exempt: docstring describing UI dialog
+    with "Allow" (Enter) and "Deny" (Esc) buttons.
+
+    Robin polls for this dialog and clicks Allow.
+    Returns True if the prompt was found and approved, False otherwise.
+
+    PERCEIVE -> REASON -> ACT -> VERIFY pattern.
+    """
+    log.info("PERCEIVE: Watching for Cowork mount prompt...")
+
+    for poll in range(MOUNT_PROMPT_MAX_POLLS):
+        time.sleep(MOUNT_PROMPT_POLL_INTERVAL)
+        elements = _snapshot(wmcp)
+        if not elements:
+            continue
+
+        # Look for the Allow button -- multiple detection strategies
+        allow_btn = (
+            # Strategy 1: Button named "Allow" in Claude window
+            find_element(elements, "Allow", window="Claude",
+                         control_type="Button")
+            # Strategy 2: Button with "Allow Enter" text (shows shortcut)
+            or find_element(elements, "Allow Enter", window="Claude")
+            # Strategy 3: Any "Allow" button on screen
+            or find_element(elements, "Allow", control_type="Button")
+        )
+
+        if allow_btn:
+            log.info("PERCEIVE: Mount prompt detected (poll %d/%d)",
+                     poll + 1, MOUNT_PROMPT_MAX_POLLS)
+            _click_element(wmcp, allow_btn, "Allow (mount prompt)")
+
+            # VERIFY: Check that the prompt dismissed
+            time.sleep(STEP_PAUSE)
+            verify_elements = _snapshot(wmcp)
+            still_there = find_element(
+                verify_elements, "Allow", window="Claude",
+                control_type="Button")
+            if still_there:
+                log.warning("VERIFY: Allow button still visible "
+                            "-- trying Enter shortcut")
+                wmcp("Shortcut", {"keys": ["enter"]})
+                time.sleep(STEP_PAUSE)
+
+            result.setdefault("reasoning_log", []).append({
+                "step": "mount_prompt",
+                "action": "approved",
+                "poll": poll + 1,
+            })
+            return True
+
+        # Check for indicators that session is already running
+        # (mount prompt may have been auto-approved or not required)
+        working = (
+            find_element(elements, "Stop", window="Claude")
+            or find_element(elements, "Working", window="Claude")
+            or find_element(elements, "Thinking", window="Claude")
+        )
+        if working:
+            log.info("PERCEIVE: Session already running "
+                     "(no mount prompt needed, poll %d)", poll + 1)
+            return False
+
+        # Also check for Deny button as confirmation prompt is visible
+        deny_btn = find_element(elements, "Deny", window="Claude",
+                                control_type="Button")
+        if deny_btn:
+            # Prompt is visible but Allow wasn't matched -- try Ollama
+            if brain:
+                decision = reason_about_ui(
+                    brain, elements,
+                    "Click the Allow button to approve Cowork "
+                    "directory access in Claude Desktop")
+                eid = decision.get("element_id")
+                if eid is not None:
+                    target = next(
+                        (e for e in elements if e["id"] == eid), None)
+                    if target:
+                        log.info("REASON: Ollama found Allow at [%d]", eid)
+                        _click_element(wmcp, target, "Allow (Ollama)")
+                        result.setdefault("reasoning_log", []).append({
+                            "step": "mount_prompt",
+                            "action": "approved_via_ollama",
+                            "poll": poll + 1,
+                        })
+                        return True
+            # Last resort: Enter key (Allow is the default action)
+            log.info("ACT: Deny visible but Allow not matched "
+                     "-- pressing Enter (default action)")
+            wmcp("Shortcut", {"keys": ["enter"]})
+            time.sleep(STEP_PAUSE)
+            result.setdefault("reasoning_log", []).append({
+                "step": "mount_prompt",
+                "action": "approved_via_enter",
+                "poll": poll + 1,
+            })
+            return True
+
+        log.debug("PERCEIVE: No mount prompt yet (poll %d/%d)",
+                  poll + 1, MOUNT_PROMPT_MAX_POLLS)
+
+    log.info("PERCEIVE: No mount prompt after %d polls "
+             "(may not be required for this session)",
+             MOUNT_PROMPT_MAX_POLLS)
+    return False
+
+
+# ---------------------------------------------------------------------------
 # Main launch: PERCEIVE -> REASON -> ACT -> VERIFY with retry
 # ---------------------------------------------------------------------------
 
@@ -430,6 +549,16 @@ def launch_cowork_session(
             log.info("ACT: No Send button found -- using Enter key")
             wmcp("Shortcut", {"keys": ["enter"]})
         time.sleep(STEP_PAUSE)
+
+        # === STEP 5: HANDLE MOUNT PROMPT - Auto-approve directory ===
+        # Cowork sessions trigger a "Claude would like to Cowork in
+        # C:\Users\ccimi\rudy-workh..." dialog with Allow/Deny buttons.
+        # Robin must detect and click "Allow" so the session can proceed.
+        mount_handled = _handle_mount_prompt(wmcp, brain, result)
+        if mount_handled:
+            log.info("ACT: Mount prompt approved successfully")
+        else:
+            log.info("ACT: No mount prompt detected (may not appear)")
 
         # === FINAL VERIFY: Did the session start? ===
         log.info("VERIFY: Final Snapshot to confirm launch...")
