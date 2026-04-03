@@ -114,6 +114,33 @@ def connect_mcp():
     return wmcp, registry
 
 
+def check_mcp_health(wmcp):
+    """Lightweight MCP health check -- returns True if Snapshot works."""
+    try:
+        result = wmcp("Snapshot", {"use_vision": False})
+        return result.success
+    except Exception as e:
+        log.warning("MCP health check failed: %s", e)
+        return False
+
+
+def reconnect_mcp(registry):
+    """Disconnect stale MCP and reconnect. Returns (wmcp, registry).
+
+    S87: When Windows-MCP connections die (Errno 22 after session cleanup),
+    the launcher needs to tear down and rebuild the connection rather than
+    spinning forever with a dead MCP.
+    """
+    log.info("MCP reconnecting...")
+    try:
+        registry.disconnect_all()
+    except Exception:
+        pass
+    time.sleep(5)
+    wmcp, new_registry = connect_mcp()
+    log.info("MCP reconnected successfully")
+    return wmcp, new_registry
+
 # ---------------------------------------------------------------------------
 # Perception — Snapshot parsing & element search
 # ---------------------------------------------------------------------------
@@ -306,6 +333,47 @@ def type_text(wmcp, element, text, clear=True):
         log.error("ACT: Type FAILED: %s", result.error)
         return False
     time.sleep(0.5)
+    return True
+
+
+def paste_prompt(wmcp, element, text):
+    """Paste prompt using clipboard. S85 fix for incomplete prompts.
+
+    Type tool sends keystrokes one-by-one for long strings (~30s for 360 chars).
+    Any interruption (focus loss, MCP timeout, UI event) = incomplete prompt.
+    Clipboard paste is atomic: full text or nothing.
+    """
+    import tempfile as _tf
+    temp_file = Path(_tf.gettempdir()) / "robin-prompt.txt"
+    try:
+        temp_file.write_text(text, encoding="utf-8")
+    except Exception as exc:
+        log.error("PASTE: Cannot write temp file: %s", exc)
+        return False
+    ps_path = str(temp_file).replace("'", "''")
+    clip_result = wmcp("Shell", {
+        "command": f"Get-Content '{ps_path}' -Raw | Set-Clipboard",
+        "timeout": 5,
+    })
+    if not clip_result.success:
+        log.error("PASTE: Set-Clipboard failed: %s", clip_result.error)
+        return False
+    log.info("PASTE: Clicking prompt input at (%d, %d)",
+             element["x"], element["y"])
+    click_result = wmcp("Click", {"loc": [element["x"], element["y"]]})
+    if not click_result.success:
+        log.error("PASTE: Click failed: %s", click_result.error)
+        return False
+    time.sleep(0.5)
+    shortcut(wmcp, "ctrl+a")
+    time.sleep(0.2)
+    shortcut(wmcp, "ctrl+v")
+    time.sleep(1.0)
+    try:
+        temp_file.unlink()
+    except Exception:
+        pass
+    log.info("PASTE: %d chars pasted via clipboard", len(text))
     return True
 
 
@@ -603,6 +671,28 @@ def launch(wmcp, handoff_path=None, force=False):
                 result["detail"] = "no_new_task_in_force_mode"
                 continue
 
+        # S85 FIX: Always click "New task" from sidebar to ensure
+        # we get a fresh task screen. cowork_select is ambiguous --
+        # it could be an active session with the radio visible.
+        if state not in (ScreenState.CLAUDE_READY,
+                         ScreenState.CLAUDE_PROMPT_READY,
+                         ScreenState.CLAUDE_MOUNT_PROMPT):
+            claude_elements = [e for e in elements
+                               if "claude" in e["window"].lower()]
+            _nt_link = find(claude_elements, "New task",
+                           window="Claude", control_type="Link")
+            if _nt_link:
+                log.info("S85 SAFETY: Clicking New task from sidebar")
+                click(wmcp, _nt_link, "New task (sidebar safety)")
+                result["steps"].append("clicked_new_task_safety")
+                time.sleep(3)
+                elements = snapshot(wmcp)
+                if elements:
+                    claude_elements = [e for e in elements
+                                      if "claude" in e["window"].lower()]
+                    state, detail = assess_state(elements)
+                    log.info("S85 SAFETY: After New task, state=%s", state)
+
         # If mount prompt, approve it first
         if state == ScreenState.CLAUDE_MOUNT_PROMPT:
             click(wmcp, detail["allow"], "Allow mount")
@@ -660,10 +750,12 @@ def launch(wmcp, handoff_path=None, force=False):
         # ------------------------------------------------------------------
         # PHASE 2: Type prompt
         # ------------------------------------------------------------------
-        log.info("STEP 3: Type prompt")
-        if not type_text(wmcp, prompt_input, prompt, clear=True):
-            result["detail"] = "type_failed"
-            continue
+        log.info("STEP 3: Paste prompt (clipboard)")
+        if not paste_prompt(wmcp, prompt_input, prompt):
+            log.warning("Clipboard paste failed -- falling back to Type")
+            if not type_text(wmcp, prompt_input, prompt, clear=True):
+                result["detail"] = "type_failed"
+                continue
         result["steps"].append("typed_prompt")
 
         # ------------------------------------------------------------------
@@ -956,14 +1048,20 @@ def _interruptible_sleep(seconds):
 # Watch Mode — Event-Driven Instant Launch on Handoff
 # ---------------------------------------------------------------------------
 
-def run_watch(wmcp):
+def run_watch(wmcp, registry):
     """
     Watch vault/Handoffs/ for new files. Launch INSTANTLY when one appears.
     No polling, no idle detection, no goading. Pure event-driven.
+
+    S87: Accepts registry for MCP reconnection. When Snapshot fails N times,
+    auto-reconnects instead of spinning with a dead MCP connection.
     """
     from watchdog.observers import Observer
     from watchdog.events import FileSystemEventHandler
     import threading
+
+    MCP_HEALTH_INTERVAL = 10  # Check MCP health every N idle ticks (~5 min)
+    MCP_FAIL_THRESHOLD = 3    # Consecutive failures before reconnect
 
     log.info("WATCH MODE: monitoring %s for new handoffs", VAULT_HANDOFFS)
     VAULT_HANDOFFS.mkdir(parents=True, exist_ok=True)
@@ -994,6 +1092,9 @@ def run_watch(wmcp):
     observer = Observer()
     observer.schedule(HandoffHandler(), str(VAULT_HANDOFFS), recursive=False)
     observer.start()
+    idle_ticks = 0  # S85: cold-start fallback counter
+    mcp_fail_count = 0  # S87: consecutive MCP failures
+
     log.info("Watchdog observer started — waiting for handoff files")
 
     try:
@@ -1005,7 +1106,69 @@ def run_watch(wmcp):
             # Block until a handoff file appears (or check kill every 30s)
             triggered = launch_event.wait(timeout=30)
             if not triggered:
-                continue  # Just a timeout — loop back to check kill switch
+                idle_ticks += 1
+                # S87: Periodic MCP health check -- detect stale connections
+                if idle_ticks % MCP_HEALTH_INTERVAL == 0:
+                    if check_mcp_health(wmcp):
+                        mcp_fail_count = 0
+                    else:
+                        mcp_fail_count += 1
+                        log.warning(
+                            "WATCH: MCP health check failed (%d/%d)",
+                            mcp_fail_count, MCP_FAIL_THRESHOLD,
+                        )
+                        if mcp_fail_count >= MCP_FAIL_THRESHOLD:
+                            log.info("WATCH: MCP stale -- reconnecting")
+                            try:
+                                wmcp, registry = reconnect_mcp(registry)
+                                mcp_fail_count = 0
+                            except Exception as e:
+                                log.error(
+                                    "WATCH: MCP reconnect failed: %s", e,
+                                )
+                # S85 SMART FALLBACK: Check every tick (~30s).
+                # Uses FILE TIMESTAMPS + STATE FILE only. No UI interaction.
+                if True:
+                    _should_launch = False
+                    _fb_hf = find_latest_handoff()
+                    if not _fb_hf:
+                        pass  # No handoffs exist yet
+                    elif not LAST_LAUNCH_TS.exists():
+                        log.info("WATCH FALLBACK: No launch timestamp (cold start)")
+                        _should_launch = True
+                    else:
+                        _launch_mtime = LAST_LAUNCH_TS.stat().st_mtime
+                        _handoff_mtime = _fb_hf.stat().st_mtime
+                        _age_sec = time.time() - _launch_mtime
+                        _age_min = _age_sec / 60
+                        if _handoff_mtime > _launch_mtime:
+                            log.info("WATCH FALLBACK: Handoff %s newer than launch -> session ended",
+                                     _fb_hf.name)
+                            _should_launch = True
+                        else:
+                            _last_ok = False
+                            try:
+                                _sj = json.loads(STATE_FILE.read_text(encoding="utf-8"))
+                                _last_ok = _sj.get("success", False)
+                            except Exception:
+                                pass
+                            if not _last_ok and _age_sec > 30:
+                                log.info("WATCH FALLBACK: Last launch FAILED, %.0fs ago -> retrying",
+                                         _age_sec)
+                                _should_launch = True
+                            elif _last_ok and _age_min > 45:
+                                log.info("WATCH FALLBACK: Last launch stale (%.0f min) -> relaunching",
+                                         _age_min)
+                                _should_launch = True
+                            elif idle_ticks % 20 == 0:
+                                log.info("WATCH STATUS: Session running (%.0f min, ok=%s)",
+                                         _age_min, _last_ok)
+                    if _should_launch and _fb_hf:
+                        log.info("WATCH FALLBACK: Launching with %s", _fb_hf.name)
+                        handoff_file[0] = str(_fb_hf)
+                        idle_ticks = 0
+                        launch_event.set()
+                continue  # Back to top of loop — loop back to check kill switch
 
             # Handoff detected — launch immediately
             launch_event.clear()
@@ -1032,7 +1195,16 @@ def run_watch(wmcp):
                 if is_killed():
                     break
                 time.sleep(60)
-                elements = snapshot(wmcp)
+                # S87: Wrap snapshot with MCP reconnect
+                try:
+                    elements = snapshot(wmcp)
+                except Exception as _mcp_err:
+                    log.warning("WATCH: MCP error during wait: %s", _mcp_err)
+                    try:
+                        wmcp, registry = reconnect_mcp(registry)
+                    except Exception as _re:
+                        log.error("WATCH: MCP reconnect failed: %s", _re)
+                    continue
                 if not elements:
                     continue
                 state, _ = assess_state(elements)
@@ -1114,7 +1286,7 @@ def main():
             return
 
         if args.watch:
-            run_watch(wmcp)
+            run_watch(wmcp, registry)
         elif args.loop:
             run_loop(wmcp, args.interval, args.handoff)
         else:
