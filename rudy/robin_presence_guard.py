@@ -70,12 +70,18 @@ def get_idle_seconds() -> float:
 
 
 def is_batman_active() -> bool:
-    """True if Batman has been active at keyboard/mouse recently."""
+    """True if Batman has been active at keyboard/mouse recently.
+
+    S77 FIX: Always log idle seconds at INFO level for debugging.
+    Previous versions logged at DEBUG, making it invisible in
+    production logs. This caused hours of undiagnosed blocking.
+    """
     idle = get_idle_seconds()
     active = idle < HID_IDLE_THRESHOLD_SECONDS
-    if active:
-        log.debug("Batman active (idle %.0fs < %ds threshold)",
-                  idle, HID_IDLE_THRESHOLD_SECONDS)
+    # S77: Always log the actual idle value — critical for debugging
+    log.info("HID idle: %.0fs (threshold: %ds) -> %s",
+             idle, HID_IDLE_THRESHOLD_SECONDS,
+             "ACTIVE (blocking)" if active else "IDLE (ok to act)")
     return active
 
 

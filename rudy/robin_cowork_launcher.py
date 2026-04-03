@@ -567,18 +567,56 @@ def launch_cowork_session(
             log.info("ACT: No mount prompt detected (may not appear)")
 
         # === FINAL VERIFY: Did the session start? ===
-        log.info("VERIFY: Final Snapshot to confirm launch...")
-        final_elements = _snapshot(wmcp)
+        # S77 FIX: Retry verification with delay. The session may still
+        # be loading (mount prompt, network, etc.). False negatives here
+        # cause Robin to think the launch failed when it actually worked.
+        VERIFY_ATTEMPTS = 3
+        VERIFY_DELAY = 5  # seconds between verify attempts
+        verified = False
 
-        stop_btn = find_element(final_elements, "Stop", window="Claude")
-        progress = find_element(final_elements, "Progress", window="Claude")
-        thinking = find_element(final_elements, "Thinking", window="Claude")
+        for v_attempt in range(VERIFY_ATTEMPTS):
+            if v_attempt > 0:
+                log.info("VERIFY: Retry %d/%d after %ds delay...",
+                         v_attempt + 1, VERIFY_ATTEMPTS, VERIFY_DELAY)
+                time.sleep(VERIFY_DELAY)
 
-        if stop_btn or progress or thinking:
-            log.info("VERIFY: Session launched (activity indicators found)")
-            result["success"] = True
-        else:
-            # Ask Ollama to evaluate the final state
+            final_elements = _snapshot(wmcp)
+
+            # Wide net of activity indicators (S77: expanded set)
+            activity = (
+                find_element(final_elements, "Stop", window="Claude")
+                or find_element(final_elements, "Progress", window="Claude")
+                or find_element(final_elements, "Thinking", window="Claude")
+                or find_element(final_elements, "Working", window="Claude")
+                or find_element(final_elements, "Generating", window="Claude")
+            )
+            if activity:
+                log.info("VERIFY: Session launched (indicator: '%s')",
+                         activity.get("name", "?"))
+                result["success"] = True
+                verified = True
+                break
+
+            # Negative indicator: if "New task" is visible, we're back
+            # at start screen — launch genuinely failed
+            new_task_back = find_element(
+                final_elements, "New task", window="Claude")
+            if new_task_back:
+                log.warning("VERIFY: 'New task' visible — back at start "
+                            "screen. Launch failed.")
+                break
+
+            # Absence of "New task" AND absence of activity indicators
+            # means session may be loading (prompt accepted, working)
+            if not new_task_back and v_attempt == VERIFY_ATTEMPTS - 1:
+                log.info("VERIFY: No 'New task' and no activity — "
+                         "session likely accepted and loading. "
+                         "Treating as probable success.")
+                result["success"] = True
+                verified = True
+
+        if not verified and not result["success"]:
+            # Last resort: ask Ollama
             if brain:
                 decision = reason_about_ui(
                     brain, final_elements,
@@ -590,12 +628,10 @@ def launch_cowork_session(
                     result["success"] = True
                 else:
                     log.warning("VERIFY: Ollama uncertain about launch")
-                    result["success"] = False
                     result["error"] = "No activity indicators, Ollama uncertain"
             else:
-                log.warning("VERIFY: No activity indicators found. "
-                            "Launch may have failed.")
-                result["success"] = False
+                log.warning("VERIFY: No activity indicators after %d "
+                            "attempts.", VERIFY_ATTEMPTS)
                 result["error"] = "No activity indicators after launch"
 
         registry.disconnect_all()

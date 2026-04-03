@@ -181,7 +181,8 @@ class DirectiveTracker:
         }
         with open(DIRECTIVE_FILE, "w") as f:
             json.dump(d, f, indent=2)
-        log.info("New directive created: %s (%.1fh budget)", directive, hours)
+        log.info("New directive created: %s (%s budget)",
+                 directive, f"{hours:.1f}h" if hours is not None else "indefinite")
         return d
 
 # ---------------------------------------------------------------------------
