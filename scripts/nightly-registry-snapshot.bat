@@ -14,7 +14,7 @@ git checkout main
 git pull origin main
 
 REM Rebuild the registry
-python rudy\agents\lucius_registry.py build
+C:\Python312\python.exe rudy\agents\lucius_registry.py build
 
 REM Check if registry.json changed
 git diff --quiet registry.json
