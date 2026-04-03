@@ -1,12 +1,25 @@
-import subprocess, sys, os, json
+import subprocess
+import sys
+import os
 from datetime import datetime
+from pathlib import Path
 
-LOG = r"C:\Users\ccimi\rudy-data\logs\launcher-watchdog.log"
+# Derive paths from script location (scripts/ is inside repo root)
+SCRIPTS_DIR = Path(__file__).resolve().parent
+REPO = SCRIPTS_DIR.parent
+RUDY_DATA = REPO.parent / "rudy-data"
+LOG_PATH = RUDY_DATA / "logs" / "launcher-watchdog.log"
+PYTHON = Path(sys.executable)
+VBS = SCRIPTS_DIR / "hidden-launch.vbs"
+LAUNCHER = SCRIPTS_DIR / "launch_cowork.py"
+
 
 def log(msg):
     ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    with open(LOG, "a", encoding="utf-8") as f:
+    LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with open(LOG_PATH, "a", encoding="utf-8") as f:
         f.write(f"{ts} {msg}\n")
+
 
 # Check if launch_cowork.py is running
 r = subprocess.run(
@@ -23,19 +36,14 @@ if r.stdout.strip() and r.stdout.strip() != "null":
 
 # Not running — start it
 log("Launcher loop NOT running — restarting...")
-vbs = r"C:\Users\ccimi\rudy-workhorse\scripts\hidden-launch.vbs"
-cmd = ("cmd /c C:\\Python312\\python.exe "
-       "C:\\Users\\ccimi\\rudy-workhorse\\scripts\\launch_cowork.py "
-       "--loop --interval 2")
-if os.path.exists(vbs):
-    subprocess.Popen(["wscript.exe", vbs, cmd],
-                     cwd=r"C:\Users\ccimi\rudy-workhorse")
+cmd = f"cmd /c {PYTHON} {LAUNCHER} --loop --interval 2"
+if VBS.exists():
+    subprocess.Popen(["wscript.exe", str(VBS), cmd], cwd=str(REPO))
     log("Restarted via hidden-launch.vbs")
 else:
     subprocess.Popen(
-        ["C:\\Python312\\python.exe",
-         r"C:\Users\ccimi\rudy-workhorse\scripts\launch_cowork.py",
-         "--loop", "--interval", "2"],
-        cwd=r"C:\Users\ccimi\rudy-workhorse",
+        [str(PYTHON), str(LAUNCHER), "--loop", "--interval", "2"],
+        cwd=str(REPO),
         creationflags=0x00000008)
     log("Restarted via direct Popen")
+
