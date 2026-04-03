@@ -341,11 +341,11 @@ def build_prompt(handoff_path=None):
         return (
             f"C:\\Users\\ccimi\\rudy-workhorse ; "
             f"Good evening, Alfred. Read {handoff_rel} and follow "
-            f"protocols; then proceed."
+            f"protocols, then proceed."
         )
     return (
         r"C:\Users\ccimi\rudy-workhorse ; "
-        "Good evening, Alfred. Read CLAUDE.md and follow protocols; "
+        "Good evening, Alfred. Read CLAUDE.md and follow protocols, "
         "then proceed."
     )
 
