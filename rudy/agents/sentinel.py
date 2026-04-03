@@ -43,6 +43,12 @@ from datetime import datetime
 from pathlib import Path
 from . import AgentBase, DESKTOP, LOGS_DIR
 
+
+try:
+    from rudy.robin_session_monitor import check_and_approve_prompts
+except ImportError:
+    check_and_approve_prompts = None
+
 class Sentinel(AgentBase):
     name = "sentinel"
     version = "2.0"
@@ -976,6 +982,20 @@ class Sentinel(AgentBase):
             age_min = (time.time() - runner_log.stat().st_mtime) / 60
 
             prev_inactive = state.get("session_inactive_since")
+
+            # S80: Check for stalled permission prompts during active session
+            if check_and_approve_prompts is not None:
+                try:
+                    prompt_result = check_and_approve_prompts()
+                    if prompt_result and prompt_result.get("action_taken") in (
+                        "approved", "approved_retry"
+                    ):
+                        self._observe("prompt_approved",
+                            "Auto-approved Cowork permission prompt",
+                            actionable=False)
+                except Exception as pe:
+                    self._observe("prompt_check_error",
+                        f"Prompt check failed: {pe}")
 
             if age_min < self.INACTIVITY_WARN_MINUTES:
                 # Active — clear any inactivity state
