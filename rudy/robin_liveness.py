@@ -532,6 +532,54 @@ def check_full_nervous_system() -> dict:
     }
 
 
+def _ensure_launcher_loop() -> dict:
+    """Ensure launch_cowork.py --loop is running. S80 fix.
+
+    The launcher loop is Robin's ability to start new Cowork sessions.
+    Without it, Robin is alive but unable to act. This is checked every
+    5 minutes by the RobinLivenessWatchdog scheduled task.
+    """
+    import subprocess as _sp
+
+    try:
+        r = _sp.run(
+            ["powershell", "-Command",
+             "Get-WmiObject Win32_Process -Filter \"Name='python.exe'\" | "
+             "Where-Object { $_.CommandLine -like '*launch_cowork*' } | "
+             "Select-Object ProcessId | ConvertTo-Json"],
+            capture_output=True, text=True, timeout=15
+        )
+        if r.stdout.strip() and r.stdout.strip() != "null":
+            return {"launcher_loop": "running"}
+    except Exception:
+        pass
+
+    # Not running — start it
+    vbs_path = REPO_ROOT / "scripts" / "hidden-launch.vbs"
+    cmd = (
+        "cmd /c C:\\Python312\\python.exe "
+        "C:\\Users\\ccimi\\rudy-workhorse\\scripts\\launch_cowork.py "  # lucius-exempt: launcher path
+        "--loop --interval 2"
+    )
+    try:
+        if vbs_path.exists():
+            _sp.Popen(
+                ["wscript.exe", str(vbs_path), cmd],
+                cwd=str(REPO_ROOT)
+            )
+        else:
+            _sp.Popen(
+                ["C:\\Python312\\python.exe",
+                 str(REPO_ROOT / "scripts" / "launch_cowork.py"),
+                 "--loop", "--interval", "2"],
+                cwd=str(REPO_ROOT),
+                creationflags=0x00000008  # DETACHED_PROCESS
+            )
+        return {"launcher_loop": "restarted"}
+    except Exception as exc:
+        return {"launcher_loop": "restart_failed", "error": str(exc)}
+
+
 def ensure_full_nervous_system() -> dict:
     """
     Ensure Robin's complete nervous system is operational.
@@ -541,9 +589,11 @@ def ensure_full_nervous_system() -> dict:
     """
     robin_result = ensure_alive()
     sentinel_result = ensure_sentinel_alive()
+    launcher_result = _ensure_launcher_loop()
     return {
         "robin_main": robin_result,
         "sentinel": sentinel_result,
+        "launcher_loop": launcher_result,
         "overall_healthy": (
             robin_result["status"]["alive"]
             and sentinel_result["status"]["alive"]

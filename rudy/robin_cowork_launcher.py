@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Optional
 
 from rudy.robin_mcp_client import MCPServerRegistry
+from rudy.robin_session_monitor import SessionMonitor
 from rudy.paths import REPO_ROOT
 
 log = logging.getLogger("robin_cowork_launcher")
@@ -565,6 +566,24 @@ def launch_cowork_session(
             log.info("ACT: Mount prompt approved successfully")
         else:
             log.info("ACT: No mount prompt detected (may not appear)")
+
+        # === STEP 5b: START SESSION MONITOR (S80) ===
+        # Run continuous prompt-pause bypass for the first 60 seconds
+        # to catch tool-loading permission prompts that appear after
+        # the initial mount prompt. Also scrolls chat to keep latest
+        # content visible for Robin's screenshot-based reasoning.
+        try:
+            session_mon = SessionMonitor(poll_interval=2.0)
+            if session_mon.connect():
+                log.info("ACT: Starting session monitor (60s)")
+                mon_stats = session_mon.run_continuous(
+                    duration_seconds=60, stop_on_idle=False)
+                result["monitor_stats"] = mon_stats
+                log.info("ACT: Session monitor done -- %d prompts approved",
+                         mon_stats.get("prompts_approved", 0))
+                session_mon.disconnect()
+        except Exception as mon_exc:
+            log.warning("Session monitor error: %s", mon_exc)
 
         # === FINAL VERIFY: Did the session start? ===
         # S77 FIX: Retry verification with delay. The session may still
