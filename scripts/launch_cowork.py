@@ -337,6 +337,8 @@ def build_prompt(handoff_path=None):
     if not handoff_path:
         handoff_path = find_latest_handoff()
     if handoff_path:
+        # Strip any extra quotes from CLI args
+        handoff_path = str(handoff_path).strip('"').strip("'")
         handoff_rel = Path(handoff_path).relative_to(REPO)
         return (
             f"C:\\Users\\ccimi\\rudy-workhorse ; "
@@ -404,9 +406,13 @@ def save_state(success, detail=""):
 # Core Launch Sequence
 # ---------------------------------------------------------------------------
 
-def launch(wmcp, handoff_path=None):
+def launch(wmcp, handoff_path=None, force=False):
     """
     PERCEIVE → REASON → ACT → VERIFY launch sequence.
+
+    Args:
+        force: If True, launch even if a session appears active.
+               Used for testing while a session is running.
 
     Returns dict with success, detail, steps taken.
     """
@@ -460,12 +466,26 @@ def launch(wmcp, handoff_path=None):
         # PHASE 1: Handle current state (state machine)
         # ------------------------------------------------------------------
 
-        # If already working, we're done
-        if state == ScreenState.CLAUDE_WORKING:
+        # If already working, we're done (unless --force)
+        if state == ScreenState.CLAUDE_WORKING and not force:
             log.info("Session already active — nothing to launch")
             result["success"] = True
             result["detail"] = "session_already_active"
             break
+        elif state == ScreenState.CLAUDE_WORKING and force:
+            log.info("Session active but --force set — clicking New task")
+            new_task = find(elements, "New task", window="Claude")
+            if new_task:
+                click(wmcp, new_task, "New task (force)")
+                result["steps"].append("clicked_new_task_force")
+                time.sleep(1)
+                elements = snapshot(wmcp)
+                state, detail = assess_state(elements)
+                log.info("After forced New task click: %s", state)
+            else:
+                log.error("Cannot find 'New task' — aborting force launch")
+                result["detail"] = "no_new_task_in_force_mode"
+                continue
 
         # If mount prompt, approve it first
         if state == ScreenState.CLAUDE_MOUNT_PROMPT:
@@ -740,6 +760,8 @@ def main():
                         help="Create kill switch to stop the launcher")
     parser.add_argument("--resume", action="store_true",
                         help="Remove kill switch to resume")
+    parser.add_argument("--force", action="store_true",
+                        help="Launch even if a session appears active")
     parser.add_argument("--dry-run", action="store_true",
                         help="Take snapshot and assess state without acting")
     args = parser.parse_args()
@@ -782,7 +804,7 @@ def main():
         if args.loop:
             run_loop(wmcp, args.interval, args.handoff)
         else:
-            result = launch(wmcp, args.handoff)
+            result = launch(wmcp, args.handoff, force=args.force)
             sys.exit(0 if result["success"] else 1)
 
     except KeyboardInterrupt:
