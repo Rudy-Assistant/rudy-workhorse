@@ -587,13 +587,14 @@ def launch(wmcp, handoff_path=None, force=False):
             result["success"] = True
             result["detail"] = "session_already_active"
             break
-        elif state == ScreenState.CLAUDE_WORKING and force:
-            log.info("Session active but --force set — clicking New task")
+        elif state in (ScreenState.CLAUDE_WORKING,
+                      ScreenState.CLAUDE_IDLE) and force:
+            log.info("Session present but --force set — clicking New task")
             new_task = find(elements, "New task", window="Claude")
             if new_task:
                 click(wmcp, new_task, "New task (force)")
                 result["steps"].append("clicked_new_task_force")
-                time.sleep(1)
+                time.sleep(3)  # Wait for UI transition
                 elements = snapshot(wmcp)
                 state, detail = assess_state(elements)
                 log.info("After forced New task click: %s", state)
@@ -1014,9 +1015,9 @@ def run_watch(wmcp):
             # Small delay to let the file finish writing
             time.sleep(2)
 
-            # Attempt launch
+            # Attempt launch (force=True: end current session if active)
             for attempt in range(3):
-                result = launch(wmcp, hf)
+                result = launch(wmcp, hf, force=True)
                 if result["success"]:
                     log.info("WATCH: Session launched successfully")
                     break
