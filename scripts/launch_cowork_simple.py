@@ -417,6 +417,7 @@ def run_loop(wmcp):
     launch_time = None
     goaded = False
     boot_time = time.time()  # Don't launch within 5 min of starting
+    consecutive_not_working = 0  # require 2+ non-working polls before launch
 
     while True:
         if KILL_SWITCH.exists():
@@ -442,6 +443,7 @@ def run_loop(wmcp):
         if state == "working":
             if not launch_time:
                 launch_time = now  # track session we didn't start
+            consecutive_not_working = 0  # reset confirmation counter
             time.sleep(POLL_INTERVAL)
             continue
 
@@ -480,16 +482,32 @@ def run_loop(wmcp):
             time.sleep(3)
             continue
 
-        # 4. Ready / gone / cowork_select / unknown = launch new session
-        # Safety: don't launch within 5 min of boot (avoid false positives)
-        if state in ("ready", "gone", "cowork_select", "unknown") and \
+        # 4. Ready / gone / cowork_select = launch new session
+        # "unknown" is NOT a launch trigger -- flaky snapshots return unknown
+        # and we must NOT launch on top of an active session (LG-S92-005)
+        if state == "unknown":
+            log.info("Unknown state -- waiting (will NOT launch on unknown)")
+            consecutive_not_working += 1
+            time.sleep(POLL_INTERVAL)
+            continue
+        if state in ("ready", "gone", "cowork_select") and \
                 (time.time() - boot_time) < 300:
             log.info("Boot cooldown (%.0fs) -- skipping launch",
                      time.time() - boot_time)
+            consecutive_not_working += 1
             time.sleep(POLL_INTERVAL)
             continue
-        if state in ("ready", "gone", "cowork_select", "unknown"):
-            log.info("No active session -- launching")
+        if state in ("ready", "gone", "cowork_select"):
+            consecutive_not_working += 1
+            # Require 2 consecutive non-working polls to confirm session
+            # is truly gone -- a single flaky snapshot must not trigger launch
+            if consecutive_not_working < 2:
+                log.info("State=%s but need 2 confirmations (%d/2) -- waiting",
+                         state, consecutive_not_working)
+                time.sleep(POLL_INTERVAL)
+                continue
+            log.info("No active session (confirmed %dx) -- launching",
+                     consecutive_not_working)
             if state == "gone":
                 # Try clicking Claude on taskbar first
                 tb = find(els, "Claude", win="Taskbar")
