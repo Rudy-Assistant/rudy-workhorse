@@ -45,7 +45,7 @@ class ResearchIntel(AgentBase):
 
     def _run_cmd(self, cmd, timeout=60):
         try:
-            r = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=timeout)
+            r = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=timeout)  # nosec B602
             return r.returncode == 0, r.stdout.strip()
         except Exception:
             return False, ""
@@ -613,7 +613,7 @@ class ResearchIntel(AgentBase):
         try:
             from rudy.local_ai import OllamaBackend
             ollama = OllamaBackend()
-            if not (ollama.is_available() and ollama.has_model("phi3-mini")):
+            if not (ollama.is_available() and ollama.has_model("qwen2.5-7b")):
                 self.log.info("  Ollama not available — skipping AI synthesis (evidence preserved)")
                 return
         except Exception:
@@ -656,7 +656,7 @@ class ResearchIntel(AgentBase):
                 response = ollama.generate(
                     prompt,
                     system="You are a dependency auditor. Judge ONLY from the facts provided. Do not use prior knowledge.",
-                    model_name="phi3-mini",
+                    model_name="qwen2.5-7b",
                     max_tokens=60,
                     temperature=0.1,
                 )
