@@ -13,6 +13,8 @@ import socket
 import subprocess
 import sys
 import time
+
+from rudy.agents.sentinel_subprocess import safe_run
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -37,12 +39,11 @@ def _escalate(message: str) -> None:
     with open(ESCALATION_LOG, "a") as f:
         f.write(f"{datetime.now().isoformat()} | {message}\n")
     try:
-        subprocess.run(
+        safe_run(
             ["powershell", "-Command",
              f'[System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms"); '
              f'[System.Windows.Forms.MessageBox]::Show("{message}", "Robin Alert", "OK", "Warning")'],
-            capture_output=True, timeout=5,
-            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+            timeout=5,
         )
     except Exception:
         pass
@@ -144,9 +145,9 @@ def phase_1_services(state: dict) -> dict:
 def _check_windows_service(name: str) -> dict:
     """Check Windows service status via sc query."""
     try:
-        result = subprocess.run(
+        result = safe_run(
             ["sc", "query", name],
-            capture_output=True, text=True, timeout=10,
+            timeout=10,
         )
         running = "RUNNING" in result.stdout
         return {"ok": running, "state": "running" if running else "stopped"}
@@ -157,11 +158,11 @@ def _restart_windows_service(name: str, max_attempts: int = 3) -> bool:
     """Attempt to restart a Windows service."""
     for attempt in range(max_attempts):
         try:
-            subprocess.run(["sc", "stop", name], capture_output=True, timeout=15)
+            safe_run(["sc", "stop", name], timeout=15)
             time.sleep(2)
-            result = subprocess.run(
+            result = safe_run(
                 ["sc", "start", name],
-                capture_output=True, text=True, timeout=15,
+                timeout=15,
             )
             if result.returncode == 0 or "RUNNING" in result.stdout:
                 return True
@@ -176,9 +177,9 @@ def _check_rustdesk_zombies(state: dict, status: dict) -> None:
     if not rd_cfg:
         return
     try:
-        result = subprocess.run(
+        result = safe_run(
             ["tasklist", "/FI", "IMAGENAME eq rustdesk.exe", "/FO", "CSV", "/NH"],
-            capture_output=True, text=True, timeout=10,
+            timeout=10,
         )
         lines = [line for line in result.stdout.strip().split("\n") if "rustdesk" in line.lower()]
         count = len(lines)
@@ -187,7 +188,7 @@ def _check_rustdesk_zombies(state: dict, status: dict) -> None:
         if count > max_inst and rd_cfg.get("kill_zombies"):
             log.warning("RustDesk has %d instances (max %d) — killing excess", count, max_inst)
             # Kill all, then restart cleanly
-            subprocess.run(["taskkill", "/F", "/IM", "rustdesk.exe"], capture_output=True, timeout=10)
+            safe_run(["taskkill", "/F", "/IM", "rustdesk.exe"], timeout=10)
             time.sleep(2)
             # Restart RustDesk
             rd_path = Path(r"C:\Program Files\RustDesk\rustdesk.exe")
@@ -228,9 +229,9 @@ def phase_2_agents(state: dict) -> dict:
 def _check_scheduled_task(name: str) -> dict:
     """Check if a Windows scheduled task exists and is enabled."""
     try:
-        result = subprocess.run(
+        result = safe_run(
             ["schtasks", "/Query", "/TN", name, "/FO", "CSV", "/NH"],
-            capture_output=True, text=True, timeout=10,
+            timeout=10,
         )
         if result.returncode == 0 and name in result.stdout:
             enabled = "Ready" in result.stdout or "Running" in result.stdout
