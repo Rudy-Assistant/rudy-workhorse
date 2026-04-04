@@ -15,7 +15,7 @@ Capabilities (all 100% offline):
 Architecture (dual backend):
   Primary: Ollama HTTP API (http://localhost:11434)
     - Manages model lifecycle, auto-loads, better memory management
-    - Models: phi3:mini, mistral, tinyllama (pull via 'ollama pull')
+    - Models: qwen2.5:7b, deepseek-r1:8b (pull via 'ollama pull')
   Fallback: llama-cpp-python (GGUF format)
     - Direct CPU inference if Ollama is down
     - Models in rudy-data/models/*.gguf
@@ -161,6 +161,9 @@ class ResponseCache:
 
 # Ollama model name mapping (our names → Ollama names)
 OLLAMA_MODEL_MAP = {
+    "qwen2.5-7b": "qwen2.5:7b",
+    "deepseek-r1-8b": "deepseek-r1:8b",
+    # Legacy aliases
     "phi3-mini": "phi3:mini",
     "mistral-7b": "mistral",
     "tinyllama": "tinyllama",
@@ -203,7 +206,7 @@ class OllamaBackend:
         models = self.list_models()
         return any(ollama_name in m for m in models)
 
-    def generate(self, prompt: str, system: str = "", model_name: str = "phi3-mini",
+    def generate(self, prompt: str, system: str = "", model_name: str = "qwen2.5-7b",
                  max_tokens: int = 256, temperature: float = 0.3) -> str:
         """Generate a response via Ollama HTTP API."""
         import urllib.request
@@ -244,7 +247,7 @@ class LocalAI:
         summary = ai.summarize("... long log output ...")
     """
 
-    def __init__(self, default_model: str = "phi3-mini"):
+    def __init__(self, default_model: str = "qwen2.5-7b"):
         MODELS_DIR.mkdir(parents=True, exist_ok=True)
         self._llm = None  # llama-cpp fallback
         self._model_name = None
@@ -594,11 +597,17 @@ class OfflineAI:
         self._loaded = False
 
     def ensure_ready(self) -> bool:
-        """Ensure a model is loaded. Try phi3-mini first (faster), then others."""
+        """Ensure AI is available. Try Ollama first, then GGUF fallbacks."""
         if self._loaded:
             return True
 
-        for model in ["phi3-mini", "tinyllama", "mistral-7b"]:
+        # Primary: Ollama (installed models: qwen2.5:7b, deepseek-r1:8b)
+        if self.ai._ollama.is_available():
+            self._loaded = True
+            return True
+
+        # Fallback: local GGUF models via llama-cpp-python
+        for model in ["qwen2.5-7b", "deepseek-r1-8b", "phi3-mini", "tinyllama"]:
             if self.ai.is_model_available(model):
                 if self.ai.load_model(model):
                     self._loaded = True
