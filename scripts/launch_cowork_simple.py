@@ -111,7 +111,17 @@ def reconnect():
 def scroll_chat_to_bottom(wmcp):
     """Scroll Claude chat to bottom so Allow/Deny buttons are visible."""
     try:
-        wmcp("Shortcut", {"shortcut": "ctrl+End"})
+        # Take a raw snapshot (no recursion — snap() calls us)
+        r = wmcp("Snapshot", {"use_vision": False})
+        if r.success:
+            els = parse(r.content or "")
+            scroll_btn = find(els, "Scroll to bottom", win="Claude")
+            if scroll_btn:
+                wmcp("Click", {"loc": [scroll_btn["x"], scroll_btn["y"]]})
+                time.sleep(0.5)
+                return
+        # Fallback: End key
+        wmcp("Shortcut", {"shortcut": "End"})
         time.sleep(0.5)
     except Exception:
         pass
@@ -218,8 +228,8 @@ def get_state(els):
         return "gone", {}
 
     # Mount prompt (Allow/Deny)?
-    allow = find(cl, "Allow", ctrl="Button")
-    deny = find(cl, "Deny", ctrl="Button")
+    allow = find(cl, "Allow")
+    deny = find(cl, "Deny")
     if allow and deny:
         return "mount", {"allow": allow}
 
