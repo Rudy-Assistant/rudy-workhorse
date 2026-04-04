@@ -492,15 +492,16 @@ See `docs/MISSION.md` for the full architectural rationale.
 | **gh CLI** | v2.88.1, authenticated as Rudy-Assistant |
 | **PAT** | Classic PAT (ghp_), expires 2026-06-27 |
 
-## Current Sprint (Session 98)
+## Current Sprint (Session 99)
 
-1. **PR #194 MERGED (S97)**: fix(liveness) -- start_robin() nightwatch restart bug
-2. **PR #176 MERGED (S90)**: fix(sentinel) -- prevent orphaned subprocess children
-3. **R-005 Robin Growth Dashboard DELIVERED (S98)**: Interactive HTML dashboard
-   - vault/Dashboards/robin-growth-dashboard.html
-   - 6 charts: cumulative PRs, velocity, Robin health, commit types, era breakdown, activity heatmap
-   - KPI cards: 97 sessions, 82 PRs merged, 100 commits tracked
-4. HEAD on main at db19e6f, no open PRs
+1. **LG-S98-002 FIXED (S99)**: Dashboard Robin status regex -- 6 GREEN -> 26 GREEN
+   - Multi-pattern extraction handles all handoff formats S28-S98
+   - Sentinel status now extracted (was UNKNOWN for all sessions)
+   - Score extraction improved from 1/10 to 5/10 with totals
+2. **Dashboard updated (S99)**: vault/Dashboards/robin-growth-dashboard.html
+   - KPIs: 98 sessions, 82 PRs, 150 commits, 26 GREEN sessions
+3. **Stale branches pruned**: 8 remote refs cleaned, 1 local branch deleted
+4. HEAD on main at 95de9e2 (PR #196), branch s99/fix-dashboard-regex
 5. Robin GREEN (PID 66080), Sentinel GREEN (PID 48620)
 
 ## Lucius Gate — Session Governance (ADR-004 v2.1, reformed by ADR-016)
