@@ -224,7 +224,7 @@ def start_robin() -> dict:
             # Start detached (CREATE_NEW_PROCESS_GROUP + DETACHED_PROCESS)
             flags = subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS
             proc = subprocess.Popen(
-                [python_exe, "-m", "rudy.robin_main", "--nightwatch"],
+                [python_exe, "-m", "rudy.robin_main"],
                 cwd=str(REPO_ROOT),
                 creationflags=flags,
                 stdout=_log_fh,
@@ -232,7 +232,7 @@ def start_robin() -> dict:
             )
         else:
             proc = subprocess.Popen(
-                [python_exe, "-m", "rudy.robin_main", "--nightwatch"],
+                [python_exe, "-m", "rudy.robin_main"],
                 cwd=str(REPO_ROOT),
                 start_new_session=True,
                 stdout=_log_fh,
