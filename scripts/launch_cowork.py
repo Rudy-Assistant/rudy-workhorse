@@ -1179,18 +1179,44 @@ def run_watch(wmcp, registry):
             time.sleep(2)
 
             # Attempt launch (force=True: end current session if active)
+            launch_succeeded = False
             for attempt in range(3):
+                # S90: Reconnect MCP before each attempt if prior failed
+                if attempt > 0:
+                    try:
+                        wmcp, registry = reconnect_mcp(registry)
+                    except Exception as _re:
+                        log.error("WATCH: MCP reconnect before attempt %d "
+                                  "failed: %s", attempt + 1, _re)
                 result = launch(wmcp, hf, force=True)
                 if result["success"]:
                     log.info("WATCH: Session launched successfully")
+                    launch_succeeded = True
                     break
                 log.warning("WATCH: Launch attempt %d failed — retrying "
                             "in 10s", attempt + 1)
                 time.sleep(10)
 
-            # After launch, wait for session to end before watching again
-            # (check every 60s if the session is still active)
+            # S90 FIX: If ALL attempts failed, do NOT enter wait loop.
+            # Reset and go back to watching for the next handoff trigger.
+            if not launch_succeeded:
+                log.error("WATCH: All 3 launch attempts FAILED — "
+                          "resetting to watch mode (will retry on next "
+                          "handoff or fallback tick)")
+                # Try to reconnect MCP for next cycle
+                try:
+                    wmcp, registry = reconnect_mcp(registry)
+                except Exception as _re:
+                    log.error("WATCH: MCP reconnect after total failure: "
+                              "%s", _re)
+                idle_ticks = 0
+                continue  # Back to top of while True loop
+
+            # After SUCCESSFUL launch, wait for session to end before
+            # watching again (check every 60s if session is still active)
             log.info("WATCH: Waiting for session to complete...")
+            empty_snapshot_count = 0
+            MAX_EMPTY_SNAPSHOTS = 10  # ~10 min of dead MCP before giving up
             while True:
                 if is_killed():
                     break
@@ -1204,9 +1230,22 @@ def run_watch(wmcp, registry):
                         wmcp, registry = reconnect_mcp(registry)
                     except Exception as _re:
                         log.error("WATCH: MCP reconnect failed: %s", _re)
+                    empty_snapshot_count += 1
+                    if empty_snapshot_count >= MAX_EMPTY_SNAPSHOTS:
+                        log.error("WATCH: %d consecutive MCP failures in "
+                                  "wait loop — breaking to watch mode",
+                                  MAX_EMPTY_SNAPSHOTS)
+                        break
                     continue
                 if not elements:
+                    empty_snapshot_count += 1
+                    if empty_snapshot_count >= MAX_EMPTY_SNAPSHOTS:
+                        log.error("WATCH: %d consecutive empty snapshots — "
+                                  "breaking to watch mode",
+                                  MAX_EMPTY_SNAPSHOTS)
+                        break
                     continue
+                empty_snapshot_count = 0  # Reset on success
                 state, _ = assess_state(elements)
                 if state not in (ScreenState.CLAUDE_WORKING,
                                  ScreenState.CLAUDE_IDLE):
