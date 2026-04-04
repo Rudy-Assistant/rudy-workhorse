@@ -134,25 +134,30 @@ def shortcut(wmcp, keys):
     time.sleep(0.5)
 
 
+def _set_clipboard(text):
+    """Set clipboard using ctypes -- ZERO subprocesses, ZERO visible windows."""
+    import ctypes
+    CF_UNICODETEXT = 13
+    kernel32 = ctypes.windll.kernel32
+    user32 = ctypes.windll.user32
+    user32.OpenClipboard(0)
+    user32.EmptyClipboard()
+    hMem = kernel32.GlobalAlloc(0x0042, (len(text) + 1) * 2)
+    pMem = kernel32.GlobalLock(hMem)
+    ctypes.cdll.msvcrt.wcscpy_s(pMem, len(text) + 1, text)
+    kernel32.GlobalUnlock(hMem)
+    user32.SetClipboardData(CF_UNICODETEXT, hMem)
+    user32.CloseClipboard()
+
+
 def paste_text(wmcp, el, text):
-    """Paste text via clipboard (atomic, no keystroke drops)."""
-    import tempfile
-    tmp = Path(tempfile.gettempdir()) / "robin-prompt.txt"
-    tmp.write_text(text, encoding="utf-8")
-    ps_path = str(tmp).replace("'", "''")
-    wmcp("Shell", {
-        "command": f"Get-Content '{ps_path}' -Raw | Set-Clipboard",
-        "timeout": 5,
-    })
+    """Paste text via clipboard (atomic, no keystroke drops, no visible windows)."""
+    _set_clipboard(text)
     wmcp("Click", {"loc": [el["x"], el["y"]]})
     time.sleep(0.5)
     shortcut(wmcp, "ctrl+a")
     shortcut(wmcp, "ctrl+v")
     time.sleep(1.0)
-    try:
-        tmp.unlink()
-    except Exception:
-        pass
     log.info("Pasted %d chars", len(text))
 
 
