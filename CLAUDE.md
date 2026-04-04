@@ -492,18 +492,17 @@ See `docs/MISSION.md` for the full architectural rationale.
 | **gh CLI** | v2.88.1, authenticated as Rudy-Assistant |
 | **PAT** | Classic PAT (ghp_), expires 2026-06-27 |
 
-## Current Sprint (Session 89)
+## Current Sprint (Session 98)
 
-1. **PR #176 OPEN**: fix(sentinel) -- process respawn root cause (LG-S88-001)
-   - Root cause: subprocess.run() spawns conhost.exe children that persist between cycles
-   - Fix: sentinel_subprocess.py shared safe_run() with CREATE_NO_WINDOW + tree kill on timeout
-   - All subprocess.run calls converted: sentinel.py (5), governance (1), boot_phases (7), nightshift (1)
-   - All 5 files pass py_compile + ruff CI
-2. **PR #174 MERGED (S88)**: ADR-005 Phase 2 sentinel extraction
-   - sentinel_governance.py (248L) + sentinel_capabilities.py (130L) extracted
-   - sentinel.py: 1249 -> 948 lines (35.8% cumulative reduction)
-3. CLAUDE.md Current Sprint updated from S81 to S89
-4. HEAD on main at 28302d0 (branch s89/fix-process-respawn pending merge)
+1. **PR #194 MERGED (S97)**: fix(liveness) -- start_robin() nightwatch restart bug
+2. **PR #176 MERGED (S90)**: fix(sentinel) -- prevent orphaned subprocess children
+3. **R-005 Robin Growth Dashboard DELIVERED (S98)**: Interactive HTML dashboard
+   - vault/Dashboards/robin-growth-dashboard.html
+   - 6 charts: cumulative PRs, velocity, Robin health, commit types, era breakdown, activity heatmap
+   - KPI cards: 97 sessions, 82 PRs merged, 100 commits tracked
+4. HEAD on main at db19e6f, no open PRs
+5. Robin GREEN (PID 66080), Sentinel GREEN (PID 48620)
+
 ## Lucius Gate — Session Governance (ADR-004 v2.1, reformed by ADR-016)
 
 **Core module:** `rudy/agents/lucius_gate.py`
