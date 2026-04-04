@@ -494,11 +494,11 @@ See `docs/MISSION.md` for the full architectural rationale.
 
 ## Current Sprint (Session 89)
 
-1. **PR #175 OPEN**: fix(sentinel) -- process respawn root cause (LG-S88-001)
-   - Root cause: subprocess.run(["powershell", ...]) spawns conhost.exe children that persist
-   - Fix: _safe_run() wrapper with CREATE_NO_WINDOW + process-tree kill on timeout
-   - All 5 sentinel.py subprocess calls + 1 governance call converted
-   - Both files pass py_compile + ruff CI
+1. **PR #176 OPEN**: fix(sentinel) -- process respawn root cause (LG-S88-001)
+   - Root cause: subprocess.run() spawns conhost.exe children that persist between cycles
+   - Fix: sentinel_subprocess.py shared safe_run() with CREATE_NO_WINDOW + tree kill on timeout
+   - All subprocess.run calls converted: sentinel.py (5), governance (1), boot_phases (7), nightshift (1)
+   - All 5 files pass py_compile + ruff CI
 2. **PR #174 MERGED (S88)**: ADR-005 Phase 2 sentinel extraction
    - sentinel_governance.py (248L) + sentinel_capabilities.py (130L) extracted
    - sentinel.py: 1249 -> 948 lines (35.8% cumulative reduction)
@@ -539,3 +539,4 @@ See `docs/MISSION.md` for the full architectural rationale.
 - Flag blockers immediately. Don't silently skip failures.
 - Proactive suggestions at the end of each major task.
 - Birthday: March 27
+                 
