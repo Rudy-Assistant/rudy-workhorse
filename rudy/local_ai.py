@@ -128,7 +128,7 @@ class ResponseCache:
         self.max_entries = max_entries
 
     def _key(self, prompt: str, role: str) -> str:
-        return hashlib.md5(f"{role}:{prompt}".encode()).hexdigest()[:16]
+        return hashlib.md5(f"{role}:{prompt}".encode(), usedforsecurity=False).hexdigest()[:16]
 
     def get(self, prompt: str, role: str = "general") -> Optional[str]:
         key = self._key(prompt, role)
