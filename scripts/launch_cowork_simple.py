@@ -200,14 +200,10 @@ def _set_clipboard(text):
 
 
 def paste_text(wmcp, el, text):
-    """Paste text via clipboard (atomic, no keystroke drops, no visible windows)."""
-    _set_clipboard(text)
-    wmcp("Click", {"loc": [el["x"], el["y"]]})
-    time.sleep(0.5)
-    shortcut(wmcp, "ctrl+a")
-    shortcut(wmcp, "ctrl+v")
+    """Type text into element using MCP Type tool (clipboard fails from background)."""
+    wmcp("Type", {"loc": [el["x"], el["y"]], "text": text, "clear": True})
     time.sleep(1.0)
-    log.info("Pasted %d chars", len(text))
+    log.info("Typed %d chars", len(text))
 
 
 # ---- State Detection (simple) ----
