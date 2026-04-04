@@ -46,9 +46,24 @@ PID_LOCK = COORD_DIR / "launcher.pid"
 LOG_DIR = REPO / "rudy-data" / "logs"
 LOG_FILE = LOG_DIR / "launch-simple.log"
 
+# ---- Handoff detection ----
+def _fresh_handoff_exists(max_age_min=15):
+    """Check if a recent handoff was written (session is done)."""
+    try:
+        handoffs = sorted(VAULT_HANDOFFS.glob("Session-*-Handoff.md"),
+                          key=lambda p: p.stat().st_mtime, reverse=True)
+        if handoffs:
+            import time
+            age_s = time.time() - handoffs[0].stat().st_mtime
+            return age_s < (max_age_min * 60)
+    except Exception:
+        pass
+    return False
+
+
 # ---- Timing ----
 POLL_INTERVAL = 30      # seconds between state checks
-GOAD_AFTER_MIN = 40     # goad Alfred if idle this long after launch
+GOAD_AFTER_MIN = 10     # goad Alfred if idle this long after launch
 MAX_SESSION_MIN = 90    # force new session after this long
 STEP_PAUSE = 2.0        # seconds between UI actions
 
@@ -568,10 +583,14 @@ def run_loop(wmcp):
         # 3. Idle = Alfred stopped responding
         if state == "idle":
             # If session is young (<GOAD_AFTER_MIN), just wait
+            # UNLESS a fresh handoff exists (session is done)
             if launch_time and age_min < GOAD_AFTER_MIN:
-                log.info("Session young (%.0fm) -- waiting", age_min)
-                time.sleep(POLL_INTERVAL)
-                continue
+                if _fresh_handoff_exists():
+                    log.info("Session young (%.0fm) but handoff exists -- proceeding", age_min)
+                else:
+                    log.info("Session young (%.0fm) -- waiting", age_min)
+                    time.sleep(POLL_INTERVAL)
+                    continue
             # Goad once, then force new session
             if not goaded:
                 if goad_handoff(wmcp):
