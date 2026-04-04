@@ -111,8 +111,17 @@ def reconnect():
 def scroll_chat_to_bottom(wmcp):
     """Scroll Claude chat to bottom so Allow/Deny buttons are visible."""
     try:
-        wmcp("Shortcut", {"shortcut": "ctrl+End"})
-        time.sleep(0.5)
+        # Take a raw snapshot (no recursion -- snap() calls us)
+        r = wmcp("Snapshot", {"use_vision": False})
+        if r.success:
+            els = parse(r.content or "")
+            scroll_btn = find(els, "Scroll to bottom", win="Claude")
+            if scroll_btn:
+                wmcp("Click", {"loc": [scroll_btn["x"], scroll_btn["y"]]})
+                time.sleep(0.5)
+                return
+        # No scroll button means we're already at the bottom -- do nothing.
+        # Do NOT send keyboard shortcuts that may minimize or break Claude.
     except Exception:
         pass
 
@@ -350,6 +359,21 @@ def launch_session(wmcp, handoff=None):
                 if not els:
                     continue
                 state, det = get_state(els)
+
+        # Step 3.5: If mount prompt appeared, handle it first
+        if state == "mount":
+            allow_btn = det.get("allow") or find(els, "Allow")
+            if allow_btn:
+                click(wmcp, allow_btn, "Allow mount (mid-launch)")
+                time.sleep(3)
+                els = snap(wmcp)
+                if not els:
+                    continue
+                state, det = get_state(els)
+                # After clicking Allow, session may start working
+                if state == "working":
+                    log.info("=== LAUNCH SUCCESS (mount handled) ===")
+                    return True
 
         # Step 4: Find prompt input and paste
         pi = (find(els, "Write your prompt", win="Claude")
