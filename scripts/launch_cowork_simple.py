@@ -108,9 +108,19 @@ def reconnect():
 
 
 # ---- Core Actions ----
+def scroll_chat_to_bottom(wmcp):
+    """Scroll Claude chat to bottom so Allow/Deny buttons are visible."""
+    try:
+        wmcp("Shortcut", {"shortcut": "ctrl+End"})
+        time.sleep(0.5)
+    except Exception:
+        pass
+
+
 def snap(wmcp):
     """Take snapshot, return parsed elements. Empty list on failure."""
     try:
+        scroll_chat_to_bottom(wmcp)
         r = wmcp("Snapshot", {"use_vision": False})
         if r.success:
             els = parse(r.content or "")
@@ -393,6 +403,34 @@ def launch_session(wmcp, handoff=None):
     return False
 
 
+# ---- Post-launch mount watcher ----
+def watch_for_mount(wmcp, duration_s=120, interval_s=10):
+    """After launch, poll rapidly for mount prompts and click Allow.
+
+    The Cowork mount dialog (Allow/Deny) appears IN the chat flow.
+    If we don't scroll down and click Allow, the session hangs forever.
+    This was the ROOT CAUSE of every launcher failure since S85.
+    """
+    log.info("=== MOUNT WATCH START (%ds) ===", duration_s)
+    end = time.time() + duration_s
+    while time.time() < end:
+        els = snap(wmcp)
+        if not els:
+            time.sleep(interval_s)
+            continue
+        st, det = get_state(els)
+        if st == "mount":
+            click(wmcp, det["allow"], "Allow mount (watch)")
+            time.sleep(3)
+            continue  # keep watching, there may be multiple mounts
+        if st == "working":
+            # Session is working, but mount could appear any moment
+            # Keep watching
+            pass
+        time.sleep(interval_s)
+    log.info("=== MOUNT WATCH END ===")
+
+
 # ---- Goad: type message into idle session ----
 def goad_handoff(wmcp):
     """Type goad message into an idle session's prompt input."""
@@ -473,6 +511,7 @@ def run_loop(wmcp):
             if launch_session(wmcp):
                 launch_time = time.time()
                 goaded = False
+                watch_for_mount(wmcp, duration_s=120, interval_s=10)
             time.sleep(POLL_INTERVAL)
             continue
 
@@ -518,6 +557,9 @@ def run_loop(wmcp):
             if launch_session(wmcp):
                 launch_time = time.time()
                 goaded = False
+                consecutive_not_working = 0
+                # CRITICAL: watch for mount prompts after launch
+                watch_for_mount(wmcp, duration_s=120, interval_s=10)
             else:
                 log.error("Launch failed -- waiting 2 min")
                 time.sleep(120)
