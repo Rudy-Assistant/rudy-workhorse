@@ -14,6 +14,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
 
+from rudy.agents.sentinel_subprocess import safe_run
+
 from rudy.paths import (
     REPO_ROOT as RUDY_ROOT,
     RUDY_DATA,
@@ -204,9 +206,9 @@ class NightShift:
 
         # Try ruff lint
         try:
-            result = subprocess.run(
+            result = safe_run(
                 ["python", "-m", "ruff", "check", str(rudy_dir), "--statistics", "--quiet"],
-                capture_output=True, text=True, timeout=60,
+                timeout=60,
             )
             results["ruff"] = {
                 "return_code": result.returncode,
