@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """
-Simple Cowork Session Launcher -- poll, click, paste, approve.
+Simple Cowork Session Launcher v2 -- poll, reason, click, approve.
 
-No state machines. No watchdog. No event threading. No escalation paths.
-Just a dumb loop that checks the screen every 60s and does the obvious thing.
+PERCEIVE -> REASON -> ACT -> VERIFY with Ollama intelligence.
+Heuristic fast-path with Ollama reasoning on ambiguous states.
+Graceful degradation: works identically without Ollama.
 
 Usage:
     python launch_cowork_simple.py              # Run once
@@ -23,6 +24,18 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
+
+# Ollama reasoning layer (graceful degradation if offline)
+try:
+    sys.path.insert(0, str(Path(r"C:\Users\ccimi\rudy-workhorse\rudy")))
+    from launcher_reasoning import (
+        get_brain, reset_brain, reason_about_state,
+        reason_find_element, reason_about_failure,
+        reason_verify_launch,
+    )
+    HAS_REASONING = True
+except ImportError:
+    HAS_REASONING = False
 
 # ---- Paths ----
 REPO = Path(r"C:\Users\ccimi\rudy-workhorse")
@@ -267,6 +280,23 @@ def get_state(els):
     if pi:
         return "idle", {"prompt": pi}
 
+    # Heuristic inconclusive -- ask Ollama if available
+    if HAS_REASONING:
+        ollama_state = reason_about_state(els)
+        if ollama_state and ollama_state != "unknown":
+            log.info("REASON: Ollama resolved unknown -> %s", ollama_state)
+            # Re-extract details for the resolved state
+            if ollama_state == "mount":
+                a = find(cl, "Allow")
+                return "mount", {"allow": a} if a else {}
+            if ollama_state == "ready":
+                nt = find(cl, "New task", ctrl="Button")
+                return "ready", {"new_task": nt} if nt else {}
+            if ollama_state == "idle":
+                pi = (find(cl, "Reply") or find(cl, "Write your prompt")
+                      or find(cl, "", ctrl="Edit"))
+                return "idle", {"prompt": pi} if pi else {}
+            return ollama_state, {}
     return "unknown", {}
 
 
@@ -378,6 +408,9 @@ def launch_session(wmcp, handoff=None):
         # Step 4: Find prompt input and paste
         pi = (find(els, "Write your prompt", win="Claude")
               or find(els, "", win="Claude", ctrl="Edit"))
+        if not pi and HAS_REASONING:
+            pi = reason_find_element(
+                els, "Find the text input field for typing a prompt")
         if not pi:
             log.error("No prompt input found (state=%s)", state)
             continue
@@ -388,6 +421,9 @@ def launch_session(wmcp, handoff=None):
         send = (find(els, "Start task", win="Claude", ctrl="Button")
                 or find(els, "Start task", win="Claude")
                 or find(els, "Send", win="Claude", ctrl="Button"))
+        if not send and HAS_REASONING:
+            send = reason_find_element(
+                els, "Find the Send or Start task button to submit")
         if send:
             click(wmcp, send, "Start task")
         else:
@@ -418,6 +454,12 @@ def launch_session(wmcp, handoff=None):
             if st != "ready":  # not back at start = probably working
                 log.info("=== LAUNCH PROBABLE SUCCESS (state=%s) ===", st)
                 return True
+            # Last resort: ask Ollama to verify
+            if HAS_REASONING:
+                ollama_ok = reason_verify_launch(els)
+                if ollama_ok:
+                    log.info("=== LAUNCH SUCCESS (Ollama verified) ===")
+                    return True
 
     log.error("=== LAUNCH FAILED after 3 attempts ===")
     return False
@@ -478,10 +520,21 @@ def run_loop(wmcp):
     boot_time = time.time()  # Don't launch within 5 min of starting
     consecutive_not_working = 0  # require 2+ non-working polls before launch
 
+    last_brain_check = 0
+    BRAIN_RECHECK_INTERVAL = 600  # re-check Ollama every 10 min
+
     while True:
         if KILL_SWITCH.exists():
             log.info("Kill switch active -- stopping")
             return
+
+        # Periodic Ollama re-check (may come online/offline)
+        if HAS_REASONING and (time.time() - last_brain_check) > BRAIN_RECHECK_INTERVAL:
+            reset_brain()
+            brain = get_brain()
+            last_brain_check = time.time()
+            if brain:
+                log.info("BRAIN: Ollama confirmed online")
 
         els = snap(wmcp)
         if not els:
