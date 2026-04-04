@@ -34,7 +34,7 @@ LOG_DIR = REPO / "rudy-data" / "logs"
 LOG_FILE = LOG_DIR / "launch-simple.log"
 
 # ---- Timing ----
-POLL_INTERVAL = 60      # seconds between state checks
+POLL_INTERVAL = 30      # seconds between state checks
 GOAD_AFTER_MIN = 40     # goad Alfred if idle this long after launch
 MAX_SESSION_MIN = 90    # force new session after this long
 STEP_PAUSE = 2.0        # seconds between UI actions
@@ -214,8 +214,8 @@ def get_state(els):
         return "gone", {}
 
     # Mount prompt (Allow/Deny)?
-    allow = find(cl, "Allow", ctrl="Button")
-    deny = find(cl, "Deny", ctrl="Button")
+    allow = find(cl, "Allow")
+    deny = find(cl, "Deny")
     if allow and deny:
         return "mount", {"allow": allow}
 
@@ -527,7 +527,7 @@ def run_loop(wmcp):
             time.sleep(POLL_INTERVAL)
             continue
         if state in ("ready", "gone", "cowork_select") and \
-                (time.time() - boot_time) < 300:
+                (time.time() - boot_time) < 15:
             log.info("Boot cooldown (%.0fs) -- skipping launch",
                      time.time() - boot_time)
             consecutive_not_working += 1
