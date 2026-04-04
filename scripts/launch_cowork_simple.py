@@ -179,18 +179,37 @@ def get_state(els):
         if find(cl, ind):
             return "working", {}
 
+    # Active session indicators -- if ANY of these exist, session is live
+    # even if no "Working on it" text is visible (between tool calls)
+    has_context = find(cl, "Context")
+    has_progress = find(cl, "Progress")
+    has_todo = find(cl, "Todo")
+    session_active = has_context or has_progress or has_todo
+
     # Ready to start new task? (Button, not sidebar Link)
     nt = find(cl, "New task", ctrl="Button")
-    if nt:
+    if nt and not session_active:
         return "ready", {"new_task": nt}
 
-    # Cowork mode selection?
+    # If session is active but not "working", it's between responses
+    # -- treat as working (do NOT launch on top)
+    if session_active:
+        # Check if there's a prompt input = Alfred finished, awaiting input
+        pi = (find(cl, "Reply") or find(cl, "Write your prompt")
+              or find(cl, "", ctrl="Edit"))
+        if pi:
+            return "idle", {"prompt": pi}
+        # No prompt input = still processing or user is reading
+        return "working", {}
+
+    # Cowork mode selection (ONLY on fresh task form, not active session)
     cw = find(cl, "Cowork", ctrl="Radio Button")
     if cw:
         return "cowork_select", {"cowork": cw}
 
-    # Prompt input visible = idle (session ended, awaiting input)
-    pi = find(cl, "Reply") or find(cl, "Write your prompt") or find(cl, "", ctrl="Edit")
+    # Prompt input visible with no session context = fresh form
+    pi = (find(cl, "Reply") or find(cl, "Write your prompt")
+          or find(cl, "", ctrl="Edit"))
     if pi:
         return "idle", {"prompt": pi}
 
@@ -357,6 +376,7 @@ def run_loop(wmcp):
     """Simple polling loop. Check state every 60s, act accordingly."""
     launch_time = None
     goaded = False
+    boot_time = time.time()  # Don't launch within 5 min of starting
 
     while True:
         if KILL_SWITCH.exists():
@@ -414,6 +434,13 @@ def run_loop(wmcp):
             continue
 
         # 4. Ready / gone / cowork_select / unknown = launch new session
+        # Safety: don't launch within 5 min of boot (avoid false positives)
+        if state in ("ready", "gone", "cowork_select", "unknown") and \
+                (time.time() - boot_time) < 300:
+            log.info("Boot cooldown (%.0fs) -- skipping launch",
+                     time.time() - boot_time)
+            time.sleep(POLL_INTERVAL)
+            continue
         if state in ("ready", "gone", "cowork_select", "unknown"):
             log.info("No active session -- launching")
             if state == "gone":
