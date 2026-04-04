@@ -59,9 +59,9 @@ NO_HANDOFF_PROMPT = (
 def _get_brain():
     """Get Robin's brain (Ollama). Returns None if offline."""
     try:
-        from rudy.local_ai import RobinBrain
-        brain = RobinBrain()
-        if brain.ensure_ready():
+        from rudy.local_ai import LocalAI
+        brain = LocalAI(default_model="qwen2.5:7b")
+        if brain._ollama.is_available():
             return brain
     except Exception as exc:
         log.warning("Ollama unavailable: %s", exc)
