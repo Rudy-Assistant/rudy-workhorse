@@ -492,17 +492,18 @@ See `docs/MISSION.md` for the full architectural rationale.
 | **gh CLI** | v2.88.1, authenticated as Rudy-Assistant |
 | **PAT** | Classic PAT (ghp_), expires 2026-06-27 |
 
-## Current Sprint (Session 81)
+## Current Sprint (Session 89)
 
-1. **PR #164 MERGED**: Robin session launcher ROOT CAUSE fix
-   - `assess_state()` matched permanent "Progress" sidebar panel as working indicator
-   - Launcher saw CLAUDE_WORKING on every check, could never detect session end
-   - Fix: removed "Progress", tightened indicators, added COWORK_SELECT/PROMPT_READY triggers
-   - Added consecutive idle escalation (3 goads → "New task" click → fresh launch)
-   - Added launcher_watchdog.py, session_monitor.py, popup nuke, Claude restart
-2. Robin autonomously launched Session 81 (first successful auto-launch)
-3. Session launcher flow: end → IDLE → goad (or COWORK_SELECT) → launch → verify
-4. HEAD on main after squash merge of s80/session-monitor (8 commits)
+1. **PR #175 OPEN**: fix(sentinel) -- process respawn root cause (LG-S88-001)
+   - Root cause: subprocess.run(["powershell", ...]) spawns conhost.exe children that persist
+   - Fix: _safe_run() wrapper with CREATE_NO_WINDOW + process-tree kill on timeout
+   - All 5 sentinel.py subprocess calls + 1 governance call converted
+   - Both files pass py_compile + ruff CI
+2. **PR #174 MERGED (S88)**: ADR-005 Phase 2 sentinel extraction
+   - sentinel_governance.py (248L) + sentinel_capabilities.py (130L) extracted
+   - sentinel.py: 1249 -> 948 lines (35.8% cumulative reduction)
+3. CLAUDE.md Current Sprint updated from S81 to S89
+4. HEAD on main at 28302d0 (branch s89/fix-process-respawn pending merge)
 ## Lucius Gate — Session Governance (ADR-004 v2.1, reformed by ADR-016)
 
 **Core module:** `rudy/agents/lucius_gate.py`
