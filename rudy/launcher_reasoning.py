@@ -30,12 +30,14 @@ def get_brain():
         return _brain
     _brain_checked = True
     try:
-        from rudy.local_ai import RobinBrain
-        brain = RobinBrain()
-        if brain.ensure_ready():
+        from rudy.local_ai import LocalAI
+        brain = LocalAI(default_model="qwen2.5:7b")
+        # Check Ollama is reachable
+        if brain._ollama.is_available():
             _brain = brain
             log.info("BRAIN: Ollama online -- reasoning enabled")
             return _brain
+        log.warning("BRAIN: Ollama not reachable")
     except Exception as exc:
         log.warning("BRAIN: Ollama unavailable: %s", exc)
     return None
