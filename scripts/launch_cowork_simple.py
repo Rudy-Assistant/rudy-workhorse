@@ -29,6 +29,7 @@ REPO = Path(r"C:\Users\ccimi\rudy-workhorse")
 VAULT_HANDOFFS = REPO / "vault" / "Handoffs"
 COORD_DIR = REPO / "rudy-data" / "coordination"
 KILL_SWITCH = COORD_DIR / "robin-pause.flag"
+PID_LOCK = COORD_DIR / "launcher.pid"
 LOG_DIR = REPO / "rudy-data" / "logs"
 LOG_FILE = LOG_DIR / "launch-simple.log"
 
@@ -564,7 +565,34 @@ def main():
         return
 
     if args.loop:
-        run_loop(wmcp)
+        # PID lockfile: only ONE launcher instance allowed (LG-S92-005)
+        COORD_DIR.mkdir(parents=True, exist_ok=True)
+        if PID_LOCK.exists():
+            old_pid = PID_LOCK.read_text().strip()
+            # Check if old process is still alive
+            try:
+                r = subprocess.run(
+                    ["tasklist", "/FI", f"PID eq {old_pid}", "/NH"],
+                    capture_output=True, text=True, timeout=5
+                )
+                if "python" in r.stdout.lower():
+                    print(f"Another launcher already running (PID {old_pid}). Exiting.")
+                    log.error("Blocked by PID lock: PID %s alive. Exiting.", old_pid)
+                    sys.exit(1)
+            except Exception:
+                pass  # stale lock, proceed
+        PID_LOCK.write_text(str(os.getpid()) + "\n")
+        log.info("PID lock acquired: %d", os.getpid())
+        try:
+            run_loop(wmcp)
+        finally:
+            # Release lock on exit
+            try:
+                if PID_LOCK.exists() and PID_LOCK.read_text().strip() == str(os.getpid()):
+                    PID_LOCK.unlink()
+                    log.info("PID lock released")
+            except Exception:
+                pass
     else:
         run_once(wmcp, args.handoff)
 
