@@ -9,6 +9,8 @@ import subprocess
 from datetime import datetime
 from pathlib import Path
 
+from rudy.agents.sentinel_subprocess import safe_run
+
 from . import DESKTOP, LOGS_DIR
 
 # Module-level constants
@@ -230,9 +232,9 @@ def observe_lucius_governance(emit_fn=None) -> None:
 
     # Check for runaway process count (LG-S37-001)
     try:
-        r = subprocess.run(
+        r = safe_run(
             ["tasklist", "/fo", "CSV", "/nh"],
-            capture_output=True, text=True, timeout=10,
+            timeout=10,
         )
         node_count = r.stdout.lower().count('"node.exe"')
         python_count = r.stdout.lower().count('"python.exe"')

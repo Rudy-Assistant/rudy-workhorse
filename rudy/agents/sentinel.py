@@ -58,6 +58,14 @@ class Sentinel(AgentBase):
     MANIFEST_FILE = LOGS_DIR / "capability-manifest.json"
     BRIEFING_FILE = LOGS_DIR / "session-briefing.md"
     CONTINUATION_FILE = LOGS_DIR / "continuation-prompt.md"
+
+    # --- Process-safe subprocess wrapper (LG-S88-001 fix) ---
+    # Delegates to shared module for reuse by extracted sentinel_*.py modules
+    @staticmethod
+    def _safe_run(cmd, timeout=10):
+        """Run a subprocess without spawning conhost.exe. See sentinel_subprocess.py."""
+        from rudy.agents.sentinel_subprocess import safe_run
+        return safe_run(cmd, timeout=timeout)
     MAX_RUNTIME = 30  # seconds — hard cap
 
     # Session inactivity thresholds
@@ -175,13 +183,13 @@ class Sentinel(AgentBase):
         """Detect active/ended RustDesk remote sessions by checking process state."""
         try:
             # Check if RustDesk has an active session by examining connections
-            result = subprocess.run(
+            result = self._safe_run(
                 ["powershell", "-Command",
                  "(Get-NetTCPConnection -OwningProcess "
                  "(Get-Process rustdesk -ErrorAction SilentlyContinue | "
                  "Select -Expand Id) -ErrorAction SilentlyContinue | "
                  "Where-Object {$_.State -eq 'Established' -and $_.RemotePort -ne 0}).Count"],
-                capture_output=True, text=True, timeout=10
+                timeout=10,
             )
             active_conns = 0
             if result.returncode == 0 and result.stdout.strip().isdigit():
@@ -319,11 +327,11 @@ class Sentinel(AgentBase):
     def _scan_device_events_basic(self, state):
         """Basic USB detection fallback (used if usb_quarantine module unavailable)."""
         try:
-            result = subprocess.run(
+            result = self._safe_run(
                 ["powershell", "-Command",
                  "Get-PnpDevice -Class USB -Status OK -ErrorAction SilentlyContinue | "
                  "Select-Object -ExpandProperty InstanceId"],
-                capture_output=True, text=True, timeout=10
+                timeout=10,
             )
             if result.returncode == 0:
                 current_usb = set(result.stdout.strip().splitlines())
@@ -359,9 +367,9 @@ class Sentinel(AgentBase):
 
         # Tailscale
         try:
-            result = subprocess.run(
+            result = self._safe_run(
                 ["tailscale", "status", "--json"],
-                capture_output=True, text=True, timeout=5
+                timeout=5,
             )
             if result.returncode == 0:
                 ts_data = json.loads(result.stdout)
@@ -374,10 +382,10 @@ class Sentinel(AgentBase):
 
         # RustDesk service
         try:
-            result = subprocess.run(
+            result = self._safe_run(
                 ["powershell", "-Command",
                  "(Get-Service rustdesk -ErrorAction SilentlyContinue).Status"],
-                capture_output=True, text=True, timeout=5
+                timeout=5,
             )
             services_status["rustdesk"] = result.stdout.strip().lower() or "not found"
         except Exception:
@@ -385,11 +393,11 @@ class Sentinel(AgentBase):
 
         # Command runner (check process)
         try:
-            result = subprocess.run(
+            result = self._safe_run(
                 ["powershell", "-Command",
                  "@(Get-Process python* -ErrorAction SilentlyContinue | "
                  "Where-Object {$_.CommandLine -like '*command-runner*'}).Count"],
-                capture_output=True, text=True, timeout=5
+                timeout=5,
             )
             count = result.stdout.strip()
             services_status["command_runner"] = f"running ({count} proc)" if count and count != "0" else "not running"
