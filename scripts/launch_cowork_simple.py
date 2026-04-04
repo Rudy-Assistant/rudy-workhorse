@@ -27,7 +27,7 @@ from pathlib import Path
 
 # Ollama reasoning layer (graceful degradation if offline)
 try:
-    sys.path.insert(0, str(Path(r"C:\Users\ccimi\rudy-workhorse\rudy")))
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "rudy"))
     from launcher_reasoning import (
         get_brain, reset_brain, reason_about_state,
         reason_find_element, reason_about_failure,
