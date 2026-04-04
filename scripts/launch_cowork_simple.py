@@ -27,9 +27,9 @@ from pathlib import Path
 # ---- Paths ----
 REPO = Path(r"C:\Users\ccimi\rudy-workhorse")
 VAULT_HANDOFFS = REPO / "vault" / "Handoffs"
-COORD_DIR = REPO.parent / "rudy-data" / "coordination"
+COORD_DIR = REPO / "rudy-data" / "coordination"
 KILL_SWITCH = COORD_DIR / "robin-pause.flag"
-LOG_DIR = REPO.parent / "rudy-data" / "logs"
+LOG_DIR = REPO / "rudy-data" / "logs"
 LOG_FILE = LOG_DIR / "launch-simple.log"
 
 # ---- Timing ----
@@ -119,6 +119,44 @@ def snap(wmcp):
     except Exception as e:
         log.error("Snap failed: %s", e)
     return []
+
+
+def dismiss_blocking_dialogs(wmcp):
+    """Dismiss any blocking dialog boxes (System Error, Script Host, etc.).
+
+    These dialogs steal focus and prevent the launcher from seeing Claude.
+    ROOT CAUSE of 4-hour outage in S92: 'python.exe - System Error' dialog
+    blocked all launch attempts from 02:48 to 06:42.
+    """
+    try:
+        r = wmcp("Snapshot", {"use_vision": False})
+        if not r.success:
+            return False
+        els = parse(r.content or "")
+        blocker_keywords = ["system error", "script host", "not responding",
+                            "has stopped working", "fatal error"]
+        for el in els:
+            win_lower = el["win"].lower()
+            if not any(kw in win_lower for kw in blocker_keywords):
+                continue
+            # Found a blocker -- try OK/Close buttons first
+            for btn_name in ["OK", "Close", "Dismiss", "Yes", "End Now"]:
+                btn = find(els, btn_name, win=el["win"], ctrl="Button")
+                if btn:
+                    log.info("Dismissing '%s' via '%s' button", el["win"], btn_name)
+                    wmcp("Click", {"loc": [btn["x"], btn["y"]]})
+                    time.sleep(1)
+                    return True
+            # No button found -- focus and Alt+F4
+            log.info("No dismiss button for '%s' -- trying Alt+F4", el["win"])
+            wmcp("Click", {"loc": [el["x"], el["y"]]})
+            time.sleep(0.5)
+            shortcut(wmcp, "alt+F4")
+            time.sleep(1)
+            return True
+    except Exception as e:
+        log.error("dismiss_blocking_dialogs error: %s", e)
+    return False
 
 
 def click(wmcp, el, label=""):
@@ -261,6 +299,8 @@ def launch_session(wmcp, handoff=None):
     Returns True on success."""
     prompt = build_prompt(handoff)
     log.info("=== LAUNCH START ===")
+    dismiss_blocking_dialogs(wmcp)
+    time.sleep(2)
 
     for attempt in range(3):
         if attempt > 0:
@@ -431,6 +471,13 @@ def run_loop(wmcp):
                 launch_time = time.time()
                 goaded = False
             time.sleep(POLL_INTERVAL)
+            continue
+
+        # 3.5. Dismiss blocking dialogs (System Error, Script Host, etc.)
+        # ROOT CAUSE of S92 4-hour outage: these steal focus from Claude
+        if dismiss_blocking_dialogs(wmcp):
+            log.info("Dismissed blocking dialog -- re-polling in 3s")
+            time.sleep(3)
             continue
 
         # 4. Ready / gone / cowork_select / unknown = launch new session
