@@ -99,7 +99,7 @@
 | **TaskMaster** | `task_master.py` | 145 | Daily 7:30 AM | Work coordination, briefings |
 | **ResearchIntel** | `research_intel.py` | 897 | Daily 6 AM + M/W/F 10 AM | Intelligence, learning |
 | **OperationsMonitor** | `operations_monitor.py` | 186 | Weekly Sun 4 AM | Maintenance, cleanup |
-| **Robin Sentinel** | `robin_sentinel.py` | 829 | Robin nightwatch | Robin health + night shift |
+| **Robin Sentinel** | `robin_sentinel.py` | 829 | Robin night shift | Robin health + night shift |
 | **Robin Bridge** | `robin_bridge.py` | 460 | On-demand | Alfred→Robin task queue |
 | **Robin Presence** | `robin_presence.py` | 607 | On-demand | Batman activity detection |
 | **Agent Runner** | `runner.py` | 186 | — | Unified agent dispatcher |
