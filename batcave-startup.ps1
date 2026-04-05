@@ -41,16 +41,16 @@ $chrome = "C:\Users\ccimi\AppData\Local\Google\Chrome SxS\Application\chrome.exe
 Start-Process $chrome -ArgumentList "https://mail.google.com"
 "[$timestamp] Chrome: Opened Gmail tab" | Out-File $logPath -Append
 
-# 5. Robin Nightwatch (THE CRITICAL ONE)
+# 5. Robin Main (full orchestrator -- nightwatch deprecated S118)
 $robin = Get-Process python* -ErrorAction SilentlyContinue | Where-Object {
-    (Get-CimInstance Win32_Process -Filter "ProcessId=$($_.Id)" -ErrorAction SilentlyContinue).CommandLine -match "nightwatch"
+    (Get-CimInstance Win32_Process -Filter "ProcessId=$($_.Id)" -ErrorAction SilentlyContinue).CommandLine -match "robin_main"
 }
 if (-not $robin) {
-    $env:PYTHONPATH = "C:\Users\ccimi\Desktop\rudy-workhorse"
-    Start-Process "C:\Python312\python.exe" -ArgumentList "-m rudy.robin_main --nightwatch" -WorkingDirectory "C:\Users\ccimi\Desktop\rudy-workhorse" -WindowStyle Hidden -RedirectStandardOutput "C:\Users\ccimi\Desktop\rudy-logs\robin-nightwatch.log" -RedirectStandardError "C:\Users\ccimi\Desktop\rudy-logs\robin-nightwatch-err.log"
-    "[$timestamp] Robin Nightwatch: STARTED" | Out-File $logPath -Append
+    $env:PYTHONPATH = "C:\Users\ccimi\rudy-workhorse"
+    Start-Process "C:\Python312\python.exe" -ArgumentList "-m rudy.robin_main" -WorkingDirectory "C:\Users\ccimi\rudy-workhorse" -WindowStyle Hidden -RedirectStandardOutput "C:\Users\ccimi\rudy-workhorse\rudy-data\logs\robin-main-boot.log" -RedirectStandardError "C:\Users\ccimi\rudy-workhorse\rudy-data\logs\robin-main-boot-err.log"
+    "[$timestamp] Robin Main: STARTED" | Out-File $logPath -Append
 } else {
-    "[$timestamp] Robin Nightwatch: ALREADY RUNNING (PID $($robin[0].Id))" | Out-File $logPath -Append
+    "[$timestamp] Robin Main: ALREADY RUNNING (PID $($robin[0].Id))" | Out-File $logPath -Append
 }
 
 # 6. Verify Ollama (should auto-start from Startup folder)
