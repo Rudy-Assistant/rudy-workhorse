@@ -1,7 +1,9 @@
 """
-Process Hygiene — Kill orphaned processes after DC sessions.
+Process Hygiene -- Kill orphaned processes after DC sessions.
 
 Session 64: Codifies process cleanup as a HARD RULE.
+Session 122: Fix F-S121-001 -- query Robin ecosystem PIDs via
+    robin_liveness BEFORE killing, to prevent accidental kills.
 
 Problem:
     DC start_process spawns powershell/cmd/python/conhost child processes.
@@ -33,15 +35,67 @@ PROTECTED_NAMES = {
     "lsass", "services", "smss", "dwm", "taskhostw", "sihost",
     "fontdrvhost", "runtimebroker", "shellexperiencehost",
     "searchhost", "startmenuexperiencehost", "textinputhost",
-    "ollama", "ollama_llama_server",  # local AI — always running
+    "ollama", "ollama_llama_server",  # local AI -- always running
     "node",  # n8n, MCP servers
     "rustdesk", "tailscaled",  # remote access
     "sshd", "conhost",  # SSH and terminal hosts (kill via parent)
-    "windows-mcp",  # Windows-MCP server — Robin's hands (S86 fix)
+    "windows-mcp",  # Windows-MCP server -- Robin's hands (S86 fix)
 }
 
 # Only kill these process names (DC session children)
 TARGET_NAMES = {"python", "python3", "cmd", "powershell"}
+
+
+def _get_robin_ecosystem_pids() -> set:
+    """Query Robin ecosystem PIDs that must NEVER be killed.
+
+    S122 fix for F-S121-001: Get-Process CommandLine was empty for all
+    python processes, so safe-process detection failed and Robin/Sentinel
+    were killed. This function uses robin_liveness (which uses wmic, not
+    Get-Process) to reliably find Robin ecosystem PIDs.
+
+    Returns a set of PIDs for: robin_main, sentinel, bridge_runner,
+    launch_cowork --watch.
+    """
+    protected = set()
+    # 1. Get Robin + Sentinel PIDs from robin_liveness
+    try:
+        from rudy.robin_liveness import check_full_nervous_system
+        ns = check_full_nervous_system()
+        for component in ns.get("components", {}).values():
+            pid = component.get("pid", 0)
+            if pid > 0:
+                protected.add(pid)
+                log.info("[Hygiene] Protected Robin component PID %d", pid)
+    except Exception as e:
+        log.warning("[Hygiene] robin_liveness import failed: %s", e)
+
+    # 2. Find bridge_runner and launch_cowork PIDs via wmic
+    #    (wmic works when Get-Process CommandLine is empty)
+    patterns = ["bridge_runner", "launch_cowork"]
+    for pattern in patterns:
+        try:
+            r = subprocess.run(
+                ["wmic", "process", "where",
+                 f"name='python.exe' and commandline like '%{pattern}%'",
+                 "get", "processid", "/format:csv"],
+                capture_output=True, text=True, timeout=10,
+            )
+            for line in r.stdout.strip().splitlines():
+                parts = line.strip().split(",")
+                if len(parts) >= 2 and parts[-1].isdigit():
+                    pid = int(parts[-1])
+                    protected.add(pid)
+                    log.info("[Hygiene] Protected %s PID %d",
+                             pattern, pid)
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            pass
+
+    if protected:
+        log.info("[Hygiene] Total protected PIDs: %s", protected)
+    else:
+        log.warning("[Hygiene] No Robin ecosystem PIDs found!")
+    return protected
 
 
 def _get_idle_processes(name: str, cpu_threshold: float = 1.0) -> list[dict]:
@@ -61,11 +115,17 @@ def _get_idle_processes(name: str, cpu_threshold: float = 1.0) -> list[dict]:
     data = json.loads(r.stdout)
     return data if isinstance(data, list) else [data]
 
+
 def cleanup_session_processes(
     dry_run: bool = False,
     cpu_threshold: float = 1.0,
 ) -> dict:
     """Kill idle DC-spawned processes (python, cmd, powershell).
+
+    S122: Now queries Robin ecosystem PIDs via robin_liveness BEFORE
+    killing anything. This prevents the F-S121-001 bug where Robin
+    and Sentinel were accidentally killed because Get-Process
+    CommandLine was empty.
 
     Args:
         dry_run: If True, report what would be killed without killing.
@@ -75,7 +135,13 @@ def cleanup_session_processes(
         Dict with counts per process type and total memory freed.
     """
     my_pid = os.getpid()
-    results = {"killed": {}, "skipped": 0, "freed_mb": 0.0, "dry_run": dry_run}
+    # S122 FIX (F-S121-001): Query Robin PIDs FIRST, exclude explicitly
+    robin_pids = _get_robin_ecosystem_pids()
+    excluded_pids = {my_pid} | robin_pids
+    results = {
+        "killed": {}, "skipped": 0, "freed_mb": 0.0,
+        "dry_run": dry_run, "robin_protected": sorted(robin_pids),
+    }
 
     for name in TARGET_NAMES:
         procs = _get_idle_processes(name, cpu_threshold)
@@ -83,8 +149,10 @@ def cleanup_session_processes(
         total_mem = 0.0
         for p in procs:
             pid = p.get("Id")
-            if not pid or pid == my_pid:
+            if not pid or pid in excluded_pids:
                 results["skipped"] += 1
+                if pid in robin_pids:
+                    log.info("[Hygiene] PROTECTED Robin PID %d", pid)
                 continue
             mem_mb = round(p.get("WorkingSet64", 0) / 1048576, 1)
             kill_pids.append(pid)
@@ -101,9 +169,7 @@ def cleanup_session_processes(
             results["freed_mb"] += total_mem
             continue
 
-        # S87: Batch taskkill — one call per process type instead of per PID.
-        # taskkill /F /PID 123 /PID 456 /PID 789 is ~100x faster than
-        # individual calls when there are 100+ orphaned processes.
+        # S87: Batch taskkill -- one call per process type instead of per PID.
         BATCH_SIZE = 50  # Windows command line limit safety
         killed = 0
         for i in range(0, len(kill_pids), BATCH_SIZE):
@@ -115,7 +181,8 @@ def cleanup_session_processes(
                 subprocess.run(cmd, capture_output=True, timeout=15)
                 killed += len(batch)
             except subprocess.TimeoutExpired:
-                log.warning("[Hygiene] Batch kill timed out (%d PIDs)", len(batch))
+                log.warning("[Hygiene] Batch kill timed out (%d PIDs)",
+                            len(batch))
                 killed += len(batch) // 2  # estimate partial success
             except Exception as e:
                 log.warning("[Hygiene] Batch kill failed: %s", e)
@@ -124,10 +191,11 @@ def cleanup_session_processes(
 
     results["freed_mb"] = round(results["freed_mb"], 1)
     total = sum(results["killed"].values())
-    log.info("[Hygiene] %s %d processes, freed ~%.1f MB",
+    log.info("[Hygiene] %s %d processes, freed ~%.1f MB (protected: %s)",
              "Would kill" if dry_run else "Killed",
-             total, results["freed_mb"])
+             total, results["freed_mb"], sorted(robin_pids))
     return results
+
 
 def audit_processes() -> dict:
     """Return current count and memory of target process types."""
@@ -151,6 +219,7 @@ def audit_processes() -> dict:
         else:
             audit[name] = {"count": 0, "mem_mb": 0}
     return audit
+
 
 
 if __name__ == "__main__":
