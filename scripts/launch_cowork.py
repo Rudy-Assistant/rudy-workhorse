@@ -384,6 +384,20 @@ def shortcut(wmcp, keys):
     return result.success
 
 
+def _scroll_chat_to_bottom(wmcp):
+    """Scroll Claude chat to bottom so Allow prompts are in the viewport.
+
+    S102 FIX: Allow buttons rendered below the fold are invisible to
+    Snapshot's accessibility tree. Pressing End key scrolls the Electron
+    chat to the latest content, making permission dialogs visible.
+    """
+    try:
+        shortcut(wmcp, "End")
+        time.sleep(0.5)
+    except Exception as exc:
+        log.debug("Scroll-to-bottom failed (non-fatal): %s", exc)
+
+
 def dismiss_popup(wmcp, detail):
     """Dismiss a detected popup by clicking its button."""
     btn = detail["popup_button"]
@@ -935,11 +949,12 @@ def run_loop(wmcp, interval_min, handoff_path=None):
         else:
             consecutive_popups = 0  # Reset when not in popup state
 
-        # If session is active, wait
+        # If session is active, wait (with Allow-prompt monitoring)
         if state == ScreenState.CLAUDE_WORKING:
             consecutive_idles = 0  # Reset idle counter
-            log.info("Session active — sleeping %d min", interval_min)
-            _interruptible_sleep(interval_min * 60)
+            log.info("Session active — sleeping %d min (with Allow monitor)",
+                     interval_min)
+            _interruptible_sleep(interval_min * 60, wmcp=wmcp)
             continue
 
         # If mount prompt, approve immediately
@@ -970,7 +985,7 @@ def run_loop(wmcp, interval_min, handoff_path=None):
                         consecutive_idles = 0
                         result = launch(wmcp, handoff_path)
                         if result["success"]:
-                            _interruptible_sleep(interval_min * 60)
+                            _interruptible_sleep(interval_min * 60, wmcp=wmcp)
                         else:
                             _interruptible_sleep(120)
                 else:
@@ -982,7 +997,7 @@ def run_loop(wmcp, interval_min, handoff_path=None):
                 # between messages. Do NOT goad. Just wait.
                 log.info("IDLE but no new handoff — session still active, "
                          "waiting %d min", interval_min)
-                _interruptible_sleep(interval_min * 60)
+                _interruptible_sleep(interval_min * 60, wmcp=wmcp)
             continue
 
         # Claude ready or not found — time to launch
@@ -994,7 +1009,7 @@ def run_loop(wmcp, interval_min, handoff_path=None):
             result = launch(wmcp, handoff_path)
             if result["success"]:
                 log.info("Session launched — sleeping %d min", interval_min)
-                _interruptible_sleep(interval_min * 60)
+                _interruptible_sleep(interval_min * 60, wmcp=wmcp)
             else:
                 log.error("Launch failed — waiting 5 min before retry")
                 _interruptible_sleep(300)
@@ -1029,8 +1044,16 @@ def _touch_launch_timestamp():
         pass
 
 
-def _interruptible_sleep(seconds):
-    """Sleep in 30-second chunks, checking kill switch and new handoffs."""
+def _interruptible_sleep(seconds, wmcp=None):
+    """Sleep in 30-second chunks, checking kill switch, handoffs, and Allow prompts.
+
+    When wmcp is provided (active session), also polls for Allow/Deny permission
+    prompts every 30 seconds and auto-approves them. This keeps the perpetual
+    work loop running without human intervention when Alfred triggers
+    request_cowork_directory or other permission-gated tools mid-session.
+
+    S101 FIX: Added wmcp parameter for mid-session Allow prompt detection.
+    """
     remaining = seconds
     while remaining > 0:
         chunk = min(30, remaining)
@@ -1042,6 +1065,25 @@ def _interruptible_sleep(seconds):
         if _has_new_handoff():
             log.info("Handoff trigger — waking launcher early")
             return
+        # S101+S102: Check for Allow prompts during active session
+        # S102: Scroll to bottom first so off-screen prompts become visible
+        if wmcp is not None:
+            try:
+                _scroll_chat_to_bottom(wmcp)
+                elements = snapshot(wmcp)
+                if elements:
+                    state_check, detail_check = assess_state(elements)
+                    if state_check == ScreenState.CLAUDE_MOUNT_PROMPT:
+                        log.info("Allow prompt detected during session — "
+                                 "auto-approving")
+                        click(wmcp, detail_check["allow"],
+                              "Allow (mid-session)")
+                        time.sleep(2)
+                    elif state_check == ScreenState.POPUP_BLOCKING:
+                        dismiss_popup(wmcp, detail_check)
+                        time.sleep(2)
+            except Exception as exc:
+                log.debug("Mid-session prompt check failed: %s", exc)
 
 
 # ---------------------------------------------------------------------------
@@ -1126,6 +1168,30 @@ def run_watch(wmcp, registry):
                                 log.error(
                                     "WATCH: MCP reconnect failed: %s", e,
                                 )
+                # S101+S102: Quick Allow-prompt check every 2 ticks (~60s)
+                # when a session appears active. Catches mid-session
+                # permission dialogs that would stall Alfred.
+                # S102: Scroll to bottom first so off-screen prompts visible.
+                if idle_ticks % 2 == 0 and LAST_LAUNCH_TS.exists():
+                    try:
+                        _ls_age = time.time() - LAST_LAUNCH_TS.stat().st_mtime
+                        if _ls_age < 3600:  # Session launched <1hr ago
+                            _scroll_chat_to_bottom(wmcp)
+                            _q_els = snapshot(wmcp)
+                            if _q_els:
+                                _q_st, _q_det = assess_state(_q_els)
+                                if _q_st == ScreenState.CLAUDE_MOUNT_PROMPT:
+                                    log.info("WATCH: Allow prompt detected "
+                                             "during idle tick — approving")
+                                    click(wmcp, _q_det["allow"],
+                                          "Allow (watch idle)")
+                                    time.sleep(2)
+                                elif _q_st == ScreenState.POPUP_BLOCKING:
+                                    dismiss_popup(wmcp, _q_det)
+                                    time.sleep(2)
+                    except Exception as _ap_exc:
+                        log.debug("Allow check in watch idle: %s", _ap_exc)
+
                 # S85 SMART FALLBACK: Check every tick (~30s).
                 # Uses FILE TIMESTAMPS + STATE FILE only. No UI interaction.
                 if True:
@@ -1222,6 +1288,8 @@ def run_watch(wmcp, registry):
                     break
                 time.sleep(60)
                 # S87: Wrap snapshot with MCP reconnect
+                # S102: Scroll to bottom before snapshot so Allow is visible
+                _scroll_chat_to_bottom(wmcp)
                 try:
                     elements = snapshot(wmcp)
                 except Exception as _mcp_err:
@@ -1246,7 +1314,19 @@ def run_watch(wmcp, registry):
                         break
                     continue
                 empty_snapshot_count = 0  # Reset on success
-                state, _ = assess_state(elements)
+                state, detail = assess_state(elements)
+                # S101: Auto-approve Allow prompts during active session
+                if state == ScreenState.CLAUDE_MOUNT_PROMPT:
+                    log.info("WATCH: Allow prompt during session — "
+                             "auto-approving")
+                    click(wmcp, detail["allow"],
+                          "Allow (mid-session watch)")
+                    time.sleep(2)
+                    continue
+                if state == ScreenState.POPUP_BLOCKING:
+                    dismiss_popup(wmcp, detail)
+                    time.sleep(2)
+                    continue
                 if state not in (ScreenState.CLAUDE_WORKING,
                                  ScreenState.CLAUDE_IDLE):
                     log.info("WATCH: Session ended (state: %s) — "
