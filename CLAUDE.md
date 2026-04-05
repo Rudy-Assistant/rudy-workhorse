@@ -181,13 +181,13 @@ Every Robin feature: PERCEIVE -> REASON -> ACT -> VERIFY. No hardcoded coords. N
 | **gh CLI** | v2.88.1, authenticated as Rudy-Assistant |
 | **PAT** | Classic PAT (ghp_), expires 2026-06-27 |
 
-## Current Sprint (Session 102)
+## Current Sprint (Session 104)
 
-1. **Scroll-to-bottom fix (S102, PR #200 merged)**: Launcher now scrolls chat to bottom before Allow-prompt snapshots, fixing off-screen approval bottleneck
-2. **PRs #200 and #201 merged**: Allow prompt monitor + CLAUDE.md sprint update both on main
-3. **Stale stash conflict resolved**: S67 stash pop had left CLAUDE.md and sentinel.py in merge conflict state on main
-4. **Robin heartbeat confirmed OK**: robin-state.json at C:\Users\ccimi\rudy-data\ (not rudy-workhorse/rudy-data/) -- path confusion from prior sessions
-5. HEAD on main at 2fdf545 (PR #200), launcher restarted PID 32140
+1. **PR #202 merged (S104)**: docs sprint update from S102
+2. **PR #204 merged (S104)**: R-006 Priority 1 -- Robin scoring -> OpenSpace bridge (fresh branch replacing #203)
+3. **PR #205 open (S104)**: R-006 Priority 2 -- skill evolution triggers (AUTO-FIX + AUTO-IMPROVE)
+4. **BATMAN DIRECTIVE completed (S104)**: Skill invocation audit -- LF-S104-001 filed, boot protocol updated
+5. HEAD on main at ff38b77, open PR #205 on s104/r006-evolution-triggers
 6. Robin GREEN (PID 7260), Sentinel GREEN (PID 19364)
 
 ## Lucius Gate (compact)
@@ -202,9 +202,4 @@ Every Robin feature: PERCEIVE -> REASON -> ACT -> VERIFY. No hardcoded coords. N
 - **70% Handoff**: STOP new work and draft a continuation prompt.
 - **Signs of context pressure**: Repeating info, forgetting decisions, lower-quality code. Trigger handoff immediately.
 
-## Communication Standards
-
-- Be concise. "Built X -- N lines, N classes, deployed." beats a paragraph.
-- Flag blockers immediately. Don't silently skip failures.
-- Proactive suggestions at the end of each major task.
-- Birthday: March 27
+## Comm
