@@ -181,28 +181,12 @@ Every Robin feature: PERCEIVE -> REASON -> ACT -> VERIFY. No hardcoded coords. N
 | **gh CLI** | v2.88.1, authenticated as Rudy-Assistant |
 | **PAT** | Classic PAT (ghp_), expires 2026-06-27 |
 
-## Current Sprint (Session 120)
+## Current Sprint (Session 121)
 
-1. **PRs #223-225 merged (S119)**: Boot protocol enforcement, nightwatch deprecation, sprint update. All branches cleaned up. HEAD at 273d896.
-2. **Nightwatch fully removed (S119)**: _run_nightwatch() (~206 lines) deleted from robin_main.py. --nightwatch CLI flag removed. batcave-startup.ps1 launches full orchestrator. 93 doc/comment references remain (low priority cleanup).
+1. **PR #229 merged (S121)**: Nightwatch code refactor -- renamed all 63 nightwatch references across 12 Python files to night shift / autonomous. Key renames: NIGHTWATCH_BRANCH -> ROBIN_AUTO_BRANCH, seed_standard_nightwatch() -> seed_standard_tasks(), log_nightwatch_checkin() -> log_night_shift_checkin(). Zero nightwatch refs remain in rudy/**/*.py. Also fixed pre-existing F841 lint issue. HEAD at 4a11fc5.
+2. **Gemma 4 download COMPLETE (S121)**: gemma4:26b (17 GB) confirmed available via `ollama list`. robin-secrets.json configured. Three-session saga (S118-S121) resolved.
 3. **Killswitch INACTIVE**: Deactivated by Batman S116 away mode. Robin autonomous behavior restored.
-4. **Gemma 4 download re-initiated (S120)**: S118/S119 pulls did not complete. Re-started `ollama pull gemma4:26b`. robin-secrets.json already configured with ollama_model: "gemma4:26b".
-5. **Session loop LEGACY (S116)**: Halted since S52. R-006 formally deprecated.
-6. **Stealth mode partial (S116)**: Watchdog fixed. RobinSentinel + RudyCommandRunner tasks still need elevated VBS wrapper update.
-7. Robin GREEN (PID 25956, sentinel PID 49100). Killswitch inactive -- autonomous behavior active.
-8. Skill gate executed (S120): Top skills: engineering:testing-strategy, engineering:debug, engineering:code-review. Gate passed. engineering:code-review invoked at boot.
-9. **GitHub PAT missing (F-S118-001)**: robin-secrets.json has no github_pat field. Git push works via credential helper. MCP GitHub works with its own auth. Batman must generate classic PAT with repo scope.
-10. **PR merge helper available (S119)**: rudy-data/helpers/list_and_merge_prs.py for GitHub API calls via credential helper.
-
-
-## Lucius Gate (compact)
-
-**Module:** `rudy/agents/lucius_gate.py` | **Gates:** session_start, pre_commit, post_session
-**Reform (ADR-016):** Fix first, document second. 65% implementation, 20% diagnosis, 15% records.
--> Full details: `vault/Protocols/session-protocols.md#lucius-gate` | `docs/ADR-004-lucius-fox-librarian.md`
-
-## Context Window Management
-
-- **50% Warning**: Proactively warn Chris to start a new thread soon.
-- **70% Handoff**: STOP new work and draft a continuation prompt.
-- **Signs of context pressure**:
+4. **Session loop LEGACY (S116)**: Halted since S52. R-006 formally deprecated.
+5. **Stealth mode partial (S116)**: Watchdog fixed. RobinSentinel + RudyCommandRunner tasks still need elevated VBS wrapper update.
+6. Robin GREEN (PID 25956, sentinel PID 49100). Killswitch inactive -- autonomous behavior active.
+7. Skill gate executed (S121): Top skills: engineering:testing-strategy, engineering:debug, engineering:architecture. Gate passed. engineering:testing-strategy invoked at boot.
