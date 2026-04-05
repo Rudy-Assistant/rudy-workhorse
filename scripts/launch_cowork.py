@@ -935,6 +935,7 @@ def launch(wmcp, handoff_path=None, force=False):
 # ---------------------------------------------------------------------------
 
 STALL_CHECK_INTERVAL = 5  # seconds — max Allow prompt delay (S108 rule)
+MAX_WORKING_SECONDS = 600  # S126: 10 min max before working-stall recovery
 
 
 def stall_recovery(wmcp, elements, handoff_path=None):
@@ -1067,12 +1068,17 @@ def run_loop(wmcp, interval_min, handoff_path=None):
             consecutive_popups = 0  # Reset when not in popup state
 
         # If session is active, wait (with Allow-prompt monitoring)
+        # S126: _interruptible_sleep now returns early on CLAUDE_IDLE
+        # detection or working-stall timeout (MAX_WORKING_SECONDS).
+        # After returning, re-assess state immediately (no continue).
         if state == ScreenState.CLAUDE_WORKING:
             consecutive_idles = 0  # Reset idle counter
             _session_lock.heartbeat()  # S124: keep lock alive
-            log.info("Session active — sleeping %d min (with Allow monitor)",
-                     interval_min)
+            log.info("Session active — sleeping %d min (with Allow "
+                     "monitor + stall detection)", interval_min)
             _interruptible_sleep(interval_min * 60, wmcp=wmcp)
+            # S126: Re-assess immediately instead of blind continue.
+            # If session finished or stalled, next iteration catches it.
             continue
 
         # If mount prompt, approve immediately
@@ -1149,29 +1155,44 @@ def _touch_launch_timestamp():
 
 
 def _interruptible_sleep(seconds, wmcp=None):
-    """Sleep in 30-second chunks, checking kill switch, handoffs, and Allow prompts.
+    """Sleep in 5-second chunks, checking kill switch, handoffs, Allow prompts,
+    and session state transitions.
 
     When wmcp is provided (active session), also polls for Allow/Deny permission
-    prompts every 30 seconds and auto-approves them. This keeps the perpetual
+    prompts every 5 seconds and auto-approves them. This keeps the perpetual
     work loop running without human intervention when Alfred triggers
     request_cowork_directory or other permission-gated tools mid-session.
 
     S101 FIX: Added wmcp parameter for mid-session Allow prompt detection.
+    S126 FIX: Added CLAUDE_IDLE detection and working-stall timeout.
+    If the session finishes (CLAUDE_IDLE) during sleep, returns early so
+    the main loop can act immediately instead of waiting the full interval.
+    If CLAUDE_WORKING persists beyond MAX_WORKING_SECONDS, returns early
+    so the main loop can run stall recovery.
     """
     remaining = seconds
+    elapsed = 0
     while remaining > 0:
         # S108: 5s polls (not 30s) — Allow prompts caught within 5 seconds
         chunk = min(STALL_CHECK_INTERVAL, remaining)
         time.sleep(chunk)
         remaining -= chunk
+        elapsed += chunk
         if is_killed():
             log.info("Kill switch detected during sleep — aborting")
             return
         if _has_new_handoff():
             log.info("Handoff trigger — waking launcher early")
             return
+        # S126: Working-stall timeout — if we have been waiting longer
+        # than MAX_WORKING_SECONDS, return to let main loop re-assess.
+        if wmcp is not None and elapsed >= MAX_WORKING_SECONDS:
+            log.info("Working-stall timeout (%ds) — returning to "
+                     "main loop for re-assessment", elapsed)
+            return
         # S101+S102: Check for Allow prompts during active session
         # S102: Scroll to bottom first so off-screen prompts become visible
+        # S126: Also detect CLAUDE_IDLE to return early when session ends
         if wmcp is not None:
             try:
                 _scroll_chat_to_bottom(wmcp)
@@ -1187,6 +1208,10 @@ def _interruptible_sleep(seconds, wmcp=None):
                     elif state_check == ScreenState.POPUP_BLOCKING:
                         dismiss_popup(wmcp, detail_check)
                         time.sleep(2)
+                    elif state_check == ScreenState.CLAUDE_IDLE:
+                        log.info("Session finished during sleep — "
+                                 "returning to main loop")
+                        return
             except Exception as exc:
                 log.debug("Mid-session prompt check failed: %s", exc)
 
@@ -1277,6 +1302,8 @@ def run_watch(wmcp, registry):
                 # when a session appears active. Catches mid-session
                 # permission dialogs that would stall Alfred.
                 # S102: Scroll to bottom first so off-screen prompts visible.
+                # S126: Also detect CLAUDE_IDLE (session finished/stalled)
+                # and trigger handoff-based relaunch immediately.
                 if idle_ticks % 2 == 0 and LAST_LAUNCH_TS.exists():
                     try:
                         _ls_age = time.time() - LAST_LAUNCH_TS.stat().st_mtime
@@ -1294,6 +1321,15 @@ def run_watch(wmcp, registry):
                                 elif _q_st == ScreenState.POPUP_BLOCKING:
                                     dismiss_popup(wmcp, _q_det)
                                     time.sleep(2)
+                                elif _q_st == ScreenState.CLAUDE_IDLE:
+                                    log.info("WATCH: Session idle detected "
+                                             "during tick — checking handoff")
+                                    if _has_new_handoff():
+                                        log.info("WATCH: Handoff exists + "
+                                                 "idle — triggering launch")
+                                        handoff_file[0] = str(
+                                            find_latest_handoff())
+                                        launch_event.set()
                     except Exception as _ap_exc:
                         log.debug("Allow check in watch idle: %s", _ap_exc)
 
@@ -1327,7 +1363,10 @@ def run_watch(wmcp, registry):
                                 log.info("WATCH FALLBACK: Last launch FAILED, %.0fs ago -> retrying",
                                          _age_sec)
                                 _should_launch = True
-                            elif _last_ok and _age_min > 45:
+                            # S126: Reduced from 45 to 15 min. A working
+                            # session that produces no handoff in 15 min
+                            # is likely stalled (AI froze mid-response).
+                            elif _last_ok and _age_min > 15:
                                 log.info("WATCH FALLBACK: Last launch stale (%.0f min) -> relaunching",
                                          _age_min)
                                 _should_launch = True
@@ -1493,37 +1532,23 @@ def main():
     # Connect to Windows-MCP
     try:
         wmcp, registry = connect_mcp()
-    except Exception as e:
-        log.error("Cannot connect to Windows-MCP: %s", e)
-        sys.exit(1)
+    except Exception:
+        log.error("Failed to connect to Windows-MCP: %s",
+                  sys.exc_info()[1])
+        return
 
     try:
-        if args.dry_run:
-            elements = snapshot(wmcp)
-            state, detail = assess_state(elements)
-            print(f"\nScreen state: {state}")
-            print(f"Detail: {json.dumps({k: str(v)[:80] for k, v in detail.items()}, indent=2)}")
-            claude_els = [e for e in elements if "claude" in e["window"].lower()]
-            print(f"\nClaude elements ({len(claude_els)}):")
-            for el in claude_els[:20]:
-                print(f"  [{el['control_type']}] '{el['name']}' at ({el['x']}, {el['y']})")
-            return
-
         if args.watch:
             run_watch(wmcp, registry)
         elif args.loop:
             run_loop(wmcp, args.interval, args.handoff)
         else:
-            result = launch(wmcp, args.handoff, force=args.force)
-            sys.exit(0 if result["success"] else 1)
-
-    except KeyboardInterrupt:
-        log.info("Interrupted by user")
+            result = launch(wmcp, args.handoff)
+            print(json.dumps(result, indent=2))
     finally:
         # S124: Release session lock on exit
         try:
             _session_lock.release()
-            log.info("Session lock released (launcher exit)")
         except Exception:
             pass
         try:
