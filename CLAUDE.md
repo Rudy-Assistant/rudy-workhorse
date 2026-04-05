@@ -181,12 +181,12 @@ Every Robin feature: PERCEIVE -> REASON -> ACT -> VERIFY. No hardcoded coords. N
 | **gh CLI** | v2.88.1, authenticated as Rudy-Assistant |
 | **PAT** | Classic PAT (ghp_), expires 2026-06-27 |
 
-## Current Sprint (Session 121)
+## Current Sprint (Session 124)
 
-1. **PR #229 merged (S121)**: Nightwatch code refactor -- renamed all 63 nightwatch references across 12 Python files to night shift / autonomous. Key renames: NIGHTWATCH_BRANCH -> ROBIN_AUTO_BRANCH, seed_standard_nightwatch() -> seed_standard_tasks(), log_nightwatch_checkin() -> log_night_shift_checkin(). Zero nightwatch refs remain in rudy/**/*.py. Also fixed pre-existing F841 lint issue. HEAD at 4a11fc5.
-2. **Gemma 4 download COMPLETE (S121)**: gemma4:26b (17 GB) confirmed available via `ollama list`. robin-secrets.json configured. Three-session saga (S118-S121) resolved.
+1. **PR #235 merged (S123)**: New `rudy/session_lock.py` module -- file-based lock preventing competing Cowork launches. Heartbeat, stale detection (10 min), atomic writes, force-release. All 5 CI checks passed. Commit 6dc12f8.
+2. **PR #236 merged (S124)**: Wired SessionLock into `scripts/launch_cowork.py` -- acquire before launch, heartbeat in run_loop(), release on failure/exit. 7 integration points, +47 lines. HEAD at 788474b.
 3. **Killswitch INACTIVE**: Deactivated by Batman S116 away mode. Robin autonomous behavior restored.
 4. **Session loop LEGACY (S116)**: Halted since S52. R-006 formally deprecated.
-5. **Stealth mode partial (S116)**: Watchdog fixed. RobinSentinel + RudyCommandRunner tasks still need elevated VBS wrapper update.
-6. Robin GREEN (PID 25956, sentinel PID 49100). Killswitch inactive -- autonomous behavior active.
-7. Skill gate executed (S121): Top skills: engineering:testing-strategy, engineering:debug, engineering:architecture. Gate passed. engineering:testing-strategy invoked at boot.
+5. **Stealth mode partial (S116)**: Script ready at `rudy-data/helpers/s123_stealth_update.ps1`. Needs Admin elevation.
+6. Robin GREEN (PID 8860, sentinel PID 26052). Killswitch inactive -- autonomous behavior active.
+7. Skill gate executed (S124): Top skills: engineering:debug, engineering:testing-strategy, engineering:standup. Gate passed. engineering:standup invoked at boot.
