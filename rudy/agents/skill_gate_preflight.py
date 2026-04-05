@@ -58,7 +58,7 @@ SKILL_KEYWORD_MAP: dict[str, list[str]] = {
     r"incident|outage|production.down": [
         "engineering:incident-response",
     ],
-    r"robin|stall|recovery|nightwatch": [
+    r"robin|stall|recovery|night.shift": [
         "engineering:debug",
         "engineering:testing-strategy",
     ],

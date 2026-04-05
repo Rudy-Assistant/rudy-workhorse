@@ -209,18 +209,18 @@ def log_task_to_notion(
         return False
 
 
-def log_nightwatch_checkin(
+def log_night_shift_checkin(
     status: str = "alive",
     tasks_pending: int = 0,
     notes: str = "",
     page_id: str = ROBIN_LOG_PAGE_ID,
 ) -> bool:
-    """Write a periodic night-watch check-in to Notion."""
+    """Write a periodic night shift check-in to Notion."""
     token = _get_notion_token()
 
     # Local log always
     _log_to_local_json(
-        task=f"nightwatch-checkin: {status}",
+        task=f"night-shift-checkin: {status}",
         success=True,
         final_answer=notes or status,
     )

@@ -41,7 +41,7 @@ import time
 
 # Task queue for autonomous operation
 try:
-    from rudy.robin_taskqueue import seed_standard_nightwatch, seed_deep_work, process_all
+    from rudy.robin_taskqueue import seed_standard_tasks, seed_deep_work, process_all
     TASKQUEUE_AVAILABLE = True
 except ImportError:
     TASKQUEUE_AVAILABLE = False

@@ -3,7 +3,7 @@
 Robin Killswitch -- SUPREME override for all Robin autonomous behavior.
 
 When the killswitch is active, Robin does NOTHING autonomous:
-- No nightwatch cycles
+- No night shift cycles
 - No session launching
 - No autonomy engine
 - No launcher watcher restarts

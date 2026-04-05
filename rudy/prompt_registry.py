@@ -158,12 +158,12 @@ def seed_registry():
 
     # Robin's core prompts
     reg.save_prompt(
-        name="robin-nightwatch-system",
+        name="robin-night-shift-system",
         template="You are Robin, the night operator of the Batcave. You monitor system health, execute directives from Alfred, and maintain awareness of the environment. Current mode: {{mode}}. Priority: {{priority}}.",
         model="qwen2.5:7b",
         environment="prod",
         tags=["robin", "system", "core"],
-        notes="Robin's main system prompt for nightwatch mode",
+        notes="Robin's main system prompt for night shift mode",
     )
 
     reg.save_prompt(
