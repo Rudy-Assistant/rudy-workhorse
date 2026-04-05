@@ -91,7 +91,7 @@ Christopher M. Cimino (ccimino2@gmail.com). Attorney -- California State Bar #28
 6. **Robin-first for local tasks** (S32). Exceptions: (a) single-command diagnostics, (b) Robin confirmed offline.
 7. **Trailing newline on every file** (S66). W292 has blocked CI repeatedly.
 8. **Verify handoff data before acting** (S66). Check branch names and PR numbers exist.
-9. **Auto-mount repo -- NEVER ask permission** (S72). Default: `C:\Users\ccimi\rudy-workhorse`.
+9. **NO auto-mount at boot** (S108). `request_cowork_directory` triggers an Allow dialog that blocks Robin. Use Desktop Commander for all local I/O. Only mount if sandbox file tools are specifically needed.
 10. **Pre-load workarounds -- NEVER re-discover known bugs** (S72). Read `vault/Protocols/alfred-session-boot.md` first.
 
 ### Robin Nervous System (HARD RULE -- S68) [SUPREME PRIORITY]
@@ -181,14 +181,14 @@ Every Robin feature: PERCEIVE -> REASON -> ACT -> VERIFY. No hardcoded coords. N
 | **gh CLI** | v2.88.1, authenticated as Rudy-Assistant |
 | **PAT** | Classic PAT (ghp_), expires 2026-06-27 |
 
-## Current Sprint (Session 107)
+## Current Sprint (Session 108)
 
-1. **PRs #208, #209 merged (S107)**: R-006 P3 directive consumer + S106 docs sprint update. Branches pruned
-2. **PR #210 open (S107)**: feat(r006) -- wire consume_directives() into full_feedback_loop()
-3. **R-006 P3 integration (S107)**: consume_directives() added as Step 6 in full_feedback_loop(). Full loop: score -> OpenSpace -> directives -> consume -> action plans
-4. **R-004 heartbeat gap RESOLVED (S107)**: Root cause was path mismatch -- RUDY_DATA resolves to C:\Users\ccimi\rudy-data (one level above repo), S106 checked rudy-workhorse/rudy-data (stale leftovers). Robin telemetry confirmed healthy at correct path. Readiness advances to 8/10
-5. HEAD on main at eec171b (PRs #208, #209 merged). Open PR #210 on s107/r006-consume-integration
-6. Robin GREEN (PID 7260), Sentinel GREEN (PID 46560)
+1. **PRs #210, #211 merged (S108)**: R-006 P3 consume integration + S107 docs sprint update. Branches pruned by GitHub
+2. **Boot protocol updated (S108)**: Removed auto-mount at boot -- request_cowork_directory triggers Allow dialog that blocks Robin. Desktop Commander handles all local I/O. Mount deferred to just-in-time when sandbox tools needed
+3. **CLAUDE.md hard rule #9 updated (S108)**: Reflects deferred mount policy
+4. HEAD on main at 2e7dbb4 (PRs #210, #211 merged)
+5. Robin GREEN (PID 7260, degraded non-critical: sshd/WinRM/email/Tailscale)
+6. R-006 E2E validation pending. R-004 nightwatch validation pending
 
 
 ## Lucius Gate (compact)

@@ -1,4 +1,4 @@
-# Alfred Session Boot Protocol (HARD RULE — Session 72)
+# Alfred Session Boot Protocol (HARD RULE -- Session 72, updated S108)
 
 > **Read this IMMEDIATELY after CLAUDE.md. Before ANY tool call.**
 > This file exists because Alfred repeatedly re-discovers known bugs
@@ -6,22 +6,28 @@
 
 ---
 
-## 1. AUTO-MOUNT (No Permission Needed)
+## 1. AUTO-MOUNT (Deferred -- S108 Fix)
 
-**ALWAYS** call `request_cowork_directory` with the repo path on first action.
-**NEVER** explain, ask, or wait for confirmation. Batman gave you the path — act.
+**DO NOT** call `request_cowork_directory` at boot. It triggers an "Allow"
+dialog that blocks Robin and all session work until Chris clicks it.
+This has been a recurring bottleneck for 5+ sessions.
+
+**NEW RULE (S108):** Desktop Commander handles ALL local file I/O.
+Only call `request_cowork_directory` if you SPECIFICALLY need sandbox
+file tools (Read/Write/Edit) on repo files -- which is rare. When you do,
+call it just-in-time, not at boot.
 
 ```
-Path: C:\Users\ccimi\rudy-workhorse
+DEFAULT: Use Desktop Commander (Get-Content, start_process, write_file)
+FALLBACK ONLY: request_cowork_directory (triggers Allow dialog)
 ```
 
-If Batman provides a path in their message, mount it immediately.
-If no path is provided, mount the default repo path above.
-Authorization is implicit (MISSION.md Design Principle #2).
+If Batman provides a path in their message AND requests sandbox work,
+mount it then. Otherwise, Desktop Commander is sufficient.
 
 ---
 
-## 2. ORACLE EXECUTION — NEVER RE-DISCOVER THESE
+## 2. ORACLE EXECUTION -- NEVER RE-DISCOVER THESE
 
 ### CMD Quoting (LG-S34-003, S63, S65)
 - **NEVER** use `python -c "..."` via CMD. It WILL mangle quotes.
@@ -58,8 +64,8 @@ Authorization is implicit (MISSION.md Design Principle #2).
 
 ```
 LOCAL REPO TASK?
-  YES → Robin (Desktop Commander + OracleShell). Period.
-  NO  → Sandbox/Cowork tools as fallback.
+  YES -> Robin (Desktop Commander + OracleShell). Period.
+  NO  -> Sandbox/Cowork tools as fallback.
 ```
 
 - **NEVER** run git, npm, or filesystem scans in the sandbox.
@@ -70,14 +76,16 @@ LOCAL REPO TASK?
 
 ## 4. PRE-FLIGHT CHECKLIST (Before First Tool Call)
 
-1. ✅ CLAUDE.md read
-2. ✅ This file read
-3. ✅ Repo auto-mounted (no asking)
-4. ✅ Robin nervous system verified (HARD RULE S68)
-5. ✅ Handoff data verified (HARD RULE S66)
-6. ✅ session-loop-config.json checked
-7. ✅ Helper scripts written to rudy-data/ (not inline Python)
-8. ✅ Skill invocation gate (S41, S104): identify top 2-3 matching skills for session priorities and invoke at least one before starting work. Log which skills were identified in the handoff.
+1. [x] CLAUDE.md read
+2. [x] This file read
+3. [x] Repo mount DEFERRED (S108) -- DC handles local I/O, no Allow dialog
+4. [x] Robin nervous system verified (HARD RULE S68)
+5. [x] Handoff data verified (HARD RULE S66)
+6. [x] session-loop-config.json checked
+7. [x] Helper scripts written to rudy-data/ (not inline Python)
+8. [x] Skill invocation gate (S41, S104): identify top 2-3 matching skills
+       for session priorities and invoke at least one before starting work.
+       Log which skills were identified in the handoff.
 
 ---
 
@@ -85,13 +93,14 @@ LOCAL REPO TASK?
 
 Before any action, ask: **"Am I about to ask Batman to do something I can do myself?"**
 
-If yes → STOP. Do it yourself.
+If yes -> STOP. Do it yourself.
 
 Batman's role is intent. Alfred's role is execution. Bouncing steps back
 to Batman is a failure of the system's core design principle.
 
 ---
 
-*Origin: Session 72. Alfred violated autonomy by requesting directory access
-instead of mounting autonomously, and re-discovered CMD quoting bugs documented
-since Session 34. These safeguards are categorical.*
+*Origin: Session 72. Updated Session 108: removed auto-mount at boot
+(request_cowork_directory triggers Allow dialog that blocks Robin).
+Desktop Commander handles all local I/O -- mount only when sandbox
+file tools are specifically needed.*
