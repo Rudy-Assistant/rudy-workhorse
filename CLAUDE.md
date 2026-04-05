@@ -181,14 +181,15 @@ Every Robin feature: PERCEIVE -> REASON -> ACT -> VERIFY. No hardcoded coords. N
 | **gh CLI** | v2.88.1, authenticated as Rudy-Assistant |
 | **PAT** | Classic PAT (ghp_), expires 2026-06-27 |
 
-## Current Sprint (Session 108)
+## Current Sprint (Session 109)
 
-1. **PRs #210, #211 merged (S108)**: R-006 P3 consume integration + S107 docs sprint update. Branches pruned by GitHub
-2. **Boot protocol updated (S108)**: Removed auto-mount at boot -- request_cowork_directory triggers Allow dialog that blocks Robin. Desktop Commander handles all local I/O. Mount deferred to just-in-time when sandbox tools needed
-3. **CLAUDE.md hard rule #9 updated (S108)**: Reflects deferred mount policy
-4. HEAD on main at 2e7dbb4 (PRs #210, #211 merged)
-5. Robin GREEN (PID 7260, degraded non-critical: sshd/WinRM/email/Tailscale)
-6. R-006 E2E validation pending. R-004 nightwatch validation pending
+1. **PRs #212, #213 merged (S109)**: Boot deferred mount + Robin 3-path stall recovery. Branches pruned
+2. **R-006 E2E VALIDATED (S109)**: Full P1->P2->P3 pipeline tested. Healthy path (95/A -> idle) and critical path (38/F -> 4 directives -> 4 actions -> lucius-actions.json) both pass
+3. **R-004 nightwatch validated (S109)**: Clean cycle confirmed, heartbeat updated. Advances to 9/10
+4. **PR #214 open (S109)**: feat(gate) -- skill_gate_preflight.py for structural S41/S104 enforcement
+5. **Stale data cleanup (S109)**: 56 S47 artifacts archived, E2E test data cleaned
+6. HEAD on main at a1d103c (PRs #212, #213 merged)
+7. Robin GREEN (PID 7260, degraded non-critical: sshd/WinRM/email/Tailscale)
 
 
 ## Lucius Gate (compact)
