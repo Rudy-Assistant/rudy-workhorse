@@ -119,7 +119,7 @@ Clean up spawned processes before session end: `cleanup_session_processes()`.
 - **Deletion Gate (S70):** `assess_deletion()` must return SAFE_TO_DELETE. -> `vault/Protocols/session-protocols.md`
 - **Vault-First (S16):** All records to BatcaveVault (`vault/`). ADRs -> Architecture, Protocols -> Protocols, Sessions -> Sessions.
 - **Handoff Location (S53):** Canonical path: `vault/Handoffs/Session-{N}-Handoff.md`. One location, no exceptions.
-- **Skill Invocation Gate (S41):** BEFORE any priority: identify + invoke matching skill. Failure = -15 on D2.
+- **Skill Invocation Gate (S41, ENFORCED S116):** BEFORE any priority: identify AND invoke matching skill via Skill tool. Identifying without invoking is a violation. Must happen during boot, not retroactively. Failure = -15 on D2.
 - **GitHub MCP Preference (S64):** Use MCP tools over `gh` CLI. MCP works despite LG-S63-002.
 - **Fresh Branch Strategy (S64):** If rebase fails, `git checkout -b fresh origin/main` + cherry-pick. Never retry rebase.
 
@@ -181,16 +181,17 @@ Every Robin feature: PERCEIVE -> REASON -> ACT -> VERIFY. No hardcoded coords. N
 | **gh CLI** | v2.88.1, authenticated as Rudy-Assistant |
 | **PAT** | Classic PAT (ghp_), expires 2026-06-27 |
 
-## Current Sprint (Session 115)
+## Current Sprint (Session 117)
 
-1. **R-004 DONE (S113)**: Proof verified. PR #217 merged. Nightwatch presence bypass confirmed.
-2. **Branch cleanup (S115)**: Deleted alfred/robin-logging-nightwatch (local, was 0df4bf7). No remaining stale branches.
-3. **R-006 production validation blocked**: No change. Last real Lucius scoring S49 (4/1). Session loop halted since S52. Needs Batman decision.
-4. **PAT audit (S115)**: robin-secrets.json contains only OpenAI key -- no GitHub PAT. gh CLI auth healthy (Rudy-Assistant, keyring, full repo scope). "PAT returns 401" issue is moot.
-5. **Process hygiene (S115)**: 15 python processes at boot. Robin (25956), Sentinel (49100), Nightwatch (47332) all alive and verified.
-6. HEAD on main at dee124a.
-7. Robin GREEN (PID 25956, sentinel PID 49100, nightwatch PID 47332).
-8. Skill gate executed (S115): Top skills: engineering:code-review, engineering:testing-strategy, engineering:architecture. Gate passed.
+1. **PR #221 merged (S117)**: Robin killswitch + stealth mode. Branch s116/robin-killswitch cleaned up. HEAD at 48ee303.
+2. **Killswitch ACTIVE**: rudy-data/robin-killswitch.json has active: true. Robin autonomous behavior frozen. Deactivate with: `python -m rudy.robin_killswitch --off`.
+3. **Nightwatch LEGACY (S116)**: PID 47332 killed. Replaced by Robin perpetual cycle. Do not restart.
+4. **Session loop LEGACY (S116)**: Halted since S52. R-006 formally deprecated. session-loop-config.json can be archived.
+5. **Process accumulation**: 34 python processes at S117 boot (up from 17 at S116). Core trio: Robin (25956), Sentinel (49100). Nightwatch dead. Needs monitoring.
+6. **Stealth mode partial (S116)**: Watchdog fixed. RobinSentinel + RudyCommandRunner tasks still need elevated VBS wrapper update.
+7. **Gemma 4 recommended (S116)**: 26B MoE on Ollama (18GB). Next step: `ollama pull gemma4:26b`. Upgrade from qwen2.5:7b for agent tasks.
+8. Robin GREEN (PID 25956, sentinel PID 49100). Killswitch active -- autonomous behavior paused.
+9. Skill gate executed (S117): Top skills: engineering:code-review, engineering:debug, engineering:testing-strategy. Gate passed. engineering:code-review invoked at boot.
 
 
 ## Lucius Gate (compact)
