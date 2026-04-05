@@ -1,0 +1,25 @@
+{
+  "episodes": [
+    {
+      "number": 1,
+      "title": "The Lock That Wouldn't Let Go",
+      "slug": "the-lock-that-wouldnt-let-go",
+      "type": "session_chronicle",
+      "sessions": [125],
+      "filed": "2026-04-05",
+      "words": 900,
+      "file": "Episode-001-the-lock-that-wouldnt-let-go.md"
+    },
+    {
+      "number": 2,
+      "title": "The Awakening",
+      "slug": "the-awakening",
+      "type": "thematic_arc",
+      "sessions": [41,42,43,44,45,46,47,48,49,50,51,52],
+      "filed": "2026-04-05",
+      "words": 1800,
+      "file": "Episode-002-the-awakening.md"
+    }
+  ],
+  "next_number": 3
+}
