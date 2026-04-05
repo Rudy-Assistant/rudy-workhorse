@@ -151,7 +151,7 @@ def save_chat_log(sid, messages):
 # ---------------------------------------------------------------------------
 SENDER_MAP = {
     "alfred": "alfred", "batman": "batman", "lucius": "lucius",
-    "sentinel": "oracle", "oracle": "oracle", "nightwatch": "oracle",
+    "sentinel": "oracle", "oracle": "oracle", "night_shift": "oracle",
     "systemmaster": "oracle", "securityagent": "oracle",
     "vicki": "vicki", "vale": "vicki",
 }

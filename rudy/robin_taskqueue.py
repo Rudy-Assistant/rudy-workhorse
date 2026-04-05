@@ -9,7 +9,7 @@ making real decisions, producing tangible output, and escalating when needed.
 
 Architecture:
     1. Task queue lives at rudy-data/robin-taskqueue/active.json
-    2. Robin polls the queue on each NightShift cycle
+    2. Robin polls the queue on each night shift cycle
     3. Each task has a type, priority, estimated duration, and dependencies
     4. Robin picks the highest-priority unblocked task and executes it
     5. Results are logged to rudy-data/robin-taskqueue/completed/
@@ -27,7 +27,7 @@ Task Types:
     - colab: Trigger Colab self-improvement workflow (when available)
 
 Integration:
-    - NightShift calls robin_taskqueue.process_next_task() on each cycle
+    - Night shift calls robin_taskqueue.process_next_task() on each cycle
     - Alfred can seed the queue by writing to active.json
     - Robin can self-seed based on discoveries (e.g., "I found stale logs, add cleanup task")
 
@@ -88,7 +88,7 @@ PYTHON = _find_exe("python", [r"C:\Python312\python.exe", r"C:\Python311\python.
 
 # Branch protection: Robin must NEVER push directly to main
 PROTECTED_BRANCHES = frozenset({"main", "master"})
-NIGHTWATCH_BRANCH = "alfred/robin-logging-nightwatch"
+ROBIN_AUTO_BRANCH = "robin/autonomous-work"
 
 # ---------------------------------------------------------------------------
 # Task Schema
@@ -416,7 +416,7 @@ def execute_task(task: dict) -> tuple[bool, str]:
     elif task_type == "browse":
         url = _sanitize_metadata_string(task.get("metadata", {}).get("url", "https://example.com"), max_length=2000, url_mode=True)
         # S43 fix: write standalone script instead of inline -c (avoids cp1252 Unicode crash)
-        browse_script = RUDY_DATA / "nightwatch_browse.py"
+        browse_script = RUDY_DATA / "robin_browse.py"
         browse_script.write_text(
             f"""import sys, os\nos.environ["PYTHONIOENCODING"] = "utf-8"\nsys.path.insert(0, r"{RUDY_ROOT}")\ntry:\n    from rudy.tools.browser_tool import browse\n    r = browse("{url}")\n    title = (r.title or "").encode("ascii", errors="replace").decode("ascii")\n    print(f"Title: {{title}}")\n    print(f"Success: {{r.success}}")\n    text = (r.text[:2000] if r.text else "No text").encode("ascii", errors="replace").decode("ascii")\n    print(text)\nexcept Exception as e:\n    print(f"Browse error: {{e}}")""",
             encoding="utf-8"
@@ -429,25 +429,25 @@ def execute_task(task: dict) -> tuple[bool, str]:
             return _execute_command([GIT_EXE, "status", "--short"])
         elif action == "commit_and_push":
             msg = _sanitize_metadata_string(task.get("metadata", {}).get("message", "Robin automated commit"))
-            nightwatch_branch = NIGHTWATCH_BRANCH
+            robin_auto_branch = ROBIN_AUTO_BRANCH
 
             # ── Safety: ensure we NEVER commit on main ──
             _, current_branch = _execute_command([GIT_EXE, "rev-parse", "--abbrev-ref", "HEAD"])
             current_branch = (current_branch or "").strip()
 
-            # Switch to nightwatch branch (create if needed)
+            # Switch to Robin autonomous branch (create if needed)
             # S43 fix: stash dirty working tree before switching branches
-            if current_branch != nightwatch_branch:
-                _execute_command([GIT_EXE, "stash", "push", "-m", "robin-nightwatch-autostash"])
-                ok_co, _ = _execute_command([GIT_EXE, "checkout", nightwatch_branch])
+            if current_branch != robin_auto_branch:
+                _execute_command([GIT_EXE, "stash", "push", "-m", "robin-auto-autostash"])
+                ok_co, _ = _execute_command([GIT_EXE, "checkout", robin_auto_branch])
                 if not ok_co:
-                    ok_co, _ = _execute_command([GIT_EXE, "checkout", "-b", nightwatch_branch])
+                    ok_co, _ = _execute_command([GIT_EXE, "checkout", "-b", robin_auto_branch])
                 if not ok_co:
                     # Restore stash before aborting
                     _execute_command([GIT_EXE, "stash", "pop"])
-                    logger.error("Cannot switch to nightwatch branch — aborting commit")
-                    return False, "Failed to switch to nightwatch branch"
-                logger.info(f"Switched to branch: {nightwatch_branch}")
+                    logger.error("Cannot switch to autonomous branch -- aborting commit")
+                    return False, "Failed to switch to autonomous branch"
+                logger.info(f"Switched to branch: {robin_auto_branch}")
 
             # F1: Explicit file list instead of blind git add -A
             safe_paths = [
@@ -481,26 +481,26 @@ def execute_task(task: dict) -> tuple[bool, str]:
                 return True, "No changes to commit (files unchanged)"
 
             success2, out2 = _execute_command([GIT_EXE, "commit", "-m", msg])
-            success3, out3 = _execute_command([GIT_EXE, "push", "origin", nightwatch_branch])
+            success3, out3 = _execute_command([GIT_EXE, "push", "origin", robin_auto_branch])
 
-            # Always return to main after nightwatch commit
+            # Always return to main after autonomous commit
             _execute_command([GIT_EXE, "checkout", "main"])
             _execute_command([GIT_EXE, "stash", "pop"])
             return all([success2, success3]), f"Staged: {staged_files}\n{out2}\n{out3}"
         return False, f"Unknown git action: {action}"
 
     elif task_type == "pr_create":
-        # S43 stretch: Robin can independently create PRs from nightwatch findings
+        # S43 stretch: Robin can independently create PRs from autonomous findings
         branch_name = _sanitize_metadata_string(
-            task.get("metadata", {}).get("branch", "robin/nightwatch-findings"),
+            task.get("metadata", {}).get("branch", "robin/autonomous-findings"),
             max_length=100
         )
         title = _sanitize_metadata_string(
-            task.get("metadata", {}).get("title", "Robin: Nightwatch findings"),
+            task.get("metadata", {}).get("title", "Robin: Autonomous findings"),
             max_length=200
         )
         body = _sanitize_metadata_string(
-            task.get("metadata", {}).get("body", "Automated PR from Robin nightwatch cycle."),
+            task.get("metadata", {}).get("body", "Automated PR from Robin night shift cycle."),
             max_length=2000
         )
 
@@ -590,17 +590,17 @@ def execute_task(task: dict) -> tuple[bool, str]:
 
     elif task_type == "report":
         # Generate a summary report of recent activity (standalone script)
-        script = RUDY_DATA / "nightwatch_activity_summary.py"
+        script = RUDY_DATA / "robin_activity_summary.py"
         if script.exists():
             return _execute_command([PYTHON, str(script)], timeout=30)
-        return False, "nightwatch_activity_summary.py not found in rudy-data/"
+        return False, "robin_activity_summary.py not found in rudy-data/"
 
     elif task_type == "handoff":
         # Check for Alfred handoff briefs (standalone script)
-        script = RUDY_DATA / "nightwatch_handoff_check.py"
+        script = RUDY_DATA / "robin_handoff_check.py"
         if script.exists():
             return _execute_command([PYTHON, str(script)], timeout=30)
-        return False, "nightwatch_handoff_check.py not found in rudy-data/"
+        return False, "robin_handoff_check.py not found in rudy-data/"
 
     elif task_type == "health_check":
         # System health check: CPU, RAM, disk, uptime
@@ -674,7 +674,7 @@ def execute_task(task: dict) -> tuple[bool, str]:
         return _execute_via_agent(task, timeout=task.get("estimated_minutes", 5) * 60)
 
 # ---------------------------------------------------------------------------
-# Main Loop (called by NightShift or directly)
+# Main Loop (called by night shift or directly)
 # ---------------------------------------------------------------------------
 
 
@@ -753,7 +753,7 @@ def process_all(max_tasks: int = 10, max_minutes: int = 30):
     """
     Process tasks until queue empty, max reached, or time limit hit.
 
-    This is what NightShift calls during Batman absence.
+    This is what the night shift calls during Batman absence.
     """
     start = time.time()
     processed = 0
@@ -807,9 +807,9 @@ def _mark_seeded():
 # Queue Seeding (Alfred pre-loads tasks before Batman leaves)
 # ---------------------------------------------------------------------------
 
-def seed_standard_nightwatch(force: bool = False):
+def seed_standard_tasks(force: bool = False):
     """
-    Seed the queue with standard nightwatch tasks.
+    Seed the queue with standard autonomous tasks.
 
     Called by Alfred when Batman declares absence.
     Args:
@@ -850,25 +850,25 @@ def seed_standard_nightwatch(force: bool = False):
                   "Summarize completed tasks for Batman review",
                   priority=80, estimated_minutes=1),
 
-        make_task("git", "Commit and push nightwatch findings",
+        make_task("git", "Commit and push autonomous findings",
                   "Commit all new findings and push to branch",
                   priority=90, estimated_minutes=1,
                   metadata={"action": "commit_and_push",
-                           "message": "nightwatch: Robin autonomous task queue results\n\nCo-Authored-By: Robin (qwen2.5:7b) <robin@batcave.local>"}),
+                           "message": "robin: autonomous task queue results\n\nCo-Authored-By: Robin (qwen2.5:7b) <robin@batcave.local>"}),
     ]
 
     for task in tasks:
         add_task(task)
 
     _mark_seeded()
-    logger.info(f"Seeded {len(tasks)} standard nightwatch tasks")
+    logger.info(f"Seeded {len(tasks)} standard autonomous tasks")
     return len(tasks)
 
 def seed_deep_work():
     """
     Seed extended deep-work tasks for longer Batman absences.
 
-    These are added ON TOP of standard nightwatch tasks.
+    These are added ON TOP of standard autonomous tasks.
     """
     tasks = [
         make_task("browse", "Monitor GitHub repo for new issues",
@@ -886,15 +886,15 @@ def seed_deep_work():
                   priority=55, estimated_minutes=2,
                   metadata={"url": "https://github.com/unclecode/crawl4ai/releases"}),
 
-        make_task("pr_create", "Create PR from nightwatch findings",
-                  "If nightwatch found changes worth committing, create a PR",
+        make_task("pr_create", "Create PR from autonomous findings",
+                  "If night shift found changes worth committing, create a PR",
                   priority=95, estimated_minutes=2,
-                  metadata={"branch": "robin/nightwatch-auto",
-                            "title": "Robin: Nightwatch automated findings",
-                            "body": "Automated PR from Robin nightwatch cycle.\n\nIncludes environment profile updates, task queue state, and review artifacts."}),
+                  metadata={"branch": "robin/autonomous-auto",
+                            "title": "Robin: Autonomous night shift findings",
+                            "body": "Automated PR from Robin night shift cycle.\n\nIncludes environment profile updates, task queue state, and review artifacts."}),
 
         make_task("profile", "Re-run profiler after task execution",
-                  "Check if RAM/CPU usage changed during nightwatch",
+                  "Check if RAM/CPU usage changed during night shift",
                   priority=85, estimated_minutes=2),
     ]
 
@@ -914,9 +914,9 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         cmd = sys.argv[1]
         if cmd == "seed":
-            seed_standard_nightwatch(force=True)  # Manual seed bypasses cooldown
+            seed_standard_tasks(force=True)  # Manual seed bypasses cooldown
         elif cmd == "seed-deep":
-            seed_standard_nightwatch(force=True)  # Manual seed bypasses cooldown
+            seed_standard_tasks(force=True)  # Manual seed bypasses cooldown
             seed_deep_work()
         elif cmd == "next":
             result = process_next_task()

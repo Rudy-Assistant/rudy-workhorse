@@ -284,7 +284,7 @@ class RobinMailbox:
                        source: str = "robin") -> str:
         """Report a quality or security finding to Alfred.
 
-        Robin should report findings discovered during nightwatch or
+        Robin should report findings discovered during night shift or
         autonomous operations so Alfred can track and act on them.
         """
         return self.send_to_alfred("finding", {
@@ -534,7 +534,7 @@ class RobinMailbox:
 
         return self.send_to_alfred("health", {
             "model": self._get_model(),
-            "nightwatch_pid": os.getpid(),
+            "night_shift_pid": os.getpid(),
             "system": health,
         })
 
@@ -670,7 +670,7 @@ class AlfredMailbox:
         """Report a quality/security finding for Robin to track.
 
         Used when Alfred discovers issues that Robin should monitor or
-        include in nightwatch reports.
+        include in night shift reports.
         """
         return self.respond_to_robin("finding", {
             "title": title,

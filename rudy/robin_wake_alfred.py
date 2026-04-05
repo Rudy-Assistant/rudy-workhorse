@@ -10,7 +10,7 @@ This module gives Robin the ability to:
 
 Called from bridge_runner.py when:
   - Alfred has been offline > WAKE_THRESHOLD_MINUTES
-  - There are pending items in alfred-inbox or nightwatch findings
+  - There are pending items in alfred-inbox or night shift findings
   - Robin hasn't sent a wake in the last COOLDOWN_MINUTES
 
 Session 34: Built to fix the zero-feedback-loop problem.
@@ -99,7 +99,7 @@ def _pending_work_summary() -> dict:
             except Exception:
                 continue
 
-    # Check for nightwatch findings
+    # Check for night shift findings
     findings_dir = RUDY_DATA / "findings"
     if findings_dir.exists():
         for f in findings_dir.glob("*.json"):

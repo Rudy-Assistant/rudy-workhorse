@@ -811,7 +811,7 @@ class Sentinel(AgentBase):
 # ============================================================
 # SentinelObserver - Merged from rudy/robin_sentinel.py
 # Consolidation date: 2026-03-29T16:50:24.074430
-# Original: Passive environmental observer for Robin nightwatch
+# Original: Passive environmental observer for Robin night shift
 # ============================================================
 
 class SentinelObserver:

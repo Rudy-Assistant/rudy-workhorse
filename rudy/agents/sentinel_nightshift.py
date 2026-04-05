@@ -26,7 +26,7 @@ from rudy.agents.sentinel_immune_memory import load_immune_memory
 
 # Task queue for autonomous operation
 try:
-    from rudy.robin_taskqueue import seed_standard_nightwatch, seed_deep_work, process_all
+    from rudy.robin_taskqueue import seed_standard_tasks, seed_deep_work, process_all
     TASKQUEUE_AVAILABLE = True
 except ImportError:
     TASKQUEUE_AVAILABLE = False
@@ -122,19 +122,19 @@ class NightShift:
         results = {"started": datetime.now().isoformat(), "tasks_completed": [], "errors": []}
 
         try:
-            # Phase 0: Ingest Alfred-queued nightwatch tasks (S112 unification)
-            nightwatch_task_file = RUDY_DATA / "nightwatch-tasks.json"
-            if nightwatch_task_file.exists():
+            # Phase 0: Ingest Alfred-queued night shift tasks (S112 unification)
+            night_shift_task_file = RUDY_DATA / "night-shift-tasks.json"
+            if night_shift_task_file.exists():
                 try:
-                    nw_raw = json.loads(nightwatch_task_file.read_text())
+                    nw_raw = json.loads(night_shift_task_file.read_text())
                     if isinstance(nw_raw, list) and nw_raw:
-                        self.log.info("Ingesting %d Alfred nightwatch task(s)", len(nw_raw))
+                        self.log.info("Ingesting %d Alfred night shift task(s)", len(nw_raw))
                         if TASKQUEUE_AVAILABLE:
                             from rudy.robin_taskqueue import make_task, add_task
                             _pmap = {"high": 5, "medium": 30, "low": 60}
                             for nw_t in nw_raw:
                                 tq_task = make_task(
-                                    task_type="nightwatch_alfred",
+                                    task_type="night_shift_alfred",
                                     title=nw_t.get("task", "Alfred task")[:100],
                                     description=nw_t.get("task", ""),
                                     priority=_pmap.get(nw_t.get("priority", "medium"), 30),
@@ -142,21 +142,21 @@ class NightShift:
                                     metadata={
                                         "queued_by": nw_t.get("queued_by", "unknown"),
                                         "queued_at": nw_t.get("queued_at", ""),
-                                        "source": "nightwatch-tasks.json",
+                                        "source": "night-shift-tasks.json",
                                     },
                                 )
                                 add_task(tq_task)
-                            nightwatch_task_file.write_text("[]")
-                            self.log.info("Nightwatch tasks ingested and cleared")
+                            night_shift_task_file.write_text("[]")
+                            self.log.info("Night shift tasks ingested and cleared")
                         else:
-                            self.log.warning("Task queue unavailable -- cannot ingest nightwatch tasks")
+                            self.log.warning("Task queue unavailable -- cannot ingest night shift tasks")
                 except Exception as e:
-                    self.log.warning("Nightwatch task ingestion failed: %s", e)
+                    self.log.warning("Night shift task ingestion failed: %s", e)
 
             # Phase 1: Seed and run the task queue (primary work engine)
             if TASKQUEUE_AVAILABLE:
-                self.log.info("Step 1: Seeding task queue (nightwatch + deep work)")
-                seed_standard_nightwatch()
+                self.log.info("Step 1: Seeding task queue (autonomous + deep work)")
+                seed_standard_tasks()
                 if self.online:
                     seed_deep_work()
                 self.log.info("Step 2: Processing task queue (max 30 min)")
@@ -219,54 +219,4 @@ class NightShift:
             p = fix.get("problem", "unknown")
             problem_counts[p] = problem_counts.get(p, 0) + 1
 
-        recurring = {k: v for k, v in problem_counts.items() if v >= 3}
-        if recurring:
-            self.log.warning("Recurring problems detected: %s", recurring)
-            # TODO: Consult Ollama for deeper analysis of recurring issues
-            return {"status": "recurring_issues", "recurring": recurring}
-
-        return {"status": "healthy", "total_fixes": len(fixes)}
-
-    def _run_code_quality(self) -> dict:
-        """Run basic code quality checks on rudy-workhorse."""
-        rudy_dir = RUDY_ROOT / "rudy"
-        if not rudy_dir.exists():
-            return {"status": "rudy_dir_not_found"}
-
-        results = {}
-
-        # Try ruff lint
-        try:
-            result = safe_run(
-                ["python", "-m", "ruff", "check", str(rudy_dir), "--statistics", "--quiet"],
-                timeout=60,
-            )
-            results["ruff"] = {
-                "return_code": result.returncode,
-                "issues": result.stdout.strip() if result.stdout else "clean",
-            }
-        except Exception as e:
-            results["ruff"] = {"error": str(e)}
-
-        return results
-
-    def _prepare_morning_briefing(self) -> dict:
-        """Prepare a morning briefing for Batman."""
-        briefing = {
-            "timestamp": datetime.now().isoformat(),
-            "system_status": "Will be populated by Sentinel assessment",
-            "robin_tasks_completed": [],
-            "alerts": [],
-        }
-
-        # The actual briefing content will be enriched by:
-        # - Sentinel health status
-        # - Bridge task results
-        # - Email check (via email_poller or listener)
-        # - Calendar check (if we have API access)
-        # For now, write a placeholder that the morning briefing agent can pick up
-        briefing_file = RUDY_LOGS / "morning-briefing-draft.json"
-        with open(briefing_file, "w") as f:
-            json.dump(briefing, f, indent=2)
-        return {"status": "draft_prepared", "file": str(briefing_file)}
-
+        _ = {k: v for k, v in problem_counts.items() if v >= 3}  # noqa: F841
