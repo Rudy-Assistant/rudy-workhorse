@@ -563,6 +563,15 @@ def _ensure_launcher_loop() -> dict:
     Without it, Robin is alive but unable to act. This is checked every
     5 minutes by the RobinLivenessWatchdog scheduled task.
     """
+    # KILLSWITCH CHECK -- supreme override (S116)
+    try:
+        from rudy.robin_killswitch import is_killed
+        if is_killed():
+            log.info("KILLSWITCH ACTIVE -- skipping launcher loop ensure")
+            return {"launcher_loop": "killswitch"}
+    except ImportError:
+        pass
+
     import subprocess as _sp
 
     # Check if launcher process is running
@@ -614,6 +623,21 @@ def ensure_full_nervous_system() -> dict:
 
     This is what the watchdog scheduled task should call.
     """
+    # KILLSWITCH CHECK -- supreme override (S116)
+    try:
+        from rudy.robin_killswitch import is_killed
+        if is_killed():
+            log.info("KILLSWITCH ACTIVE -- skipping all ensure operations")
+            return {
+                "robin_main": {"status": {"alive": "unknown"}, "action": "killswitch"},
+                "sentinel": {"status": {"alive": "unknown"}, "action": "killswitch"},
+                "launcher_loop": {"launcher_loop": "killswitch"},
+                "overall_healthy": False,
+                "killswitch": True,
+            }
+    except ImportError:
+        pass
+
     robin_result = ensure_alive()
     sentinel_result = ensure_sentinel_alive()
     launcher_result = _ensure_launcher_loop()

@@ -594,14 +594,23 @@ class RobinOrchestrator:
                     log.info("Presence: mode changed to %s", mode)
                     prev_mode = mode
 
-                    # Trigger night shift
+                    # Trigger night shift (respects killswitch S116)
                     if mode == RobinMode.NIGHTSHIFT.value:
-                        log.info("Triggering night shift")
-                        threading.Thread(
-                            target=self._run_night_shift,
-                            name="robin-nightshift",
-                            daemon=True,
-                        ).start()
+                        _ks_active = False
+                        try:
+                            from rudy.robin_killswitch import is_killed
+                            _ks_active = is_killed()
+                        except ImportError:
+                            pass
+                        if _ks_active:
+                            log.info("KILLSWITCH ACTIVE -- night shift blocked")
+                        else:
+                            log.info("Triggering night shift")
+                            threading.Thread(
+                                target=self._run_night_shift,
+                                name="robin-nightshift",
+                                daemon=True,
+                            ).start()
 
                 self.state["presence"] = state
                 time.sleep(30)
@@ -708,6 +717,20 @@ def _run_nightwatch() -> None:
     cycle = 0
     while True:
         cycle += 1
+
+        # KILLSWITCH CHECK -- supreme override (S116)
+        try:
+            from rudy.robin_killswitch import is_killed
+            if is_killed():
+                if cycle % 12 == 1:
+                    log.info("[NightWatch] KILLSWITCH ACTIVE -- standing by")
+                try:
+                    _time.sleep(CHECK_INTERVAL)
+                except KeyboardInterrupt:
+                    break
+                continue
+        except ImportError:
+            pass
 
         # S71 FIX (LG-S70-001): Update robin-state.json heartbeat.
         # _run_nightwatch() never called _save_state(), so the heartbeat
