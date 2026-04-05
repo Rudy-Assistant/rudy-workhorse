@@ -891,6 +891,83 @@ def launch(wmcp, handoff_path=None, force=False):
 
 
 # ---------------------------------------------------------------------------
+# S108: 3-Path Stall Recovery — resolves idle sessions in <5 seconds
+# ---------------------------------------------------------------------------
+
+STALL_CHECK_INTERVAL = 5  # seconds — max Allow prompt delay (S108 rule)
+
+
+def stall_recovery(wmcp, elements, handoff_path=None):
+    """3-path decision tree for session perpetuation (S108).
+
+    Called when CLAUDE_IDLE detected. Resolves in <5 seconds.
+
+      PATH A: Allow/permission prompt visible -> click Allow
+      PATH B: No handoff exists -> goad Alfred to write one
+      PATH C: Handoff exists -> launch new session
+
+    Returns: (action_taken: str, should_launch: bool)
+    """
+    log.info("STALL RECOVERY: 3-path decision tree activated")
+
+    _scroll_chat_to_bottom(wmcp)
+    time.sleep(0.5)
+    elements = snapshot(wmcp)
+    if not elements:
+        log.warning("STALL: Empty snapshot during recovery")
+        return "snapshot_failed", False
+
+    state, detail = assess_state(elements)
+
+    # --- PATH A: Allow/permission prompt needs feedback ---
+    if state == ScreenState.CLAUDE_MOUNT_PROMPT:
+        log.info("STALL PATH A: Allow prompt — clicking")
+        click(wmcp, detail["allow"], "Allow (stall recovery)")
+        time.sleep(2)
+        return "allow_clicked", False
+
+    has_handoff = _has_new_handoff()
+
+    # --- PATH C: Handoff exists — launch new session ---
+    if has_handoff:
+        log.info("STALL PATH C: Handoff exists — launching")
+        return "handoff_ready", True
+
+    # --- PATH B: No handoff — goad Alfred ---
+    claude_els = [e for e in elements
+                  if "claude" in e.get("window", "").lower()]
+    prompt_input = (
+        find(claude_els, "Reply")
+        or find(claude_els, "Write your prompt")
+        or find(claude_els, "", control_type="Edit")
+    )
+
+    if prompt_input:
+        log.info("STALL PATH B: No handoff — goading Alfred")
+        type_text(wmcp, prompt_input, GOAD_PROMPT, clear=True)
+        time.sleep(0.5)
+        send_els = snapshot(wmcp)
+        send_btn = (
+            find(send_els, "Send", window="Claude",
+                 control_type="Button")
+            or find(send_els, "Submit", window="Claude",
+                    control_type="Button")
+        )
+        if send_btn:
+            click(wmcp, send_btn, "Send (goad)")
+        else:
+            shortcut(wmcp, "enter")
+        return "goaded", False
+
+    new_task = find(elements, "New task", control_type="Button")
+    if new_task:
+        log.info("STALL: Start screen — launching fresh")
+        return "session_ended", True
+
+    return "no_action", False
+
+
+# ---------------------------------------------------------------------------
 # Loop Mode — Perpetual Session Launcher
 # ---------------------------------------------------------------------------
 
@@ -963,41 +1040,27 @@ def run_loop(wmcp, interval_min, handoff_path=None):
             time.sleep(5)
             continue
 
-        # Session idle — only act if a NEW handoff file exists.
-        # S83 FIX: Never goad an active session. Batman may be between
-        # messages. Only escalate when Alfred actually wrote a handoff,
-        # signaling the session is truly done.
+        # S108: Session idle — run 3-path stall recovery instantly.
+        # Replaces old 3-iteration escalation (3+ min) with <5s resolution.
         if state == ScreenState.CLAUDE_IDLE:
-            if _has_new_handoff():
-                consecutive_idles += 1
-                log.info("IDLE + new handoff detected (attempt %d/3)",
-                         consecutive_idles)
-                if consecutive_idles >= 3:
-                    log.info("ESCALATE: %d consecutive idles with handoff — "
-                             "session is done, starting new", consecutive_idles)
-                    new_task = find(elements, "New task", window="Claude")
-                    if new_task:
-                        click(wmcp, new_task, "New task (idle escalation)")
-                        consecutive_idles = 0
-                        time.sleep(2)
-                    else:
-                        log.info("ESCALATE: No 'New task' — forcing launch")
-                        consecutive_idles = 0
-                        result = launch(wmcp, handoff_path)
-                        if result["success"]:
-                            _interruptible_sleep(interval_min * 60, wmcp=wmcp)
-                        else:
-                            _interruptible_sleep(120)
+            consecutive_idles += 1
+            log.info("IDLE (count=%d) — stall recovery", consecutive_idles)
+            action, should_launch = stall_recovery(wmcp, elements, handoff_path)
+            log.info("STALL: action=%s launch=%s", action, should_launch)
+            if should_launch:
+                consecutive_idles = 0
+                result = launch(wmcp, handoff_path)
+                if result["success"]:
+                    _interruptible_sleep(interval_min * 60, wmcp=wmcp)
                 else:
-                    log.info("IDLE with handoff — waiting for session to "
-                             "fully end (attempt %d/3)", consecutive_idles)
-                    _interruptible_sleep(60)
+                    _interruptible_sleep(120)
+            elif action == "allow_clicked":
+                consecutive_idles = 0
+                _interruptible_sleep(10, wmcp=wmcp)
+            elif action == "goaded":
+                _interruptible_sleep(90, wmcp=wmcp)
             else:
-                # No new handoff — session is still active, Batman is
-                # between messages. Do NOT goad. Just wait.
-                log.info("IDLE but no new handoff — session still active, "
-                         "waiting %d min", interval_min)
-                _interruptible_sleep(interval_min * 60, wmcp=wmcp)
+                _interruptible_sleep(30, wmcp=wmcp)
             continue
 
         # Claude ready or not found — time to launch
@@ -1056,7 +1119,8 @@ def _interruptible_sleep(seconds, wmcp=None):
     """
     remaining = seconds
     while remaining > 0:
-        chunk = min(30, remaining)
+        # S108: 5s polls (not 30s) — Allow prompts caught within 5 seconds
+        chunk = min(STALL_CHECK_INTERVAL, remaining)
         time.sleep(chunk)
         remaining -= chunk
         if is_killed():
