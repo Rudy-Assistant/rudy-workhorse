@@ -14,7 +14,7 @@ Usage:
     python -m rudy.robin_main                    # Full startup
     python -m rudy.robin_main --night-shift      # Force night shift mode
 
-Note: --nightwatch mode removed in S118, replaced by perpetual orchestrator cycle.
+Note: Night shift mode uses the perpetual orchestrator cycle (S118+).
     python -m rudy.robin_main --status            # Show all subsystem status
     python -m rudy.robin_main --chat "query"      # Direct Robin chat
     python -m rudy.robin_main --agent "task"      # Agent mode (MCP tools)
