@@ -181,12 +181,14 @@ Every Robin feature: PERCEIVE -> REASON -> ACT -> VERIFY. No hardcoded coords. N
 | **gh CLI** | v2.88.1, authenticated as Rudy-Assistant |
 | **PAT** | Classic PAT (ghp_), expires 2026-06-27 |
 
-## Current Sprint (Session 101)
+## Current Sprint (Session 102)
 
-1. **Mid-session Allow prompt fix (S101, PR #200)**: Launcher now auto-approves Allow/Deny dialogs during active sessions, enabling fully autonomous perpetual work loop
-2. **R-001 CLAUDE.md Refactor (S100, PR #199)**: 543->209 lines, protocols extracted to vault/Protocols/
-3. HEAD on main at 574e5f9 (PR #199), open PR #200 on s101/allow-prompt-monitor
-4. Robin GREEN (PID 7260), Sentinel GREEN (PID 2156)
+1. **Scroll-to-bottom fix (S102, PR #200 merged)**: Launcher now scrolls chat to bottom before Allow-prompt snapshots, fixing off-screen approval bottleneck
+2. **PRs #200 and #201 merged**: Allow prompt monitor + CLAUDE.md sprint update both on main
+3. **Stale stash conflict resolved**: S67 stash pop had left CLAUDE.md and sentinel.py in merge conflict state on main
+4. **Robin heartbeat confirmed OK**: robin-state.json at C:\Users\ccimi\rudy-data\ (not rudy-workhorse/rudy-data/) -- path confusion from prior sessions
+5. HEAD on main at 2fdf545 (PR #200), launcher restarted PID 32140
+6. Robin GREEN (PID 7260), Sentinel GREEN (PID 19364)
 
 ## Lucius Gate (compact)
 
