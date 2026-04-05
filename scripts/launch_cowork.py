@@ -30,6 +30,10 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+# Session lock -- prevents competing Cowork launches (S124)
+sys.path.insert(0, str(Path(r"C:\Users\ccimi\rudy-workhorse")))
+from rudy.session_lock import SessionLock
+
 # ---------------------------------------------------------------------------
 # Paths
 # ---------------------------------------------------------------------------
@@ -42,6 +46,9 @@ STATE_FILE = COORD_DIR / "simple-launcher-state.json"
 KILL_SWITCH = COORD_DIR / "robin-pause.flag"
 LAST_LAUNCH_TS = COORD_DIR / "last-launch-timestamp"
 LOG_FILE = RUDY_DATA / "logs" / "launch-cowork.log"
+
+# Session lock instance (S124)
+_session_lock = SessionLock()
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -603,6 +610,19 @@ def save_state(success, detail=""):
 # Core Launch Sequence
 # ---------------------------------------------------------------------------
 
+def _next_session_number():
+    """Determine the next session number from handoff files."""
+    try:
+        handoffs = sorted(VAULT_HANDOFFS.glob("Session-*-Handoff.md"))
+        if handoffs:
+            last = handoffs[-1].stem  # Session-123-Handoff
+            num = int(last.split("-")[1])
+            return num + 1
+    except (IndexError, ValueError):
+        pass
+    return 0
+
+
 def launch(wmcp, handoff_path=None, force=False):
     """
     PERCEIVE → REASON → ACT → VERIFY launch sequence.
@@ -614,6 +634,21 @@ def launch(wmcp, handoff_path=None, force=False):
     Returns dict with success, detail, steps taken.
     """
     prompt = build_prompt(handoff_path)
+
+    # S124: Acquire session lock before launching
+    session_num = _next_session_number()
+    if not force and _session_lock.is_locked():
+        owner = _session_lock.get_owner()
+        log.info("Session lock held by session %s -- skipping launch",
+                 owner.get("session_id") if owner else "unknown")
+        return {"success": False, "steps": [], "detail": "session_locked"}
+    if not _session_lock.acquire(session_id=session_num,
+                                 launcher_pid=os.getpid()):
+        log.warning("Failed to acquire session lock")
+        if not force:
+            return {"success": False, "steps": [], "detail": "lock_acquire_failed"}
+    log.info("Session lock acquired for session %d", session_num)
+
     log.info("=" * 60)
     log.info("LAUNCH START — prompt: %s", prompt[:80])
     log.info("=" * 60)
@@ -887,6 +922,11 @@ def launch(wmcp, handoff_path=None, force=False):
                   MAX_LAUNCH_RETRIES + 1, result["detail"])
         save_state(False, result["detail"])
 
+    # S124: Release lock on failure (caller manages on success)
+    if not result["success"]:
+        _session_lock.release()
+        log.info("Session lock released (launch failed)")
+
     return result
 
 
@@ -1029,6 +1069,7 @@ def run_loop(wmcp, interval_min, handoff_path=None):
         # If session is active, wait (with Allow-prompt monitoring)
         if state == ScreenState.CLAUDE_WORKING:
             consecutive_idles = 0  # Reset idle counter
+            _session_lock.heartbeat()  # S124: keep lock alive
             log.info("Session active — sleeping %d min (with Allow monitor)",
                      interval_min)
             _interruptible_sleep(interval_min * 60, wmcp=wmcp)
@@ -1479,6 +1520,12 @@ def main():
     except KeyboardInterrupt:
         log.info("Interrupted by user")
     finally:
+        # S124: Release session lock on exit
+        try:
+            _session_lock.release()
+            log.info("Session lock released (launcher exit)")
+        except Exception:
+            pass
         try:
             registry.disconnect_all()
         except Exception:
