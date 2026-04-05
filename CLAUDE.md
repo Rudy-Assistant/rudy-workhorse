@@ -181,14 +181,15 @@ Every Robin feature: PERCEIVE -> REASON -> ACT -> VERIFY. No hardcoded coords. N
 | **gh CLI** | v2.88.1, authenticated as Rudy-Assistant |
 | **PAT** | Classic PAT (ghp_), expires 2026-06-27 |
 
-## Current Sprint (Session 104)
+## Current Sprint (Session 105)
 
-1. **PR #202 merged (S104)**: docs sprint update from S102
-2. **PR #204 merged (S104)**: R-006 Priority 1 -- Robin scoring -> OpenSpace bridge (fresh branch replacing #203)
-3. **PR #205 open (S104)**: R-006 Priority 2 -- skill evolution triggers (AUTO-FIX + AUTO-IMPROVE)
-4. **BATMAN DIRECTIVE completed (S104)**: Skill invocation audit -- LF-S104-001 filed, boot protocol updated
-5. HEAD on main at ff38b77, open PR #205 on s104/r006-evolution-triggers
+1. **PRs #205 and #206 merged (S105)**: R-006 P2 evolution triggers + docs sprint update
+2. **R-006 P2 verified (S105)**: End-to-end test -- AUTO-FIX and AUTO-IMPROVE both fire correctly
+3. **R-004 assessed (S105)**: 5 consecutive GREEN sessions (S100-S104). Advanced to 7.5/10. Awaiting nightwatch cycle validation for 8/10
+4. **Vault tracking decision (S105)**: Local-only accepted as design intent. vault/ stays in .gitignore
+5. HEAD on main at 7e78246 (PRs #205, #206 merged)
 6. Robin GREEN (PID 7260), Sentinel GREEN (PID 19364)
+
 
 ## Lucius Gate (compact)
 
