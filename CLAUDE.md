@@ -181,13 +181,14 @@ Every Robin feature: PERCEIVE -> REASON -> ACT -> VERIFY. No hardcoded coords. N
 | **gh CLI** | v2.88.1, authenticated as Rudy-Assistant |
 | **PAT** | Classic PAT (ghp_), expires 2026-06-27 |
 
-## Current Sprint (Session 126)
+## Current Sprint (Session 128)
 
-1. **PR #240 merged (S125)**: Fixed `session_lock.py` bug -- `is_locked()` ignored `status` field after `release()`. Fresh heartbeat still returned True, blocking re-acquisition. Fix: early return on `status=released`. Commit e60423b, merge at e493f38.
-2. **E2E test suite created (S125)**: `rudy-data/helpers/test_session_lock_e2e.py` -- 10 tests covering full SessionLock lifecycle (acquire, release, stale detection, force-release, etc.).
-3. **R-007 Vicki Vale feasibility assessed HIGH (S125)**: Data corpus mature (97 handoffs, 30 sessions, 22 scores, 23 findings). Estimated 2-3 sessions to build as Cowork skill. Awaiting Batman approval.
-4. **Killswitch INACTIVE**: Deactivated by Batman S116 away mode. Robin autonomous behavior restored.
-5. **Session loop LEGACY (S116)**: Halted since S52. R-006 formally deprecated.
-6. **Stealth mode partial (S116)**: Script ready at `rudy-data/helpers/s123_stealth_update.ps1`. Needs Admin elevation.
-7. Robin GREEN (PID 8860, sentinel PID 26052). Killswitch inactive -- autonomous behavior active.
-8. Skill gate executed (S126): Top skills: engineering:code-review, engineering:standup, operations:status-report. Gate passed. engineering:standup invoked at boot.                                                                                                                                                                               
+1. **PR #247 merged (S127)**: R-007 Vicki Vale scaffold -- `rudy/vicki_vale.py` (vault data extractor with arc mapping, episode context builder) + `.claude/skills/vicki-vale/SKILL.md` (Cowork skill with persona, episode types, narrative guidelines). Commit 0781817, merge at 2b11363.
+2. **Test episode generated (S127)**: Episode 002 "The Lock That Wouldn't Release" -- chronicles S125-S126 (session_lock bug fix, hygiene session). Pipeline validated: scan, register, save all functional.
+3. **PR #244 merged (S126)**: Fixed launcher working-stall bug. Added MAX_WORKING_SECONDS timeout, CLAUDE_IDLE detection, reduced stale threshold.
+4. **R-007 Vicki Vale: Phase 1 COMPLETE**: Scaffold merged. 5 pre-mapped arcs. Episode pipeline functional. Phase 2: generate arc narratives.
+5. **Killswitch INACTIVE**: Deactivated by Batman S116 away mode. Robin autonomous behavior restored.
+6. **Session loop LEGACY (S116)**: Halted since S52. R-006 formally deprecated.
+7. **Stealth mode partial (S116)**: Script ready at `rudy-data/helpers/s123_stealth_update.ps1`. Needs Admin elevation.
+8. Robin GREEN (PID 8860, sentinel PID 26052). Killswitch inactive -- autonomous behavior active.
+9. Skill gate executed (S127): Top skills: engineering:code-review, engineering:standup, operations:status-report. Gate passed. engineering:standup invoked at boot.                                                                                                                                                                               

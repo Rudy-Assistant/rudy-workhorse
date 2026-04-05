@@ -1,0 +1,27 @@
+{
+  "next_episode": 3,
+  "episodes": [
+    {
+      "episode": 1,
+      "title": "The Lock That Wouldn't Let Go",
+      "slug": "the-lock-that-wouldnt-let-go",
+      "session_range": [
+        125,
+        125
+      ],
+      "type": "session-chronicle",
+      "file": "Episode-001-the-lock-that-wouldnt-let-go.md"
+    },
+    {
+      "episode": 2,
+      "title": "The Lock That Wouldn't Release",
+      "slug": "the-lock-that-wouldnt-release",
+      "session_range": [
+        125,
+        126
+      ],
+      "type": "chronicle",
+      "file": "Episode-002-the-lock-that-wouldnt-release.md"
+    }
+  ]
+}
