@@ -65,6 +65,8 @@ class SessionLock:
         data = self._read()
         if data is None:
             return False
+        if data.get("status") == "released":
+            return False
         heartbeat = data.get("last_heartbeat", data.get("acquired_at"))
         if not heartbeat:
             return False
