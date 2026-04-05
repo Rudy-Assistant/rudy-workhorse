@@ -181,17 +181,18 @@ Every Robin feature: PERCEIVE -> REASON -> ACT -> VERIFY. No hardcoded coords. N
 | **gh CLI** | v2.88.1, authenticated as Rudy-Assistant |
 | **PAT** | Classic PAT (ghp_), expires 2026-06-27 |
 
-## Current Sprint (Session 117)
+## Current Sprint (Session 118)
 
-1. **PR #221 merged (S117)**: Robin killswitch + stealth mode. Branch s116/robin-killswitch cleaned up. HEAD at 48ee303.
-2. **Killswitch ACTIVE**: rudy-data/robin-killswitch.json has active: true. Robin autonomous behavior frozen. Deactivate with: `python -m rudy.robin_killswitch --off`.
-3. **Nightwatch LEGACY (S116)**: PID 47332 killed. Replaced by Robin perpetual cycle. Do not restart.
-4. **Session loop LEGACY (S116)**: Halted since S52. R-006 formally deprecated. session-loop-config.json can be archived.
-5. **Process accumulation**: 34 python processes at S117 boot (up from 17 at S116). Core trio: Robin (25956), Sentinel (49100). Nightwatch dead. Needs monitoring.
-6. **Stealth mode partial (S116)**: Watchdog fixed. RobinSentinel + RudyCommandRunner tasks still need elevated VBS wrapper update.
-7. **Gemma 4 recommended (S116)**: 26B MoE on Ollama (18GB). Next step: `ollama pull gemma4:26b`. Upgrade from qwen2.5:7b for agent tasks.
-8. Robin GREEN (PID 25956, sentinel PID 49100). Killswitch active -- autonomous behavior paused.
-9. Skill gate executed (S117): Top skills: engineering:code-review, engineering:debug, engineering:testing-strategy. Gate passed. engineering:code-review invoked at boot.
+1. **Boot protocol enforcement PR created (S118)**: Skill gate invocation rule strengthened in alfred-session-boot.md. PR open on s118/boot-protocol-enforcement.
+2. **Nightwatch deprecated (S118)**: Removed _run_nightwatch() (~200 lines dead code) from robin_main.py. Removed --nightwatch CLI flag. Updated batcave-startup.ps1 to launch full orchestrator. PR open on s118/nightwatch-deprecation.
+3. **batcave-startup.ps1 path fix (S118)**: Fixed stale Desktop path references to current rudy-workhorse location.
+4. **Killswitch INACTIVE**: Deactivated by Batman S116 away mode. Robin autonomous behavior restored.
+5. **Gemma 4 pull initiated (S118)**: `ollama pull gemma4:26b` running (17GB download). Once complete, update robin-secrets.json ollama_model field.
+6. **Session loop LEGACY (S116)**: Halted since S52. R-006 formally deprecated.
+7. **Stealth mode partial (S116)**: Watchdog fixed. RobinSentinel + RudyCommandRunner tasks still need elevated VBS wrapper update.
+8. Robin GREEN (PID 25956, sentinel PID 49100). Killswitch inactive -- autonomous behavior active.
+9. Skill gate executed (S118): Top skills: engineering:code-review, operations:process-optimization, engineering:standup. Gate passed. engineering:code-review invoked at boot.
+10. **GitHub PAT 401 (F-S118-001)**: robin-secrets.json PAT returns 401 on API calls. Git push works via credential helper. PAT may need rotation. Expires 2026-06-27 per CLAUDE.md.
 
 
 ## Lucius Gate (compact)
