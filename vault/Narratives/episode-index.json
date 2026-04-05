@@ -19,7 +19,17 @@
       "filed": "2026-04-05",
       "words": 1800,
       "file": "Episode-002-the-awakening.md"
+    },
+    {
+      "number": 3,
+      "title": "The Reform",
+      "slug": "the-reform",
+      "type": "thematic_arc",
+      "sessions": [52,53,54,55,56,57,58,59,60,61,62,63,64,65,66],
+      "filed": "2026-04-05",
+      "words": 2100,
+      "file": "Episode-003-the-reform.md"
     }
   ],
-  "next_number": 3
+  "next_number": 4
 }
