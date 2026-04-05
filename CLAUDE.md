@@ -181,15 +181,15 @@ Every Robin feature: PERCEIVE -> REASON -> ACT -> VERIFY. No hardcoded coords. N
 | **gh CLI** | v2.88.1, authenticated as Rudy-Assistant |
 | **PAT** | Classic PAT (ghp_), expires 2026-06-27 |
 
-## Current Sprint (Session 113)
+## Current Sprint (Session 114)
 
-1. **R-004 nightwatch fix MERGED (S113)**: PR #217 merged (commit 42fb1a9). Nightwatch restarted on new code (PID 47332). High-priority R-004 proof task seeded into nightwatch-tasks.json. Awaiting nightwatch cycle to write r004-nightwatch-proof.json.
-2. **R-004 proof task seeded**: nightwatch-tasks.json now contains a high-priority task that will write the proof file. Nightwatch should execute it on next 5-min cycle even with Batman present.
-3. **Process hygiene (S113)**: 14 python at boot, killed 1 stale duplicate (PID 7260 from 4/4). 5 healthy Rudy processes remain (Robin 25956; Sentinel 49100; Robin-status 51928; Nightwatch 47332; launch_cowork 57096).
-4. **R-006 production validation blocked**: No change. Last real Lucius scoring S49 (4/1). Session loop halted since S52.
-5. HEAD on main at 42fb1a9 (includes PR #217 merge).
-6. Robin GREEN (PID 25956, sentinel PID 49100, nightwatch PID 47332)
-7. Skill gate executed (S113): Top skills: engineering:code-review, engineering:debug, engineering:testing-strategy. Gate passed.
+1. **R-004 DONE (S113)**: Proof verified. PR #217 merged (commit 42fb1a9). Nightwatch consumed high-priority task while Batman present, confirming presence bypass works. Proof: rudy-data/r004-nightwatch-proof.json.
+2. **Branch cleanup (S114)**: Deleted s112/nightwatch-unification and s113/sprint-update (local + remote). Pruned 9 stale remote branches from s106-s110.
+3. **R-006 production validation blocked**: No change. Last real Lucius scoring S49 (4/1). Session loop halted since S52. Needs Batman decision.
+4. **Process hygiene (S114)**: 5 healthy Rudy processes confirmed at boot (Robin 25956; Sentinel 49100; Robin-status 51928; Nightwatch 47332; launch_cowork 57096). No stale processes found.
+5. HEAD on main at 62f561a.
+6. Robin GREEN (PID 25956, sentinel PID 49100, nightwatch PID 47332).
+7. Skill gate executed (S114): Top skills: engineering:code-review, engineering:debug, engineering:testing-strategy. Gate passed.
 
 
 ## Lucius Gate (compact)
