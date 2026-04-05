@@ -1324,7 +1324,11 @@ def run_watch(wmcp, registry):
                                 elif _q_st == ScreenState.CLAUDE_IDLE:
                                     log.info("WATCH: Session idle detected "
                                              "during tick — checking handoff")
-                                    if _has_new_handoff():
+                                    # S128: Check lock before triggering
+                                    if _session_lock.is_locked():
+                                        log.info("WATCH: Idle but lock held "
+                                                 "— skipping trigger")
+                                    elif _has_new_handoff():
                                         log.info("WATCH: Handoff exists + "
                                                  "idle — triggering launch")
                                         handoff_file[0] = str(
@@ -1335,8 +1339,18 @@ def run_watch(wmcp, registry):
 
                 # S85 SMART FALLBACK: Check every tick (~30s).
                 # Uses FILE TIMESTAMPS + STATE FILE only. No UI interaction.
+                # S128: Check session lock first — never trigger a launch
+                # while another session holds an active lock.
                 if True:
                     _should_launch = False
+                    if _session_lock.is_locked():
+                        if idle_ticks % 20 == 0:
+                            _fb_owner = _session_lock.get_owner()
+                            _fb_sid = (_fb_owner.get("session_id")
+                                       if _fb_owner else "?")
+                            log.info("WATCH FALLBACK: Lock held by %s "
+                                     "— skipping fallback", _fb_sid)
+                        continue  # Skip entire fallback block
                     _fb_hf = find_latest_handoff()
                     if not _fb_hf:
                         pass  # No handoffs exist yet
@@ -1388,7 +1402,19 @@ def run_watch(wmcp, registry):
             # Small delay to let the file finish writing
             time.sleep(2)
 
-            # Attempt launch (force=True: end current session if active)
+            # S128 FIX: Check session lock before launching.
+            # Only proceed if no active session holds the lock.
+            # This prevents spawning concurrent sessions when Batman
+            # manually opened a Cowork session or another session is
+            # already running.
+            if _session_lock.is_locked():
+                _w_owner = _session_lock.get_owner()
+                _w_sid = _w_owner.get("session_id") if _w_owner else "?"
+                log.info("WATCH: Session lock held by %s — skipping "
+                         "launch to avoid concurrent sessions", _w_sid)
+                idle_ticks = 0
+                continue  # Back to watch loop
+
             launch_succeeded = False
             for attempt in range(3):
                 # S90: Reconnect MCP before each attempt if prior failed
@@ -1398,7 +1424,7 @@ def run_watch(wmcp, registry):
                     except Exception as _re:
                         log.error("WATCH: MCP reconnect before attempt %d "
                                   "failed: %s", attempt + 1, _re)
-                result = launch(wmcp, hf, force=True)
+                result = launch(wmcp, hf)
                 if result["success"]:
                     log.info("WATCH: Session launched successfully")
                     launch_succeeded = True
@@ -1431,6 +1457,8 @@ def run_watch(wmcp, registry):
                 if is_killed():
                     break
                 time.sleep(60)
+                # S128: Heartbeat the session lock while waiting
+                _session_lock.heartbeat()
                 # S87: Wrap snapshot with MCP reconnect
                 # S102: Scroll to bottom before snapshot so Allow is visible
                 _scroll_chat_to_bottom(wmcp)
