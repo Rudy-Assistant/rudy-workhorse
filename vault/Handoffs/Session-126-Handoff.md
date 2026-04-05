@@ -2,7 +2,7 @@
 
 **Date:** 2026-04-05
 **Alfred Session:** 126
-**Context at handoff:** ~35%
+**Context at handoff:** ~55%
 
 ## FIRST: Read CLAUDE.md before doing any work (HARD RULE -- S22)
 
@@ -16,23 +16,62 @@
    E2E test suite creation, R-007 Vicki Vale HIGH feasibility
    assessment, and updated Ollama model list (added gemma4:26b,
    nomic-embed-text). Commit 7831dcc, merge at 8f09ccc.
-3. **Process hygiene executed** -- 4 Robin PIDs protected (8860,
-   26052, 26180, 30008). 11 orphan Python processes and 6 orphan
-   Windows-MCP processes terminated. Zero errors.
+3. **PR #243 merged (s126/handoff)** -- Session 126 handoff v1.
+   Commit ed818f7, merge at 6848798.
+4. **F-S126-001 FOUND AND RESOLVED: Launcher working-stall bug**
+   -- Robin launched S127 successfully (clicked through UI, typed
+   prompt, sent). The Cowork AI froze mid-response (spinning
+   indicator stayed). The launcher saw CLAUDE_WORKING and slept
+   for the full interval (45 min) with NO stall timeout. Nobody
+   noticed the freeze. Root cause: `_interruptible_sleep` only
+   checked for Allow prompts and popups, never for CLAUDE_IDLE
+   (session finished) or working time limits.
+5. **PR #244 merged (s126/fix-working-stall)** -- Fix for
+   F-S126-001. Changes:
+   - Added `MAX_WORKING_SECONDS` (10 min) timeout to
+     `_interruptible_sleep` -- returns to main loop for
+     re-assessment after 10 min of CLAUDE_WORKING
+   - Added `CLAUDE_IDLE` detection during sleep -- returns
+     early when session finishes instead of waiting full interval
+   - Added `CLAUDE_IDLE` detection to watch mode tick checks --
+     triggers handoff-based relaunch immediately
+   - Reduced stale session threshold from 45 to 15 min in watch
+     mode fallback -- catches stalled sessions faster
+   - Restored truncated file ending (main() block was cut off)
+   Commit ad9c486, merge at d704ffe. CI clean (ruff + py_compile).
+6. **Process hygiene executed (x2)** -- First pass: 4 Robin PIDs
+   protected, 11 Python + 6 MCP orphans terminated. Second pass
+   (after stall fix work): 20 additional orphans terminated.
+   Robin GREEN throughout.
 
 ## Current State
 
-- **HEAD on main:** 8f09ccc (Merge PR #242: s126/sprint-update)
+- **HEAD on main:** d704ffe (Merge PR #244: s126/fix-working-stall)
 - **Open branches:** None
 - **Open PRs:** None
 - **Robin:** GREEN (PID 8860, sentinel PID 26052)
 - **Killswitch:** INACTIVE (deactivated by Batman S116 away mode)
 - **Sentinel:** GREEN (PID 26052)
-- **Launcher watcher:** Running (PID 26180)
+- **Launcher watcher:** Running (PID 26180) -- NOTE: running old
+  code. Restart needed to pick up stall detection fix.
 - **Bridge runner:** Running (PID 30008)
 - **Ollama:** Online (gemma4:26b, qwen2.5:7b, deepseek-r1:8b,
   nomic-embed-text)
 - **Session loop:** LEGACY (halted since S52)
+
+## IMPORTANT: Launcher Restart Required
+
+The launcher watcher (PID 26180) is still running the OLD
+launch_cowork.py without the stall detection fix. To activate
+the fix, the launcher must be restarted:
+
+```powershell
+Stop-Process -Id 26180 -Force
+Start-Process -FilePath "C:\Python312\python.exe" -ArgumentList "C:\Users\ccimi\rudy-workhorse\scripts\launch_cowork.py --watch" -WindowStyle Hidden
+```
+
+Or Robin's sentinel should detect the dead PID and restart it.
+Alternatively, Batman can restart it manually.
 
 ## Known Issues
 
@@ -67,24 +106,36 @@
 - **robin-secrets.json path** -- Located at
   `C:\Users\ccimi\rudy-data\robin-secrets.json` (NOT under
   coordination/). Confirmed S125.
+- **DC start_process scripts exit instantly** -- Python scripts
+  with time.sleep() or network I/O sometimes report exit code 0
+  in <1s despite containing long waits. Workaround: write to
+  result file, check for file existence, re-run if missing.
+  Observed S126 during merge polling.
 
 ## Findings (S126)
 
-- No new findings this session.
+- **F-S126-001: Launcher has no working-stall timeout (RESOLVED)**
+  -- When CLAUDE_WORKING detected, launcher slept full interval
+  (45 min) with no stall detection. If AI froze mid-response, the
+  session stayed stuck indefinitely. Fixed in PR #244: added
+  MAX_WORKING_SECONDS (10 min) timeout, CLAUDE_IDLE detection
+  during sleep, and reduced watch mode stale threshold from 45
+  to 15 min. Severity: High (blocks autonomous session
+  perpetuation entirely).
 
 ## Batman Directives (S126)
 
-1. **Run stealth update as Admin** -- Open PowerShell as Admin,
+1. **Restart launcher watcher** -- Kill PID 26180 and restart with
+   new code to activate stall detection fix. Or reboot Robin.
+2. **Run stealth update as Admin** -- Open PowerShell as Admin,
    run: `powershell -ExecutionPolicy Bypass -File
    C:\Users\ccimi\rudy-data\helpers\s123_stealth_update.ps1`
-   This updates RobinSentinel + RudyCommandRunner tasks to launch
-   via hidden-launch.vbs (no visible console windows).
    (Carried from S123.)
-2. **Approve R-007 Vicki Vale** -- Feasibility assessed as HIGH
+3. **Approve R-007 Vicki Vale** -- Feasibility assessed as HIGH
    (S125). Data corpus is mature (97 handoffs, 30 sessions,
    22 scores, 23 findings). Estimated 2-3 sessions to build as
    a Cowork skill. Say the word and Alfred will begin implementation.
-3. **Consider smaller Ollama model** -- gemma4:26b (17GB) on 16GB
+4. **Consider smaller Ollama model** -- gemma4:26b (17GB) on 16GB
    RAM causes slow loads. Could use qwen2.5:7b as fallback for
    faster responses when latency matters. (Carried from S122.)
 
@@ -111,15 +162,16 @@ Skills identified at boot via run_skill_gate.py:
 Skills INVOKED (via Skill tool):
 - engineering:standup -- Invoked at boot BEFORE first work action
   (compliant with S116 HARD RULE). Used to generate standup from
-  S125 handoff data: PR #240 merge, E2E test suite, R-007
-  feasibility, and S126 plan (CLAUDE.md update, hygiene).
+  S125 handoff data.
 
 Gate compliance: FULL. Skill invoked at boot before any work action.
 
 ## Priority for Next Session
 
-1. **Begin R-007 Vicki Vale** (if Batman approves) -- Create skill
+1. **Restart launcher watcher** -- Must pick up stall detection
+   fix (PR #244). PID 26180 running old code.
+2. **Begin R-007 Vicki Vale** (if Batman approves) -- Create skill
    scaffold, design narrative prompts, generate first test episode.
-2. **Run stealth update as Admin** -- Batman action. Script ready.
-3. **Process hygiene at session end** -- Run cleanup for orphan
+3. **Run stealth update as Admin** -- Batman action. Script ready.
+4. **Process hygiene at session end** -- Run cleanup for orphan
    processes (now safe with Robin PID protection).
