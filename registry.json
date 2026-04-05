@@ -2345,6 +2345,22 @@
       "name": "finance:variance-analysis",
       "type": "plugin",
       "plugin": "Finance"
+    },
+    {
+      "name": "vicki-vale",
+      "type": "custom",
+      "triggers": [
+        "vicki",
+        "vale",
+        "narrative",
+        "chronicle",
+        "episode",
+        "story"
+      ],
+      "path": ".claude/skills/vicki-vale/SKILL.md",
+      "module": "rudy/vicki_vale.py",
+      "description": "Narrative engine that transforms vault data into Batman-universe episodic stories",
+      "added_session": 127
     }
   ],
   "mcps": [

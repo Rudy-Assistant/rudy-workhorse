@@ -1,6 +1,6 @@
 # Lucius Artifact Registry v2
 
-> Maintained by Lucius Fox — last updated Session 22 (2026-03-30)
+> Maintained by Lucius Fox — last updated Session 128 (2026-04-05)
 > Codebase: 78+ files, 34,317+ lines | Repo: Rudy-Assistant/rudy-workhorse
 
 ---
@@ -79,9 +79,11 @@
 - `rudy/robin_sentinel.py` (13L) — Compat shim → agents/sentinel.py
 - `rudy/robin_taskqueue.py` (673L) — Extended absence task queue
 - `rudy/sanitize.py` (60L) — Shared input sanitization
+- `rudy/session_lock.py` — Session lock with heartbeat, stale detection, force-release (S125)
 - `rudy/surveillance.py` (591L) — Video camera integration
 - `rudy/travel_mode.py` (709L) — Portable network intelligence
 - `rudy/usb_quarantine.py` (1050L) — USB quarantine protocol
+- `rudy/vicki_vale.py` — Vicki Vale narrative engine: vault data → Batman-universe episodes (S127, R-007)
 - `rudy/voice.py` (248L) — TTS, STT, audio processing
 - `rudy/voice_clone.py` (678L) — Voice cloning (Pocket TTS)
 - `rudy/web_intelligence.py` (393L) — Web scraping, article extraction
@@ -237,4 +239,4 @@
 
 *"I keep the inventory. You keep the promises." — Lucius Fox*
 
-*Registry v2 — Session 22 (2026-03-30)*
+*Registry v2 — Session 22 (2026-03-30)*
