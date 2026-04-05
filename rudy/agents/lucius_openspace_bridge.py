@@ -383,6 +383,17 @@ async def full_feedback_loop(
     # Step 5: Write directives (including any evolution triggers)
     written_path = write_directives(directives, directives_path)
 
+    # Step 6: Consume directives -> generate action plans (R-006 P3, S107)
+    consumption = {"consumed": 0, "status": "skipped"}
+    try:
+        from rudy.agents.lucius_directive_consumer import consume_directives
+        consumption = consume_directives(
+            directives_path=Path(written_path) if written_path else None,
+        )
+    except Exception as e:
+        log.warning("Directive consumption failed: %s", e)
+        consumption = {"consumed": 0, "status": "error", "error": str(e)}
+
     tier = classify_severity(score_result.get("total_score", 0))
 
     return {
@@ -390,6 +401,7 @@ async def full_feedback_loop(
         "directives_count": len(directives),
         "evolution_directives_count": len(evolution_directives),
         "directives_path": written_path,
+        "consumption": consumption,
         "severity_tier": tier,
         "action": SEVERITY_TIERS.get(tier, {}).get("action", "unknown"),
     }
