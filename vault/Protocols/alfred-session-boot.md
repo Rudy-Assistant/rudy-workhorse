@@ -77,6 +77,7 @@ LOCAL REPO TASK?
 5. ✅ Handoff data verified (HARD RULE S66)
 6. ✅ session-loop-config.json checked
 7. ✅ Helper scripts written to rudy-data/ (not inline Python)
+8. ✅ Skill invocation gate (S41, S104): identify top 2-3 matching skills for session priorities and invoke at least one before starting work. Log which skills were identified in the handoff.
 
 ---
 

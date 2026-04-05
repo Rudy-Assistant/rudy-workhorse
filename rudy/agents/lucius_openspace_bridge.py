@@ -371,7 +371,16 @@ async def full_feedback_loop(
     # Step 3: Generate directives
     directives = generate_directives(score_result, session_number)
 
-    # Step 4: Write directives
+    # Step 4: Evaluate evolution triggers (R-006 Priority 2, S104)
+    evolution_directives = []
+    try:
+        from rudy.skill_evolution_triggers import evaluate_evolution_triggers
+        evolution_directives = evaluate_evolution_triggers()
+        directives.extend(evolution_directives)
+    except Exception as e:
+        log.warning("Evolution trigger evaluation failed: %s", e)
+
+    # Step 5: Write directives (including any evolution triggers)
     written_path = write_directives(directives, directives_path)
 
     tier = classify_severity(score_result.get("total_score", 0))
@@ -379,6 +388,7 @@ async def full_feedback_loop(
     return {
         "openspace": record_result,
         "directives_count": len(directives),
+        "evolution_directives_count": len(evolution_directives),
         "directives_path": written_path,
         "severity_tier": tier,
         "action": SEVERITY_TIERS.get(tier, {}).get("action", "unknown"),
