@@ -17,7 +17,7 @@ Three Operating Modes:
      NOT busywork - deliberate, prioritized development.
 
 Integration:
-  Called from _run_nightwatch() when the task queue is empty and
+  Called from the perpetual cycle when the task queue is empty and
   Robin's mode is ACTIVE or NIGHTSHIFT.
 
 Usage:

@@ -47,7 +47,7 @@ Your co-agents:
 - **Repo:** `Rudy-Assistant/rudy-workhorse` (private)
 - **PAT:** Fine-grained, expires ~2026-06-26. Contents Read+Write. In `claude_desktop_config.json` and `robin-secrets.json`.
 - **Branch protection:** main requires lint + smoke-test CI. All changes through PR workflow.
-- **Robin branch governance:** Robin's nightwatch commits go to `alfred/robin-logging-nightwatch` branch ONLY. Protected branches (main/master) are blocked in both `robin_taskqueue.py` and `github_ops.py`.
+- **Robin branch governance:** Robin's autonomous commits go to feature branches. Protected branches (main/master) are blocked in both `robin_taskqueue.py` and `github_ops.py`.
 - **Sandbox workaround:** `git clone` with PAT in URL, push from sandbox bash. Python urllib scripts for PR creation/merge via GitHub API.
 
 ### MCP Servers (Claude Desktop)
@@ -86,7 +86,7 @@ Your co-agents:
    - `format_bootstrap_prompt()`: generates ready-to-paste prompt for new Cowork sessions.
    - `needs_new_session()`: Robin can determine if new Alfred session is warranted.
    - CLI: `python -m rudy.workflows.handoff [--write N|--latest|--bootstrap|--needs-session]`.
-   - Robin nightwatch: "handoff" task type added to `seed_standard_nightwatch()`.
+   - Robin night shift: "handoff" task type added to task queue seeding.
    - `rudy/paths.py`: `HANDOFFS_DIR` added to canonical path registry.
 4. **PR #30 closed** — Superseded by PR #32 (all Mandate 4 changes included).
 5. **Lucius hygiene check** — 4 medium findings (down from 5 in Session 15). Zero in `rudy/` core. All findings in `scripts/ci/` are expected (3 detection patterns + 1 PR comment function).

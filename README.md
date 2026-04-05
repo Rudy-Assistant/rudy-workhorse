@@ -11,7 +11,7 @@ Batman (Human) --> Alfred (Claude Opus, cloud sessions)
                      |
                      +--> Robin (Ollama qwen2.5:7b, local, always-on)
                      |      +-- Sentinel (observer, every 15 min)
-                     |      +-- Nightwatch (autonomous overnight ops)
+                     |      +-- Night Shift (autonomous overnight ops)
                      |      +-- MCP client (Windows-MCP, Snapshot, Type, Click)
                      |
                      +--> Lucius Fox (Claude, governance/audit sessions)
@@ -32,7 +32,7 @@ Batman (Human) --> Alfred (Claude Opus, cloud sessions)
 
 | Agent | Role | Runtime | Schedule |
 |-------|------|---------|----------|
-| **Robin** | Local AI agent: autonomous ops, MCP interaction, nightwatch | Ollama qwen2.5:7b | 10s poll cycle, always-on |
+| **Robin** | Local AI agent: autonomous ops, MCP interaction, night shifts | Ollama qwen2.5:7b | 10s poll cycle, always-on |
 | **Alfred** | Cloud mentor: architecture, code, orchestration | Claude Opus (Cowork) | On-demand sessions |
 | **Lucius Fox** | Governance: audits, scoring, dependency review | Claude (Cowork) | Weekly + on-demand |
 | **Sentinel** | Environmental awareness, change detection, briefings | Python scheduled task | Every 15 min |
@@ -49,7 +49,7 @@ Batman (Human) --> Alfred (Claude Opus, cloud sessions)
 | `rudy/robin_main.py` | Robin core: orchestrator loop, MCP client, autonomy engine |
 | `rudy/robin_autonomy.py` | Three-mode autonomy: directive, collaborative, initiative |
 | `rudy/robin_liveness.py` | Nervous system health checks, process restart |
-| `rudy/robin_sentinel.py` | Passive observer for Robin's nightwatch cycles |
+| `rudy/robin_sentinel.py` | Passive observer for Robin's autonomous cycles |
 | `rudy/bridge_runner.py` | Robin-to-Cowork bridge: session launching, inbox polling |
 | `rudy/agents/sentinel.py` | Sentinel agent: env monitoring, governance, boot phases |
 | `rudy/agents/lucius_fox.py` | Lucius Fox: audit engine, gate checks, scoring |
@@ -93,8 +93,8 @@ cd C:\Users\ccimi\rudy-workhorse
 C:\Python312\python.exe -m rudy.robin_main
 ```
 
-Robin automatically enters full orchestrator mode (nightwatch + inbox
-polling + autonomy engine). The `--nightwatch` flag is deprecated as
+Robin automatically enters full orchestrator mode (night shift + inbox
+polling + autonomy engine). The `--nightwatch` flag was removed in S118 as
 of S97/PR #194.
 
 ## Documentation
