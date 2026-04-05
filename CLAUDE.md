@@ -181,22 +181,23 @@ Every Robin feature: PERCEIVE -> REASON -> ACT -> VERIFY. No hardcoded coords. N
 | **gh CLI** | v2.88.1, authenticated as Rudy-Assistant |
 | **PAT** | Classic PAT (ghp_), expires 2026-06-27 |
 
-## Current Sprint (Session 128)
+## Current Sprint (Session 130)
 
-1. **R-007 Vicki Vale Phase 1 DONE (S127)**: Narrative skill built --
-   ADR-017, SKILL.md, vicki_vale.py (219L), Episode 001 generated.
-   PR #247 + #248 merged. Module registered in registry.json (S128).
-2. **PR #240 merged (S125)**: Fixed session_lock.py bug -- is_locked()
-   ignored status field after release(). Commit e60423b.
-3. **E2E test suite created (S125)**: test_session_lock_e2e.py --
-   10 tests covering full SessionLock lifecycle.
+1. **R-007 Vicki Vale Episodes 001-004 DONE**: Narrative skill built
+   (S127). Episodes: 001 The Lock (S125), 002 The Awakening (S41-52),
+   003 The Reform (S52-66), 004 The Nervous System (S67-72).
+   PRs #247, #248, #253, #254 merged. PR #255 open (Ep 004).
+2. **PR #254 merged (S130)**: Episode 003 The Reform. CI 5/5 green.
+   Merge SHA 6cd0dcb.
+3. **PR #255 created (S130)**: Episode 004 The Nervous System (S67-72).
+   ~2300 words. CI pending at creation.
 4. **Killswitch INACTIVE**: Deactivated by Batman S116 away mode.
    Robin autonomous behavior restored.
 5. **Session loop LEGACY (S116)**: Halted since S52. R-006 deprecated.
 6. **Stealth mode partial (S116)**: Script ready at
    rudy-data/helpers/s123_stealth_update.ps1. Needs Admin elevation.
 7. Robin GREEN (PID 8860, sentinel PID 26052). Killswitch inactive.
-8. Skill gate executed (S128): Top skills: engineering:code-review,
+8. Skill gate executed (S130): Top skills: engineering:code-review,
    engineering:standup, operations:status-report.
    engineering:code-review invoked at boot.
  
