@@ -78,7 +78,7 @@ Context about this system:
 - Your config and secrets live in {RUDY_DATA}/
 
 Keep responses focused. If Batman asks you to run a command, explain what it does
-and confirm you'd execute it (in nightwatch mode you can; in chat mode, describe it).
+and confirm you'd execute it (in night shift mode you can; in chat mode, describe it).
 """
 
 # ---------------------------------------------------------------------------
