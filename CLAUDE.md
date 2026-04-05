@@ -181,12 +181,13 @@ Every Robin feature: PERCEIVE -> REASON -> ACT -> VERIFY. No hardcoded coords. N
 | **gh CLI** | v2.88.1, authenticated as Rudy-Assistant |
 | **PAT** | Classic PAT (ghp_), expires 2026-06-27 |
 
-## Current Sprint (Session 121)
+## Current Sprint (Session 122)
 
-1. **PR #229 merged (S121)**: Nightwatch code refactor -- renamed all 63 nightwatch references across 12 Python files to night shift / autonomous. Key renames: NIGHTWATCH_BRANCH -> ROBIN_AUTO_BRANCH, seed_standard_nightwatch() -> seed_standard_tasks(), log_nightwatch_checkin() -> log_night_shift_checkin(). Zero nightwatch refs remain in rudy/**/*.py. Also fixed pre-existing F841 lint issue. HEAD at 4a11fc5.
-2. **Gemma 4 download COMPLETE (S121)**: gemma4:26b (17 GB) confirmed available via `ollama list`. robin-secrets.json configured. Three-session saga (S118-S121) resolved.
-3. **Killswitch INACTIVE**: Deactivated by Batman S116 away mode. Robin autonomous behavior restored.
-4. **Session loop LEGACY (S116)**: Halted since S52. R-006 formally deprecated.
-5. **Stealth mode partial (S116)**: Watchdog fixed. RobinSentinel + RudyCommandRunner tasks still need elevated VBS wrapper update.
-6. Robin GREEN (PID 25956, sentinel PID 49100). Killswitch inactive -- autonomous behavior active.
-7. Skill gate executed (S121): Top skills: engineering:testing-strategy, engineering:debug, engineering:architecture. Gate passed. engineering:testing-strategy invoked at boot.
+1. **PR #231 merged (S122, by Robin)**: Process hygiene fix F-S121-001 -- `_get_robin_ecosystem_pids()` now queries robin_liveness before cleanup, preventing accidental Robin/Sentinel kills. HEAD at a0da5cc.
+2. **PR #232 merged (S122)**: Cleaned last 3 nightwatch refs in robin_alfred_protocol.export.txt. Zero nightwatch refs remain in tracked Python/export files.
+3. **Gemma 4 VERIFIED (S122)**: gemma4:26b tested via Ollama API -- model responds correctly. Integration confirmed working.
+4. **Killswitch INACTIVE**: Deactivated by Batman S116 away mode. Robin autonomous behavior restored.
+5. **Session loop LEGACY (S116)**: Halted since S52. R-006 formally deprecated.
+6. **Stealth mode partial (S116)**: Watchdog fixed. RobinSentinel + RudyCommandRunner tasks still need elevated VBS wrapper update.
+7. Robin GREEN (PID 8860, sentinel PID 26052). Killswitch inactive -- autonomous behavior active.
+8. Skill gate executed (S122): Top skills: engineering:testing-strategy, engineering:debug, engineering:standup. Gate passed. engineering:testing-strategy invoked at boot.
