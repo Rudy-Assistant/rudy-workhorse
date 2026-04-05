@@ -107,7 +107,6 @@ class VickiVale:
         for f in sorted(FINDINGS_DIR.iterdir()):
             if not f.suffix == ".md":
                 continue
-            # Extract session number from filename like LF-S49-002-...
             match = re.search(r"S(\d+)", f.name)
             if match:
                 snum = int(match.group(1))
@@ -139,7 +138,8 @@ class VickiVale:
         """Extract all vault data for a pre-mapped thematic arc."""
         arc = ARCS.get(arc_name)
         if not arc:
-            return {"error": f"Unknown arc: {arc_name}", "known": list(ARCS.keys())}
+            return {"error": f"Unknown arc: {arc_name}",
+                    "known": list(ARCS.keys())}
         start = min(arc["sessions"])
         end = max(arc["sessions"])
         return {
@@ -201,7 +201,6 @@ if __name__ == "__main__":
         end = int(sys.argv[3]) if len(sys.argv) > 3 else 127
         ctx = vv.build_episode_context(list(range(start, end + 1)))
         out = RUDY_DATA / f"vicki-scan-{start}-{end}.json"
-        # Save summary (not full content -- too large)
         summary = {
             "session_range": ctx["session_range"],
             "handoff_count": len(ctx["handoffs"]),
