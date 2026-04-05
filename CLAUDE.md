@@ -181,13 +181,13 @@ Every Robin feature: PERCEIVE -> REASON -> ACT -> VERIFY. No hardcoded coords. N
 | **gh CLI** | v2.88.1, authenticated as Rudy-Assistant |
 | **PAT** | Classic PAT (ghp_), expires 2026-06-27 |
 
-## Current Sprint (Session 105)
+## Current Sprint (Session 106)
 
-1. **PRs #205 and #206 merged (S105)**: R-006 P2 evolution triggers + docs sprint update
-2. **R-006 P2 verified (S105)**: End-to-end test -- AUTO-FIX and AUTO-IMPROVE both fire correctly
-3. **R-004 assessed (S105)**: 5 consecutive GREEN sessions (S100-S104). Advanced to 7.5/10. Awaiting nightwatch cycle validation for 8/10
-4. **Vault tracking decision (S105)**: Local-only accepted as design intent. vault/ stays in .gitignore
-5. HEAD on main at 7e78246 (PRs #205, #206 merged)
+1. **PR #207 merged (S106)**: S105 docs sprint update
+2. **PR #208 open (S106)**: R-006 P3 -- directive consumer for evolution triggers
+3. **R-006 P3 built + tested (S106)**: lucius_directive_consumer.py consumes AUTO-FIX, AUTO-IMPROVE, and standard directives. E2E test passed
+4. **R-004 assessed (S106)**: Readiness holds at 7.5/10. Heartbeat telemetry gap -- no sentinel-heartbeat.json or robin-state.json being generated. Needs nightwatch cycle validation
+5. HEAD on main at a9ef510 (PR #207 merged). Open PR #208 on s106/r006-directive-consumer
 6. Robin GREEN (PID 7260), Sentinel GREEN (PID 19364)
 
 
