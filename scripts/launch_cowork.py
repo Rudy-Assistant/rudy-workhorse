@@ -384,6 +384,20 @@ def shortcut(wmcp, keys):
     return result.success
 
 
+def _scroll_chat_to_bottom(wmcp):
+    """Scroll Claude chat to bottom so Allow prompts are in the viewport.
+
+    S102 FIX: Allow buttons rendered below the fold are invisible to
+    Snapshot's accessibility tree. Pressing End key scrolls the Electron
+    chat to the latest content, making permission dialogs visible.
+    """
+    try:
+        shortcut(wmcp, "End")
+        time.sleep(0.5)
+    except Exception as exc:
+        log.debug("Scroll-to-bottom failed (non-fatal): %s", exc)
+
+
 def dismiss_popup(wmcp, detail):
     """Dismiss a detected popup by clicking its button."""
     btn = detail["popup_button"]
@@ -1051,9 +1065,11 @@ def _interruptible_sleep(seconds, wmcp=None):
         if _has_new_handoff():
             log.info("Handoff trigger — waking launcher early")
             return
-        # S101: Check for Allow prompts during active session
+        # S101+S102: Check for Allow prompts during active session
+        # S102: Scroll to bottom first so off-screen prompts become visible
         if wmcp is not None:
             try:
+                _scroll_chat_to_bottom(wmcp)
                 elements = snapshot(wmcp)
                 if elements:
                     state_check, detail_check = assess_state(elements)
@@ -1152,13 +1168,15 @@ def run_watch(wmcp, registry):
                                 log.error(
                                     "WATCH: MCP reconnect failed: %s", e,
                                 )
-                # S101: Quick Allow-prompt check every 2 ticks (~60s)
+                # S101+S102: Quick Allow-prompt check every 2 ticks (~60s)
                 # when a session appears active. Catches mid-session
                 # permission dialogs that would stall Alfred.
+                # S102: Scroll to bottom first so off-screen prompts visible.
                 if idle_ticks % 2 == 0 and LAST_LAUNCH_TS.exists():
                     try:
                         _ls_age = time.time() - LAST_LAUNCH_TS.stat().st_mtime
                         if _ls_age < 3600:  # Session launched <1hr ago
+                            _scroll_chat_to_bottom(wmcp)
                             _q_els = snapshot(wmcp)
                             if _q_els:
                                 _q_st, _q_det = assess_state(_q_els)
@@ -1270,6 +1288,8 @@ def run_watch(wmcp, registry):
                     break
                 time.sleep(60)
                 # S87: Wrap snapshot with MCP reconnect
+                # S102: Scroll to bottom before snapshot so Allow is visible
+                _scroll_chat_to_bottom(wmcp)
                 try:
                     elements = snapshot(wmcp)
                 except Exception as _mcp_err:
