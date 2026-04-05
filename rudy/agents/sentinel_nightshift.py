@@ -122,6 +122,37 @@ class NightShift:
         results = {"started": datetime.now().isoformat(), "tasks_completed": [], "errors": []}
 
         try:
+            # Phase 0: Ingest Alfred-queued nightwatch tasks (S112 unification)
+            nightwatch_task_file = RUDY_DATA / "nightwatch-tasks.json"
+            if nightwatch_task_file.exists():
+                try:
+                    nw_raw = json.loads(nightwatch_task_file.read_text())
+                    if isinstance(nw_raw, list) and nw_raw:
+                        self.log.info("Ingesting %d Alfred nightwatch task(s)", len(nw_raw))
+                        if TASKQUEUE_AVAILABLE:
+                            from rudy.robin_taskqueue import make_task, add_task
+                            _pmap = {"high": 5, "medium": 30, "low": 60}
+                            for nw_t in nw_raw:
+                                tq_task = make_task(
+                                    task_type="nightwatch_alfred",
+                                    title=nw_t.get("task", "Alfred task")[:100],
+                                    description=nw_t.get("task", ""),
+                                    priority=_pmap.get(nw_t.get("priority", "medium"), 30),
+                                    estimated_minutes=5,
+                                    metadata={
+                                        "queued_by": nw_t.get("queued_by", "unknown"),
+                                        "queued_at": nw_t.get("queued_at", ""),
+                                        "source": "nightwatch-tasks.json",
+                                    },
+                                )
+                                add_task(tq_task)
+                            nightwatch_task_file.write_text("[]")
+                            self.log.info("Nightwatch tasks ingested and cleared")
+                        else:
+                            self.log.warning("Task queue unavailable -- cannot ingest nightwatch tasks")
+                except Exception as e:
+                    self.log.warning("Nightwatch task ingestion failed: %s", e)
+
             # Phase 1: Seed and run the task queue (primary work engine)
             if TASKQUEUE_AVAILABLE:
                 self.log.info("Step 1: Seeding task queue (nightwatch + deep work)")

@@ -758,9 +758,23 @@ def _run_nightwatch() -> None:
                             continue
                 except Exception:
                     pass
-                if _has_directive or _has_urgent:
+                # S112 FIX: High-priority nightwatch tasks bypass presence
+                _has_high_nw = False
+                try:
+                    if TASK_FILE.exists():
+                        _nw_tasks = json.loads(TASK_FILE.read_text())
+                        if isinstance(_nw_tasks, list):
+                            _has_high_nw = any(
+                                t.get("priority") == "high" for t in _nw_tasks
+                            )
+                except Exception:
+                    pass
+                if _has_directive or _has_urgent or _has_high_nw:
                     idle = pstate.get("idle_minutes", 0)
-                    log.info("[NightWatch] Batman present but directive/urgent msg active -- proceeding")
+                    _reason = "directive" if _has_directive else (
+                        "urgent msg" if _has_urgent else "high-priority nightwatch task"
+                    )
+                    log.info("[NightWatch] Batman present but %s active -- proceeding", _reason)
                 else:
                     idle = pstate.get("idle_minutes", 0)
                     mode = pstate.get("robin_mode", "unknown")
