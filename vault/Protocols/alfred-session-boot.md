@@ -1,4 +1,4 @@
-# Alfred Session Boot Protocol (HARD RULE -- Session 72, updated S108)
+# Alfred Session Boot Protocol (HARD RULE -- Session 72, updated S110)
 
 > **Read this IMMEDIATELY after CLAUDE.md. Before ANY tool call.**
 > This file exists because Alfred repeatedly re-discovers known bugs
@@ -83,9 +83,15 @@ LOCAL REPO TASK?
 5. [x] Handoff data verified (HARD RULE S66)
 6. [x] session-loop-config.json checked
 7. [x] Helper scripts written to rudy-data/ (not inline Python)
-8. [x] Skill invocation gate (S41, S104): identify top 2-3 matching skills
-       for session priorities and invoke at least one before starting work.
-       Log which skills were identified in the handoff.
+8. [x] **Skill gate preflight (S41, S104, S110):**
+       Run the helper script via Desktop Commander (replace N with session number):
+       ```
+       C:\Python312\python.exe C:\Users\ccimi\rudy-data\helpers\run_skill_gate.py N
+       ```
+       Then read the coordination file:
+       `Get-Content "C:\Users\ccimi\rudy-data\coordination\skill-gate-sN.json" -Raw`
+       Invoke at least one of the top_skills before starting work.
+       Log which skills were identified and invoked in the handoff.
 
 ---
 
@@ -100,7 +106,6 @@ to Batman is a failure of the system's core design principle.
 
 ---
 
-*Origin: Session 72. Updated Session 108: removed auto-mount at boot
-(request_cowork_directory triggers Allow dialog that blocks Robin).
-Desktop Commander handles all local I/O -- mount only when sandbox
-file tools are specifically needed.*
+*Origin: Session 72. Updated Session 110: integrated skill_gate_preflight
+into pre-flight checklist step 8. Module: rudy/agents/skill_gate_preflight.py
+(PR #214, merged S110). Previous update S108: removed auto-mount at boot.*

@@ -181,14 +181,14 @@ Every Robin feature: PERCEIVE -> REASON -> ACT -> VERIFY. No hardcoded coords. N
 | **gh CLI** | v2.88.1, authenticated as Rudy-Assistant |
 | **PAT** | Classic PAT (ghp_), expires 2026-06-27 |
 
-## Current Sprint (Session 109)
+## Current Sprint (Session 110)
 
-1. **PRs #212, #213 merged (S109)**: Boot deferred mount + Robin 3-path stall recovery. Branches pruned
-2. **R-006 E2E VALIDATED (S109)**: Full P1->P2->P3 pipeline tested. Healthy path (95/A -> idle) and critical path (38/F -> 4 directives -> 4 actions -> lucius-actions.json) both pass
-3. **R-004 nightwatch validated (S109)**: Clean cycle confirmed, heartbeat updated. Advances to 9/10
-4. **PR #214 open (S109)**: feat(gate) -- skill_gate_preflight.py for structural S41/S104 enforcement
-5. **Stale data cleanup (S109)**: 56 S47 artifacts archived, E2E test data cleaned
-6. HEAD on main at a1d103c (PRs #212, #213 merged)
+1. **PRs #214, #215 merged (S110)**: Skill gate preflight + S109 docs sprint update. All CI green. Branches pruned
+2. **Boot protocol updated (S110)**: Integrated skill_gate_preflight into pre-flight checklist step 8 with helper script (no inline python -c)
+3. **R-004 nightwatch test queued (S110)**: High-priority task in nightwatch-tasks.json for tonight's cycle. Next session checks r004-nightwatch-proof.json
+4. **R-006 production validation blocked**: No real Lucius scoring since S49 (session loop halted S52). E2E synthetic test still valid
+5. **Robin stall recovery (PR #213)**: Deployed on disk, not yet triggered (healthy path -- no stalls observed)
+6. HEAD on main at c6acd1f (PRs #214, #215 merged)
 7. Robin GREEN (PID 7260, degraded non-critical: sshd/WinRM/email/Tailscale)
 
 
