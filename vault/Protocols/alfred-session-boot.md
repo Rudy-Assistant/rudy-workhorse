@@ -83,15 +83,21 @@ LOCAL REPO TASK?
 5. [x] Handoff data verified (HARD RULE S66)
 6. [x] session-loop-config.json checked
 7. [x] Helper scripts written to rudy-data/ (not inline Python)
-8. [x] **Skill gate preflight (S41, S104, S110):**
+8. [x] **Skill gate preflight (S41, S104, S110, ENFORCED S116):**
        Run the helper script via Desktop Commander (replace N with session number):
        ```
        C:\Python312\python.exe C:\Users\ccimi\rudy-data\helpers\run_skill_gate.py N
        ```
        Then read the coordination file:
        `Get-Content "C:\Users\ccimi\rudy-data\coordination\skill-gate-sN.json" -Raw`
-       Invoke at least one of the top_skills before starting work.
-       Log which skills were identified and invoked in the handoff.
+
+       **HARD RULE (S116): You MUST use the Skill tool to invoke at least
+       one top_skill BEFORE your first work action (code edit, file write,
+       process kill, branch create, etc.). Identifying skills without
+       invoking them is a violation. The invocation must happen during
+       boot -- not retroactively after Batman notices the gap.**
+
+       Log which skills were identified AND invoked in the handoff.
 
 ---
 
