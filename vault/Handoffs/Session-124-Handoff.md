@@ -24,6 +24,10 @@
    sprint section from S121 to S124. Commit a91ad56, merge at 3edbc7e.
 4. **Process hygiene executed** -- 4 Robin PIDs protected. 2 orphan
    Windows-MCP backup processes terminated (~135 MB freed).
+5. **GitHub PAT added (F-S118-001 RESOLVED)** -- Batman provided
+   classic PAT (90 days from Mar 29, expires ~Jun 27). Added to
+   robin-secrets.json as github_pat field. Robin GitHub API now
+   functional.
 
 ## Current State
 
@@ -57,11 +61,8 @@
   Get-Content via start_process.
 - **DC stdout swallowed** (LG-S63-001) -- Write results to JSON,
   read back.
-- **GitHub PAT missing (F-S118-001)** -- robin-secrets.json has
-  no github_pat field. Git push works via credential helper. MCP
-  GitHub works with its own auth. Robin API calls get None.
-  Batman must generate a classic PAT at github.com/settings/tokens
-  with repo scope and add to robin-secrets.json.
+- **GitHub PAT (F-S118-001 RESOLVED S124)** -- PAT added to
+  robin-secrets.json. Expires ~Jun 27, 2026. Robin API functional.
 - **RobinSentinel + RudyCommandRunner tasks not stealthed** --
   Need elevated privileges to update. Script ready at
   `rudy-data/helpers/s123_stealth_update.ps1`. Batman: run as Admin.
@@ -79,11 +80,7 @@
 
 ## Batman Directives (S124)
 
-1. **Generate GitHub PAT** -- Go to github.com/settings/tokens,
-   create classic PAT with repo scope. Add to robin-secrets.json
-   as "github_pat": "ghp_...". This enables Robin's GitHub API.
-   (Carried from S118.)
-2. **Run stealth update as Admin** -- Open PowerShell as Admin,
+1. **Run stealth update as Admin** -- Open PowerShell as Admin,
    run: `powershell -ExecutionPolicy Bypass -File
    C:\Users\ccimi\rudy-data\helpers\s123_stealth_update.ps1`
    This updates RobinSentinel + RudyCommandRunner tasks to launch
@@ -127,10 +124,8 @@ Gate compliance: FULL. Skill invoked at boot before any work action.
    session and verify lock file is created, heartbeat updates, and
    released on exit. Check that a second launch attempt is blocked
    while the first session is active.
-2. **Generate GitHub PAT for Robin** -- Batman action. Add to
-   robin-secrets.json as github_pat field.
-3. **Run stealth update as Admin** -- Batman action. Script ready.
-4. **Explore next roadmap item** -- R-007 (Vicki Vale) is the only
+2. **Run stealth update as Admin** -- Batman action. Script ready.
+3. **Explore next roadmap item** -- R-007 (Vicki Vale) is the only
    open non-legacy item. Assess feasibility and scope.
-5. **Process hygiene at session end** -- Run cleanup for orphan
+4. **Process hygiene at session end** -- Run cleanup for orphan
    processes (now safe with Robin PID protection).
