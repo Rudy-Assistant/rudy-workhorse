@@ -29,7 +29,7 @@ Christopher M. Cimino (ccimino2@gmail.com). Attorney -- California State Bar #28
 | **Local IP** | 192.168.7.25 |
 | **Python** | 3.12 (WSL) / C:\Python312\python.exe (Windows) |
 | **Node** | v24.14.1 |
-| **Local AI** | Ollama v0.18.3 (qwen2.5:7b, deepseek-r1:8b) |
+| **Local AI** | Ollama v0.18.3 (gemma4:26b, qwen2.5:7b, deepseek-r1:8b, nomic-embed-text) |
 
 -> Full specs: `memory/context/machine-oracle.md`
 ## Agents
@@ -181,12 +181,13 @@ Every Robin feature: PERCEIVE -> REASON -> ACT -> VERIFY. No hardcoded coords. N
 | **gh CLI** | v2.88.1, authenticated as Rudy-Assistant |
 | **PAT** | Classic PAT (ghp_), expires 2026-06-27 |
 
-## Current Sprint (Session 124)
+## Current Sprint (Session 126)
 
-1. **PR #235 merged (S123)**: New `rudy/session_lock.py` module -- file-based lock preventing competing Cowork launches. Heartbeat, stale detection (10 min), atomic writes, force-release. All 5 CI checks passed. Commit 6dc12f8.
-2. **PR #236 merged (S124)**: Wired SessionLock into `scripts/launch_cowork.py` -- acquire before launch, heartbeat in run_loop(), release on failure/exit. 7 integration points, +47 lines. HEAD at 788474b.
-3. **Killswitch INACTIVE**: Deactivated by Batman S116 away mode. Robin autonomous behavior restored.
-4. **Session loop LEGACY (S116)**: Halted since S52. R-006 formally deprecated.
-5. **Stealth mode partial (S116)**: Script ready at `rudy-data/helpers/s123_stealth_update.ps1`. Needs Admin elevation.
-6. Robin GREEN (PID 8860, sentinel PID 26052). Killswitch inactive -- autonomous behavior active.
-7. Skill gate executed (S124): Top skills: engineering:debug, engineering:testing-strategy, engineering:standup. Gate passed. engineering:standup invoked at boot.
+1. **PR #240 merged (S125)**: Fixed `session_lock.py` bug -- `is_locked()` ignored `status` field after `release()`. Fresh heartbeat still returned True, blocking re-acquisition. Fix: early return on `status=released`. Commit e60423b, merge at e493f38.
+2. **E2E test suite created (S125)**: `rudy-data/helpers/test_session_lock_e2e.py` -- 10 tests covering full SessionLock lifecycle (acquire, release, stale detection, force-release, etc.).
+3. **R-007 Vicki Vale feasibility assessed HIGH (S125)**: Data corpus mature (97 handoffs, 30 sessions, 22 scores, 23 findings). Estimated 2-3 sessions to build as Cowork skill. Awaiting Batman approval.
+4. **Killswitch INACTIVE**: Deactivated by Batman S116 away mode. Robin autonomous behavior restored.
+5. **Session loop LEGACY (S116)**: Halted since S52. R-006 formally deprecated.
+6. **Stealth mode partial (S116)**: Script ready at `rudy-data/helpers/s123_stealth_update.ps1`. Needs Admin elevation.
+7. Robin GREEN (PID 8860, sentinel PID 26052). Killswitch inactive -- autonomous behavior active.
+8. Skill gate executed (S126): Top skills: engineering:code-review, engineering:standup, operations:status-report. Gate passed. engineering:standup invoked at boot.                                                                                                                                                                               
