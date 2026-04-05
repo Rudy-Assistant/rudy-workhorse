@@ -181,14 +181,14 @@ Every Robin feature: PERCEIVE -> REASON -> ACT -> VERIFY. No hardcoded coords. N
 | **gh CLI** | v2.88.1, authenticated as Rudy-Assistant |
 | **PAT** | Classic PAT (ghp_), expires 2026-06-27 |
 
-## Current Sprint (Session 106)
+## Current Sprint (Session 107)
 
-1. **PR #207 merged (S106)**: S105 docs sprint update
-2. **PR #208 open (S106)**: R-006 P3 -- directive consumer for evolution triggers
-3. **R-006 P3 built + tested (S106)**: lucius_directive_consumer.py consumes AUTO-FIX, AUTO-IMPROVE, and standard directives. E2E test passed
-4. **R-004 assessed (S106)**: Readiness holds at 7.5/10. Heartbeat telemetry gap -- no sentinel-heartbeat.json or robin-state.json being generated. Needs nightwatch cycle validation
-5. HEAD on main at a9ef510 (PR #207 merged). Open PR #208 on s106/r006-directive-consumer
-6. Robin GREEN (PID 7260), Sentinel GREEN (PID 19364)
+1. **PRs #208, #209 merged (S107)**: R-006 P3 directive consumer + S106 docs sprint update. Branches pruned
+2. **PR #210 open (S107)**: feat(r006) -- wire consume_directives() into full_feedback_loop()
+3. **R-006 P3 integration (S107)**: consume_directives() added as Step 6 in full_feedback_loop(). Full loop: score -> OpenSpace -> directives -> consume -> action plans
+4. **R-004 heartbeat gap RESOLVED (S107)**: Root cause was path mismatch -- RUDY_DATA resolves to C:\Users\ccimi\rudy-data (one level above repo), S106 checked rudy-workhorse/rudy-data (stale leftovers). Robin telemetry confirmed healthy at correct path. Readiness advances to 8/10
+5. HEAD on main at eec171b (PRs #208, #209 merged). Open PR #210 on s107/r006-consume-integration
+6. Robin GREEN (PID 7260), Sentinel GREEN (PID 46560)
 
 
 ## Lucius Gate (compact)
@@ -201,6 +201,4 @@ Every Robin feature: PERCEIVE -> REASON -> ACT -> VERIFY. No hardcoded coords. N
 
 - **50% Warning**: Proactively warn Chris to start a new thread soon.
 - **70% Handoff**: STOP new work and draft a continuation prompt.
-- **Signs of context pressure**: Repeating info, forgetting decisions, lower-quality code. Trigger handoff immediately.
-
-## Comm
+- **Signs of context pressure**:
