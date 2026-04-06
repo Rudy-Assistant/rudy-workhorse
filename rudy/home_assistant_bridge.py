@@ -1,4 +1,4 @@
-"""
+﻿"""
 Home Assistant Bridge -- Andrew-Readiness Phase 2, Step 7.
 
 Connects Robin to a Home Assistant instance via REST API,
@@ -718,13 +718,11 @@ def get_home_summary_for_briefing(bridge: "HomeAssistantBridge | None" = None,
             )
             parts.append(f"Inside temperature is {temp} degrees")
         unlocked = [
-            l for l in locks if l.get("state") == "unlocked"
+            lk for lk in locks if lk.get("state") == "unlocked"
         ]
         if unlocked:
             names = ", ".join(
-                l.get("attributes", {}).get(
-                    "friendly_name", "a lock"
-                ) for l in unlocked
+                lk.get("attributes", {}).get("friendly_name", "a lock") for lk in unlocked
             )
             parts.append(f"Warning: {names} is unlocked")
         elif locks:
