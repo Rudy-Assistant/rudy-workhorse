@@ -181,27 +181,37 @@ Every Robin feature: PERCEIVE -> REASON -> ACT -> VERIFY. No hardcoded coords. N
 | **gh CLI** | v2.88.1, authenticated as Rudy-Assistant |
 | **PAT** | Classic PAT (ghp_), expires 2026-06-27 |
 
-## Current Sprint (Session 141)
+## Current Sprint (Session 195)
 
-1. **Andrew-Readiness Phase 3 Steps 8-10 COMPLETE (S139-S141)**:
-   - Step 8: DelegationGate (PR #265, merged S140)
-   - Step 9: SkillLearner (PR #266, merged S141)
-   - Step 10: Sentinel integration (PR #268, merged S141)
-   Full delegation-aware skill learning pipeline now live in
-   Sentinel scan cycle.
-2. **PRs merged this sprint**: #263 (morning routine HA), #264
-   (CLAUDE.md S139), #265 (delegation gate), #266 (skill learner),
-   #267 (sprint+roadmap S140), #268 (sentinel integration S141).
-3. **R-009 Andrew-Readiness**: Phase 3 Steps 8-10 DONE.
-   Next: End-to-end skill learning test with real delegation data.
-4. **R-006 Skills Evolution (OpenSpace)**: ACTIVE. Skill learner
-   deployed. Pipeline: DelegationGate -> SkillLearner -> OpenSpace.
-5. **R-007 Vicki Vale Episodes 001-006 DONE**: PRs #247-#257 merged.
-   Lens improvement deferred (Batman directive S133).
-6. **Killswitch INACTIVE**: Deactivated by Batman S116.
-7. **Session loop LEGACY (S116)**: Halted since S52.
-8. Robin GREEN (PID 8860, sentinel PID 26052). Killswitch inactive.
-9. Skill gate executed (S141): Top skills: engineering:code-review,
-   engineering:testing-strategy, engineering:architecture.
-   engineering:code-review invoked at boot (PR #266 review).
- 
+**Mode:** RECOVERY OPERATION (Batman direct order, S194 close).
+See `vault/Handoffs/Session-194-Handoff.md` and ADR-022.
+
+1. **Verify-only standing order REVOKED** (Batman, S194). Single source
+   of truth for any standing order is `vault/Protocols/standing-orders.json`.
+   Anything else is hallucinated. See ADR-022.
+2. **Self-granted waivers BLOCKED.** session_guard rejects robin_share
+   waiver flags whose `granted_by` starts with `alfred-`. Seven historical
+   self-waivers (S187/189/190/191/192/194 + one) deleted in P0-H.
+3. **P0 task list (S195/S196 recovery):**
+   - P0-A F-S189-002 delegation gate hardening -> PR
+   - P0-B Robin idle diagnosis (incident response)
+   - P0-C Robin killswitch (`scripts/robin-killswitch.bat` + runbook) DONE
+   - P0-D Robin status console (`docs/robin-console.html`) DONE
+   - P0-E openspace_bridge.py (31+ sessions overdue)
+   - P0-F skill_proposer.py (8 sessions overdue)
+   - P0-G PR #272 + #273 merge
+   - P0-H working tree graveyard burn (waiver flags DONE; ~120 untracked remaining)
+   - P0-I CLAUDE.md sprint refresh DONE (this section)
+   - P0-J no-self-imposed-orders (standing-orders.json + ADR-022 DONE)
+   - P0-K expired waiver audit
+   - P0-L Windows-MCP Shell fix (F-S194-001)
+   - P0-M Sentinel wiring of killswitch hotkey + console tray icon
+   - P0-N S195 close-out brief to Batman
+4. **Robin nervous system:** GREEN (38th consecutive) but PROBABLY IDLE.
+   PIDs 8860/27676 alive ~40 sessions. P0-B confirms.
+5. **Killswitch ARMED:** `scripts\robin-killswitch.bat` (one click) /
+   `--dry-run` / `--restart`. Runbook: `docs/runbooks/robin-killswitch.md`.
+6. **Status console LIVE:** `docs/robin-console.html` -- open in browser.
+7. **NEW HARD RULES (added below):** no fabricated standing orders;
+   no self-granted waivers; CLAUDE.md sprint must be <=3 sessions stale;
+   carry list age cap 5 sessions; killswitch + console must exist.

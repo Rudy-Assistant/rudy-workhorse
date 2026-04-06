@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Robin Status Console (S195 / P0-D)</title>
+<style>
+  :root { color-scheme: dark; }
+  body { font-family: ui-monospace, Menlo, Consolas, monospace;
+         background:#0b0e14; color:#d1d5db; margin:0; padding:18px; }
+  h1 { color:#fbbf24; margin:0 0 4px; font-size:18px; }
+  .sub { color:#6b7280; font-size:12px; margin-bottom:14px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(360px,1fr)); gap:12px; }
+  .card { background:#111827; border:1px solid #1f2937; border-radius:8px; padding:12px; }
+  .card h2 { font-size:13px; color:#93c5fd; margin:0 0 8px; text-transform:uppercase; letter-spacing:.5px; }
+  table { width:100%; border-collapse:collapse; font-size:12px; }
+  td,th { padding:3px 6px; text-align:left; vertical-align:top; border-bottom:1px dashed #1f2937; }
+  th { color:#9ca3af; font-weight:600; }
+  .green  { color:#22c55e; }
+  .yellow { color:#eab308; }
+  .red    { color:#ef4444; }
+  .light { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:6px; vertical-align:middle; }
+  .l-g { background:#22c55e; box-shadow:0 0 6px #22c55e; }
+  .l-y { background:#eab308; box-shadow:0 0 6px #eab308; }
+  .l-r { background:#ef4444; box-shadow:0 0 6px #ef4444; }
+  .killbtn { display:block; width:100%; padding:14px; font-size:16px; font-weight:700;
+             color:#fff; background:#7f1d1d; border:1px solid #ef4444; border-radius:6px;
+             cursor:pointer; letter-spacing:1px; }
+  .killbtn:hover { background:#991b1b; }
+  .toolbar { display:flex; gap:8px; align-items:center; margin-bottom:10px; font-size:12px; color:#9ca3af; }
+  .toolbar button { background:#1f2937; color:#d1d5db; border:1px solid #374151;
+                    border-radius:4px; padding:4px 10px; cursor:pointer; }
+  pre { white-space:pre-wrap; word-break:break-all; font-size:11px; color:#9ca3af; margin:0; }
+  .age-old { color:#ef4444; font-weight:700; }
+  .empty { color:#6b7280; font-style:italic; }
+</style>
+</head>
+<body>
+<h1>Robin Status Console</h1>
+<div class="sub">S195 / P0-D &middot; reads local files only &middot; auto-refresh 5s</div>
+
+<div class="toolbar">
+  <button onclick="loadAll()">Refresh now</button>
+  <span id="lastTick">never</span>
+  <span style="flex:1"></span>
+  <span>data root: <code>../rudy-data/</code></span>
+</div>
+
+<div class="grid">
+
+  <div class="card">
+    <h2>Liveness</h2>
+    <table id="liveness"><tr><td class="empty">loading...</td></tr></table>
+  </div>
+
+  <div class="card">
+    <h2>Skill-learning pipeline</h2>
+    <table id="pipeline">
+      <tr><td><span class="light l-y"></span>DelegationGate</td><td id="dg">?</td></tr>
+      <tr><td><span class="light l-y"></span>SkillLearner</td><td id="sl">?</td></tr>
+      <tr><td><span class="light l-y"></span>openspace_bridge</td><td id="ob">?</td></tr>
+      <tr><td><span class="light l-y"></span>OpenSpace receive</td><td id="os">?</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Last action</h2>
+    <pre id="lastAction" class="empty">loading...</pre>
+  </div>
+
+  <div class="card">
+    <h2>Carry list (oldest first)</h2>
+    <table id="carry"><tr><td class="empty">loading...</td></tr></table>
+  </div>
+
+  <div class="card">
+    <h2>Recent commits (last 10)</h2>
+    <table id="commits"><tr><td class="empty">loading...</td></tr></table>
+  </div>
+
+  <div class="card">
+    <h2>Killswitch</h2>
+    <p style="font-size:12px;color:#9ca3af;margin-top:0;">
+      Big red button. Confirms before firing. Calls
+      <code>scripts\robin-killswitch.bat</code>.
+    </p>
+    <button class="killbtn" onclick="fireKill()">KILL ROBIN</button>
+    <p id="killMsg" class="empty" style="margin:8px 0 0;font-size:11px;"></p>
+  </div>
+
+</div>
+
+<script>
+const ROOT = '../';
+async function getJSON(path){
+  try { const r = await fetch(ROOT + path, {cache:'no-store'}); if(!r.ok) return null; return await r.json(); }
+  catch(e){ return null; }
+}
+async function getText(path){
+  try { const r = await fetch(ROOT + path, {cache:'no-store'}); if(!r.ok) return null; return await r.text(); }
+  catch(e){ return null; }
+}
+function light(state){
+  const cls = state==='green'?'l-g':state==='yellow'?'l-y':'l-r';
+  return '<span class="light '+cls+'"></span>';
+}
+function age(iso){
+  if(!iso) return '?';
+  const d = new Date(iso); const s = (Date.now()-d.getTime())/1000;
+  if(s<60) return Math.floor(s)+'s';
+  if(s<3600) return Math.floor(s/60)+'m';
+  if(s<86400) return Math.floor(s/3600)+'h';
+  return Math.floor(s/86400)+'d';
+}
+
+async function loadLiveness(){
+  const s = await getJSON('rudy-data/robin-status.json');
+  const t = document.getElementById('liveness');
+  if(!s){ t.innerHTML='<tr><td class="red">robin-status.json MISSING</td></tr>'; return; }
+  const rows = [];
+  for(const k of ['robin_main_pid','sentinel_pid','main_pid','pid','status','last_heartbeat','uptime','cpu','rss']){
+    if(s[k]!==undefined) rows.push('<tr><td>'+k+'</td><td>'+s[k]+'</td></tr>');
+  }
+  if(s.last_heartbeat) rows.push('<tr><td>heartbeat age</td><td>'+age(s.last_heartbeat)+'</td></tr>');
+  t.innerHTML = rows.join('') || '<tr><td class="empty">empty</td></tr>';
+}
+
+async function loadLastAction(){
+  const s = await getJSON('rudy-data/robin-status.json');
+  const el = document.getElementById('lastAction');
+  if(!s){ el.textContent='(no robin-status.json)'; return; }
+  el.textContent = JSON.stringify(s.last_action || s.last_cycle || s, null, 2);
+}
+
+async function loadPipeline(){
+  const s = await getJSON('rudy-data/robin-status.json') || {};
+  const setLight = (id, state, label) => {
+    const td = document.getElementById(id);
+    td.innerHTML = label;
+    const tr = td.parentElement;
+    tr.firstElementChild.firstElementChild.className = 'light ' + (state==='green'?'l-g':state==='yellow'?'l-y':'l-r');
+  };
+  setLight('dg', s.delegation_gate || 'red', s.delegation_gate || 'unknown');
+  setLight('sl', s.skill_learner   || 'red', s.skill_learner   || 'unknown');
+  setLight('ob', s.openspace_bridge|| 'red', s.openspace_bridge|| 'NOT LANDED (P0-E)');
+  setLight('os', s.openspace_receive|| 'red', s.openspace_receive|| 'unknown');
+}
+
+async function loadCarry(){
+  const j = await getJSON('vault/Protocols/findings-registry.json')
+         || await getJSON('rudy-data/findings-registry.json');
+  const t = document.getElementById('carry');
+  if(!j){ t.innerHTML='<tr><td class="empty">no findings-registry.json found</td></tr>'; return; }
+  const items = (j.findings||j.open||[]).filter(f=>f.status!=='resolved');
+  items.sort((a,b)=>(a.opened_session||0)-(b.opened_session||0));
+  if(!items.length){ t.innerHTML='<tr><td class="empty">no open findings</td></tr>'; return; }
+  t.innerHTML = '<tr><th>id</th><th>age (sessions)</th><th>title</th></tr>' +
+    items.slice(0,15).map(f=>{
+      const ageS = (j.current_session||195) - (f.opened_session||0);
+      const cls = ageS>=10?'age-old':'';
+      return `<tr><td>${f.id||'?'}</td><td class="${cls}">${ageS}</td><td>${(f.title||'').replace(/</g,'&lt;')}</td></tr>`;
+    }).join('');
+}
+
+async function loadCommits(){
+  // No JS git access; show file if a script publishes one.
+  const txt = await getText('rudy-data/recent-commits.txt');
+  const t = document.getElementById('commits');
+  if(!txt){
+    t.innerHTML='<tr><td class="empty">populate <code>rudy-data\\recent-commits.txt</code> via post-commit hook</td></tr>';
+    return;
+  }
+  t.innerHTML = txt.split('\n').slice(0,10).map(l=>'<tr><td>'+l.replace(/</g,'&lt;')+'</td></tr>').join('');
+}
+
+function fireKill(){
+  if(!confirm('KILL Robin? This runs robin-killswitch.bat. Continue?')) return;
+  // file:// can't shell-out from JS; show command for Batman to run.
+  const cmd = 'cmd /c start "" "' + location.href.replace('docs/robin-console.html','scripts\\robin-killswitch.bat').replace('file:///','').replace(/\//g,'\\') + '"';
+  const el = document.getElementById('killMsg');
+  el.className=''; el.style.color='#fbbf24';
+  el.textContent = 'Run from a terminal: scripts\\robin-killswitch.bat   (browsers cannot shell-out from file://)';
+  navigator.clipboard && navigator.clipboard.writeText('scripts\\robin-killswitch.bat');
+}
+
+async function loadAll(){
+  await Promise.all([loadLiveness(), loadLastAction(), loadPipeline(), loadCarry(), loadCommits()]);
+  document.getElementById('lastTick').textContent = 'last refresh: ' + new Date().toLocaleTimeString();
+}
+loadAll();
+setInterval(loadAll, 5000);
+</script>
+</body>
+</html>
