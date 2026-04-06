@@ -1,7 +1,7 @@
 """OpenSpace Trigger Registry -- Session 144 (R-006 / R-009).
 
 Minimal dispatcher that maps named runtime events to OpenSpace skill
-handlers under ``C:\\Users\\ccimi\\OpenSpace\\<skill>\\handler.py``.
+handlers under ``$OPENSPACE_DIR/<skill>/handler.py``.  # lucius-exempt: docstring example
 
 Replaces the implicit "scaffolds exist but nothing calls them" gap
 flagged in S143 handoff (Batman directive S144 Priority 2).
@@ -29,9 +29,11 @@ import logging
 from pathlib import Path
 from typing import Any, Callable
 
+from rudy.paths import OPENSPACE_DIR
+
 log = logging.getLogger("rudy.openspace_trigger_registry")
 
-OPENSPACE_ROOT = Path(r"C:\Users\ccimi\OpenSpace")
+OPENSPACE_ROOT = OPENSPACE_DIR
 
 # trigger_name -> openspace skill directory name
 _REGISTRY: dict[str, str] = {
