@@ -116,6 +116,11 @@ class Sentinel(AgentBase):
         if not self._time_ok():
             return self._finalize(state)
 
+        # === OpenSpace Trigger Producer (S146, F-S144-002) ===
+        self._scan_process_audit(state)
+        if not self._time_ok():
+            return self._finalize(state)
+
         # === Session Guardian (ADR-001) ===
         self._scan_capabilities(state)
         if not self._time_ok():
@@ -631,6 +636,53 @@ class Sentinel(AgentBase):
                         actionable=False)
             except Exception:
                 pass
+
+    # === OPENSPACE TRIGGER PRODUCER (S146, F-S144-002) ===
+
+    def _scan_process_audit(self, state):
+        """Dispatch the process_audit OpenSpace trigger.
+
+        First sentinel-side producer wired into the trigger registry.
+        Calls dispatch("process_audit") which fans out to the
+        count_python_processes handler (psutil-based, S145). Emits an
+        observation when the handler reports status=warn (count > 100)
+        so Robin's verifier and Lucius scoring see the signal.
+
+        Safe-by-default: dispatcher never raises; any error is logged
+        as an observation and the scan loop continues.
+        """
+        try:
+            from rudy.openspace_trigger_registry import dispatch
+            envelope = dispatch("process_audit", {})
+        except Exception as exc:  # noqa: BLE001
+            self._observe(
+                "openspace_dispatch",
+                f"process_audit dispatch failed: {exc}",
+                actionable=False,
+            )
+            return
+        status = envelope.get("status")
+        result = envelope.get("result") or {}
+        count = result.get("count")
+        handler_status = result.get("status")
+        state.setdefault("openspace_triggers", {})["process_audit"] = {
+            "status": status,
+            "handler_status": handler_status,
+            "count": count,
+        }
+        if status != "dispatched":
+            self._observe(
+                "openspace_dispatch",
+                f"process_audit envelope status={status}",
+                actionable=False,
+            )
+            return
+        if handler_status == "warn":
+            self._observe(
+                "process_audit",
+                f"python process count={count} (warn threshold)",
+                actionable=True,
+            )
 
     # === SESSION GUARDIAN (ADR-001) ===
 
