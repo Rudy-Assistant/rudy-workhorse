@@ -5,9 +5,7 @@
       "title": "The Lock That Wouldn't Let Go",
       "slug": "the-lock-that-wouldnt-let-go",
       "type": "session_chronicle",
-      "sessions": [
-        125
-      ],
+      "sessions": [125],
       "filed": "2026-04-05",
       "words": 900,
       "file": "Episode-001-the-lock-that-wouldnt-let-go.md"
@@ -17,20 +15,7 @@
       "title": "The Awakening",
       "slug": "the-awakening",
       "type": "thematic_arc",
-      "sessions": [
-        41,
-        42,
-        43,
-        44,
-        45,
-        46,
-        47,
-        48,
-        49,
-        50,
-        51,
-        52
-      ],
+      "sessions": [41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52],
       "filed": "2026-04-05",
       "words": 1800,
       "file": "Episode-002-the-awakening.md"
@@ -40,23 +25,7 @@
       "title": "The Reform",
       "slug": "the-reform",
       "type": "thematic_arc",
-      "sessions": [
-        52,
-        53,
-        54,
-        55,
-        56,
-        57,
-        58,
-        59,
-        60,
-        61,
-        62,
-        63,
-        64,
-        65,
-        66
-      ],
+      "sessions": [52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66],
       "filed": "2026-04-05",
       "words": 2100,
       "file": "Episode-003-the-reform.md"
@@ -66,18 +35,21 @@
       "title": "The Nervous System",
       "slug": "the-nervous-system",
       "type": "thematic_arc",
-      "sessions": [
-        67,
-        68,
-        69,
-        70,
-        71,
-        72
-      ],
+      "sessions": [67, 68, 69, 70, 71, 72],
       "filed": "2026-04-05",
       "words": 2300,
       "file": "Episode-004-the-nervous-system.md"
+    },
+    {
+      "number": 5,
+      "title": "The Governance Wars",
+      "slug": "the-governance-wars",
+      "type": "thematic_arc",
+      "sessions": [73, 74, 75, 76, 77, 78, 79, 80],
+      "filed": "2026-04-05",
+      "words": 2450,
+      "file": "Episode-005-the-governance-wars.md"
     }
   ],
-  "next_number": 5
+  "next_number": 6
 }
