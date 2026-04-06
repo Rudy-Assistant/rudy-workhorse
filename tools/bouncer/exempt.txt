@@ -1,0 +1,31 @@
+# BOUNCER exempt patterns (fnmatch glob style, repo-relative).
+# Files matching ANY of these patterns are not gated.
+# Add patterns sparingly; every exemption is a hole in the gate.
+#
+# Bootstrap exemptions (ADR-002 Appendix F) — these files predate or implement BOUNCER itself.
+vault/protocols/IRON-AUDIT.md
+vault/protocols/BOUNCER.md
+vault/AUDIT-DISCIPLINE.md
+tools/iron_audit/*
+tools/iron_audit/**
+tools/bouncer/*
+tools/bouncer/**
+tools/install-hooks.*
+CLAUDE.md
+#
+# Generic non-source exemptions (not actually needed since check() filters by extension,
+# but listed for human readers of this file).
+*.md
+*.json
+*.yaml
+*.yml
+*.toml
+*.ini
+*.cfg
+#
+# Tests are exempt — testing existing code does not introduce new functionality.
+tests/*
+tests/**
+**/tests/*
+**/tests/**
+**/test_*.py

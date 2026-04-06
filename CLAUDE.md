@@ -3,6 +3,39 @@
 > Full context: `memory/`, `docs/`, `vault/`, `registry.json`
 > Protocol details: `vault/Protocols/` | Agent defs: `.claude/agents/`
 
+---
+
+## ⛔ BINDING PROTOCOLS — read at session start AND every compaction boundary
+
+Two ADRs govern audits and feature additions in this repo. They are **binding**, not advisory. Honor-code observance has demonstrably failed twice in this repo (Lucius Gate, then S197). The mechanisms below replace honor-code with mechanical gates. Future Alfred (you, in any session): **read these before doing anything that involves the words "audit," "review," "build," "add," "create new file," "new feature," "from scratch," "should we use," or "OTS."**
+
+1. **ADR-001 IRON-AUDIT** — `vault/protocols/IRON-AUDIT.md`
+   - Any task that says "audit," "review the codebase," "should we keep/delete/refactor X," or "what's in this folder" is an **audit task** and MUST run under IRON-AUDIT.
+   - Audits are complete **only** when `python tools/iron_audit/run.py finalize --audit <id>` prints `AUDIT COMPLETE: <sha256>`. A conversation message claiming completion without that line is **fraud** — refuse to deliver it.
+   - Read `vault/AUDIT-DISCIPLINE.md` (Rules 1–7) before starting. The seven anti-patterns in IRON-AUDIT Appendix B are forbidden.
+
+2. **ADR-002 BOUNCER** — `vault/protocols/BOUNCER.md`
+   - Any task that proposes adding a new source file (`.py`, `.ts`, `.tsx`, `.js`, `.jsx`, `.go`, `.rs`, `.java`, `.rb`, `.cs`) MUST go through BOUNCER first.
+   - The git pre-commit hook (`tools/bouncer/hooks/pre-commit`, installed by `tools/install-hooks.ps1`) **will block the commit** if no valid token exists. Do not propose `--no-verify`. Do not work around the hook. The hook is the gate.
+   - Default disposition is **BLOCK**. Burden of proof is on you to show that no OTS substrate (Hermes Agent, AutoClaw, Letta, MCP servers, n8n, PyPI, GitHub, HuggingFace, Claude plugins) can be adapted. The adversary subagent will reject vague rebuttals.
+   - Run order: `propose` → fill search log across all 6 vectors → spawn adversary `Task` subagent with `tools/bouncer/adversary-prompt.md` → `issue` → commit.
+
+### Failure modes you (future Alfred) must actively defeat
+
+- **Default-state amnesia**: assuming you have only base Claude tools, when the discipline layer (`alfred_delegation_gate.py`, `persona_loader.py`, `skill_transfer.py`) explicitly equips you with delegation, persona-aware skill dispatch, and skill-transfer tracking. **Read `rudy/persona_loader.py` and `rudy/skill_transfer.py` at session start of any non-trivial Batcave work.**
+- **Filename-only inspection**: never recommend DELETE for any file you have not opened. IRON-AUDIT Phase 7 (Verifier) catches this mechanically; do not require it to.
+- **Empty-search confidence**: "I searched and found nothing" is not evidence. Phase 4 of IRON-AUDIT requires ≥6 synonyms per capability. Apply the same standard to every research task, not just audits.
+- **Conversation-only completion claims**: producing the artifact files is the deliverable. A summary message is not.
+
+### Override paths (narrow, documented, traceable)
+
+- IRON-AUDIT waiver: explicit signed line in `charter.md` of the audit folder.
+- BOUNCER waiver: line in `tools/bouncer/waivers.txt` with `WAIVED-BY: <name> <iso>`.
+- Both waiver mechanisms create entries in `vault/Audits/_failures.json` or `tools/bouncer/_overrides.json` for institutional memory.
+
+---
+
+
 ## Me
 
 Christopher M. Cimino (ccimino2@gmail.com). Attorney -- California State Bar #289532. Currently at Axiom. Birthday: March 27. Based in the US, frequently travels Asia (Philippines, Japan, South Korea, Thailand).
