@@ -139,6 +139,11 @@ class Sentinel(AgentBase):
         if not self._time_ok():
             return self._finalize(state)
 
+        # === Home Assistant Health Check (ADR-020 Step 7, S137) ===
+        self._check_home_assistant(state)
+        if not self._time_ok():
+            return self._finalize(state)
+
         self._micro_improve(state)
         self._finalize(state)
 
@@ -845,6 +850,39 @@ class Sentinel(AgentBase):
             self._observe("command_proposals", f"Proposal module not available: {exc}")
         except Exception as exc:
             self._observe("command_proposals", f"Proposal cycle error: {exc}")
+
+    def _check_home_assistant(self, state):
+        """Lightweight HA connectivity check (ADR-020 Step 7, S137).
+
+        Verifies Home Assistant is reachable. If connected, logs
+        entity count. Runs at most once per hour to avoid noise.
+        """
+        try:
+            from rudy.home_assistant_bridge import HomeAssistantBridge
+
+            # Only check every 4th run (~hourly at 15-min intervals)
+            run_count = state.get("run_count", 0)
+            if run_count % 4 != 0:
+                return
+
+            bridge = HomeAssistantBridge()
+            conn = bridge.connect()
+            if conn.get("connected"):
+                counts = bridge.cache.summarize_domains()
+                total = sum(counts.values())
+                self._observe(
+                    "home_assistant",
+                    f"HA connected: {total} entities",
+                )
+            else:
+                self._observe(
+                    "home_assistant",
+                    "HA not reachable -- smart home offline",
+                )
+        except ImportError:
+            pass  # Module not available, skip silently
+        except Exception as exc:
+            self._observe("home_assistant", f"HA check error: {exc}")
 
     def _micro_improve(self, state):
         """Take small, safe improvement actions."""

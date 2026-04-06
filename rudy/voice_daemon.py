@@ -54,6 +54,14 @@ try:
 except ImportError:
     _HAS_MORNING = False
 
+try:
+    from rudy.home_assistant_bridge import (
+        HomeAssistantBridge, handle_smart_home_intent,
+    )
+    _HAS_HA = True
+except ImportError:
+    _HAS_HA = False
+
 # -------------------------------------------------------------------
 # Configuration
 # -------------------------------------------------------------------
@@ -395,6 +403,19 @@ class VoiceDaemon:
                 )
             except Exception as e:
                 log.warning("[Daemon] Health monitor init failed: %s", e)
+        # Home Assistant bridge integration (S137)
+        self._ha_bridge = None
+        if _HAS_HA:
+            try:
+                self._ha_bridge = HomeAssistantBridge()
+                conn = self._ha_bridge.connect()
+                if conn.get("connected"):
+                    log.info("[Daemon] HA bridge connected")
+                else:
+                    log.info("[Daemon] HA bridge not available (no HA instance)")
+                    self._ha_bridge = None
+            except Exception as e:
+                log.warning("[Daemon] HA bridge init failed: %s", e)
         # Morning routine integration (S135)
         self._morning_routine = None
         if _HAS_MORNING:
@@ -507,6 +528,24 @@ class VoiceDaemon:
             self.tts.speak(question)
             _emit("clarification", {"question": question})
             return
+
+        # Handle smart_home intents directly via HA bridge (S137)
+        if intent.get("domain") == "smart_home" and self._ha_bridge:
+            try:
+                result = handle_smart_home_intent(
+                    intent, bridge=self._ha_bridge
+                )
+                msg = result.get("message", "Done.")
+                self.tts.speak(msg)
+                self._stats["commands_processed"] += 1
+                _emit("confirmed", {
+                    "domain": "smart_home",
+                    "action": intent.get("action", ""),
+                    "ha_result": result,
+                })
+                return
+            except Exception as e:
+                log.warning("[Daemon] HA intent failed, queuing: %s", e)
 
         # Queue task for Robin
         task = queue_task(intent, self.config)
