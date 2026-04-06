@@ -175,27 +175,17 @@ class Sentinel(AgentBase):
         self.observations.append(entry)
         self.log.info(f"[{category}] {observation}")
 
+    # S201: state I/O extracted to rudy.core.agent_state for reuse by future
+    # agents. Behavior is byte-equivalent to the prior inline implementation;
+    # these methods are now thin shims (same pattern as _safe_run delegating
+    # to sentinel_subprocess). See vault/Handoffs/Session-201-Handoff.md.
     def _load_state(self) -> dict:
-        if self.STATE_FILE.exists():
-            try:
-                with open(self.STATE_FILE) as f:
-                    return json.load(f)
-            except Exception:
-                pass
-        return {
-            "run_count": 0,
-            "last_run": None,
-            "file_hashes": {},
-            "last_agent_statuses": {},
-            "improvement_log": [],
-            "streak": 0,  # consecutive healthy runs
-        }
+        from rudy.core.agent_state import load_state
+        return load_state(self.STATE_FILE)
 
     def _save_state(self, state: dict):
-        state["last_run"] = datetime.now().isoformat()
-        state["run_count"] = state.get("run_count", 0) + 1
-        with open(self.STATE_FILE, "w", encoding="utf-8") as f:
-            json.dump(state, f, indent=2, default=str)
+        from rudy.core.agent_state import save_state
+        save_state(self.STATE_FILE, state)
 
     # === LIVE EVENT AWARENESS ===
 
@@ -764,6 +754,22 @@ class Sentinel(AgentBase):
 
     def _trigger_handoff(self, state):
         """Generate continuation prompt and flag for offline ops activation."""
+        # S200: route through alfred_delegation_gate observe-only.
+        # Closes the F-S198-C gap on the Sentinel side (S199 closed it
+        # on the robin_autonomy side). Gate currently records metrics
+        # only -- it does NOT block handoff. Failures are swallowed so
+        # gate unavailability never breaks Sentinel.
+        try:
+            from rudy.alfred_delegation_gate import get_gate
+            decision = get_gate().evaluate("sentinel: trigger session handoff")
+            self.log.info(
+                "[Sentinel] gate: %s -> %s (%s)",
+                decision.category.value,
+                decision.disposition.value,
+                decision.reason,
+            )
+        except Exception as _gate_e:
+            self.log.debug("[Sentinel] delegation gate unavailable: %s", _gate_e)
         try:
             lines = []
             lines.append("CONTINUATION PROMPT (copy into new Cowork thread):")
