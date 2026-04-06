@@ -14,7 +14,7 @@ import sys
 import traceback as tb_module
 from datetime import datetime
 from pathlib import Path
-from rudy.paths import RUDY_LOGS
+from rudy.paths import RUDY_LOGS, DESKTOP  # noqa: F401  (DESKTOP re-exported for sentinel.py - F-S146-001)
 
 LOGS_DIR = RUDY_LOGS
 LOGS_DIR.mkdir(exist_ok=True)
