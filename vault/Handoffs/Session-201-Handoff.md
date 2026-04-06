@@ -47,6 +47,27 @@ Concrete state of the delegation surface:
 
 **Mechanical artifact for S202:** I did not add code or rules this session for this finding (no new doctrine — S196 condition #1). The artifact is this handoff section. S202 should treat it as the first agenda item.
 
+### F-S201-001 addendum — the deeper problem Batman surfaced mid-session
+
+After I shipped the first S201 commit, Batman pointed out that I had just spent ~8 tool calls re-discovering known Cowork-shell quirks (`python -c` stdout silence, `& $git | Out-File` swallowing output, `cmd /c .bat` not firing, `Set-Alias g git.exe` parsing-but-not-running, `Start-Process` being the only reliable pattern for capturing git output). Every one of these is documented in prior handoffs as a Lucius Gate (LG-S34-003, LG-S63-001, LG-S88-001, etc.). I read those handoffs at session start. **It made no difference**, because the knowledge is prose, not skill. The next Alfred will hit the same cycle.
+
+This is the actual shape of F-S201-001, and "delegation rate too low" was the wrong frame. The real frame:
+
+**There is no mechanism in this architecture for skill-level knowledge to survive a session boundary as anything other than prose.** Prose decays. Three things are missing:
+
+1. **Operation fingerprinting + cycle detection.** A new `rudy/core/operation_fingerprint.py` (sketch only — not built this session) would record every shell/git/python invocation's normalized argv shape, working dir, exit code, stdout length, retry depth. After N retries on the same shape in a single session, it raises `KnownCycleError` pointing at the handoff anchor where the cycle was first documented and the skill that should handle it. *No such module exists.* The closest thing is `rudy/preflight.py`, which only gates on the "did you report context / did you grep before claiming a blocker" axes.
+2. **A populated executable skill registry.** `.claude/skills/script-library/` exists but does not contain `git-commit`, `start-process-with-capture`, `python-script-via-file-not-dash-c`, or `wait-for-mcp-stdout-quirk`. Every one of these is a cycle that has been hit ≥3 times across S187/S191/S195/S196/S201 (and probably more). The fix is mechanical: every session-end post-mortem entry that names a cycle should produce a skill file in the same commit, and the next session's boot must list those skills *before* the first relevant tool call. Currently, post-mortems produce only handoff text.
+3. **Robin actually running, as the host for the cycle database.** Cowork-Alfred cannot maintain a cross-session operation-fingerprint database — the context window resets and the prose handoff is the only memory. Robin can. This is the *strongest* argument for resolving F-S201-001 in favor of Option B (controlled re-enable): not "Alfred should delegate more," but "the architecture has no other place to put session-spanning skill memory." Without Robin, every Alfred starts as a tabula rasa and re-discovers the same workarounds in the same order forever.
+
+**Concrete S202 first-deliverables under this frame:**
+
+- A `.claude/skills/git-commit/SKILL.md` that wraps the exact `Start-Process -FilePath gitexe -ArgumentList ... -RedirectStandardOutput ... -RedirectStandardError ...` pattern that survived this session, with sanitization guards (no `.env`, no `credentials.dat`, no `*.s2*-*.{out,err,py,bat}` scratch).
+- A `.claude/skills/cowork-shell-quirks/SKILL.md` enumerating the known stdout-capture quirks (PowerShell pipe-to-Out-File swallowing, `cmd /c .bat` not firing, `python -c` silence) with the *known-good* invocation for each.
+- A draft `rudy/core/operation_fingerprint.py` (skeleton only) so future sessions can append to its hash database. Tests-first, as always.
+- These three deliverables are the smallest possible vertical slice of "skill knowledge survives sessions." Without them, every future S20N handoff will keep saying "Alfred re-discovered X" and the system will keep failing the same way.
+
+This addendum is the most important paragraph in the S201 handoff. The agent_state extraction and the test count are routine; this is the structural finding.
+
 ## Path-resolution observation (not a finding, just evidence for S202)
 
 There are two parallel `rudy-data` trees on disk:
