@@ -157,21 +157,23 @@ class Sentinel(AgentBase):
         self._micro_improve(state)
         self._finalize(state)
 
+    # S202: _time_ok / _observe runtime helpers extracted to
+    # rudy.core.agent_runtime for reuse by future agents. Behavior is
+    # byte-equivalent to the prior inline implementations; these are
+    # thin shims (same pattern as _load_state/_save_state in S201).
+    # See vault/Handoffs/Session-202-Handoff.md.
     def _time_ok(self) -> bool:
         if not hasattr(self, 'start'):
             self.start = time.time()
-        return (time.time() - self.start) < self.MAX_RUNTIME
+        from rudy.core.agent_runtime import time_ok
+        return time_ok(self.start, self.MAX_RUNTIME)
 
     def _observe(self, category: str, observation: str, actionable: bool = False):
         """Record something noticed."""
         if not hasattr(self, 'observations'):
             self.observations = []
-        entry = {
-            "time": datetime.now().isoformat(),
-            "category": category,
-            "observation": observation,
-            "actionable": actionable,
-        }
+        from rudy.core.agent_runtime import make_observation
+        entry = make_observation(category, observation, actionable)
         self.observations.append(entry)
         self.log.info(f"[{category}] {observation}")
 
