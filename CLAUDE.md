@@ -181,19 +181,19 @@ Every Robin feature: PERCEIVE -> REASON -> ACT -> VERIFY. No hardcoded coords. N
 | **gh CLI** | v2.88.1, authenticated as Rudy-Assistant |
 | **PAT** | Classic PAT (ghp_), expires 2026-06-27 |
 
-## Current Sprint (Session 136)
+## Current Sprint (Session 137)
 
-1. **Andrew-Readiness Phase 2 advancing (S136)**:
-   PR #260 merged (S136, merge SHA 3cb5791). Phase 2 Step 5
-   (Morning Robin) complete. Step 6 (Sentinel proposal pipeline)
-   created this session: sentinel_proposals.py + sentinel.py
-   integration. PR #261 open, CI pending.
-2. **PR #260 merged (S136)**: Morning Robin routine + daemon
-   integration. CI 5/5 green. Merge SHA 3cb5791.
-   Code reviewed at boot (engineering:code-review).
-3. **PR #261 created (S136)**: Sentinel proposal pipeline.
-   Command-pattern observer, Ollama proposals, voice feedback.
-   ADR-020 Step 6. CI pending at handoff.
+1. **Andrew-Readiness Phase 2 Step 7 (S137)**:
+   PR #261 merged (S137, merge SHA f6aa45b). Phase 2 Steps 5-6
+   complete. Step 7 (Home Assistant bridge) created this session:
+   home_assistant_bridge.py + voice_daemon.py + sentinel.py
+   integration. PR #262 open, CI pending.
+2. **PR #261 merged (S137)**: Sentinel proposal pipeline.
+   CI 5/5 green. Merge SHA f6aa45b. Code reviewed at boot.
+3. **PR #262 created (S137)**: Home Assistant bridge.
+   REST API client, entity discovery, voice command routing,
+   morning briefing integration, Sentinel health check.
+   ADR-020 Step 7. CI pending at handoff.
 4. **R-007 Vicki Vale Episodes 001-006 DONE**: PRs #247-#257 merged.
    Vicki Vale lens improvement deferred until Robin reaches
    Andrew-readiness (Batman directive S133).
@@ -203,7 +203,7 @@ Every Robin feature: PERCEIVE -> REASON -> ACT -> VERIFY. No hardcoded coords. N
 7. **Stealth mode partial (S116)**: Script ready at
    rudy-data/helpers/s123_stealth_update.ps1. Needs Admin elevation.
 8. Robin GREEN (PID 8860, sentinel PID 26052). Killswitch inactive.
-9. Skill gate executed (S136): Top skills: engineering:code-review,
+9. Skill gate executed (S137): Top skills: engineering:code-review,
    engineering:standup, operations:status-report.
    engineering:code-review invoked at boot.
  
