@@ -49,7 +49,17 @@
       "filed": "2026-04-05",
       "words": 2450,
       "file": "Episode-005-the-governance-wars.md"
+    },
+    {
+      "number": 6,
+      "title": "The Outer Walls",
+      "slug": "the-outer-walls",
+      "type": "thematic_arc",
+      "sessions": [81, 82, 83, 84, 85, 86, 87, 88, 89, 90],
+      "filed": "2026-04-06",
+      "words": 2890,
+      "file": "Episode-006-the-outer-walls.md"
     }
   ],
-  "next_number": 6
+  "next_number": 7
 }
