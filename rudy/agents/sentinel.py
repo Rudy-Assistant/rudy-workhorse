@@ -134,6 +134,11 @@ class Sentinel(AgentBase):
         if not self._time_ok():
             return self._finalize(state)
 
+        # === Command Proposal Pipeline (ADR-020 Step 6, S136) ===
+        self._scan_command_proposals(state)
+        if not self._time_ok():
+            return self._finalize(state)
+
         self._micro_improve(state)
         self._finalize(state)
 
@@ -798,6 +803,48 @@ class Sentinel(AgentBase):
             self._observe("behavioral_learning", f"Learning module not available: {exc}")
         except Exception as exc:
             self._observe("behavioral_learning", f"Learning cycle error: {exc}")
+
+    def _scan_command_proposals(self, state):
+        """Run the command-based proposal pipeline (ADR-020 Step 6, S136).
+
+        Collects Robin's command history (voice, runner, inbox),
+        discovers Andrew's usage patterns, and generates automation
+        proposals via Ollama. Complements the ActivityWatch-based
+        sentinel_learning.py with Robin-native event sources.
+        """
+        try:
+            from rudy.sentinel_proposals import run_proposal_cycle
+
+            remaining = self.MAX_RUNTIME - (time.time() - self.start)
+            if remaining < 5:
+                return
+
+            result = run_proposal_cycle(
+                max_runtime_secs=min(remaining - 2, 20),
+            )
+
+            events = result.get("events_collected", 0)
+            patterns = result.get("patterns_discovered", 0)
+            proposals = result.get("proposals_generated", 0)
+
+            if events > 0:
+                self._observe(
+                    "command_proposals",
+                    f"Proposal cycle: {events} events, {patterns} patterns, "
+                    f"{proposals} proposals"
+                    + (" (full)" if result.get("full_analysis") else " (quick)"),
+                    actionable=proposals > 0,
+                )
+            elif result.get("result") == "no_command_events":
+                self._observe(
+                    "command_proposals",
+                    "No command events found -- proposal pipeline idle",
+                )
+
+        except ImportError as exc:
+            self._observe("command_proposals", f"Proposal module not available: {exc}")
+        except Exception as exc:
+            self._observe("command_proposals", f"Proposal cycle error: {exc}")
 
     def _micro_improve(self, state):
         """Take small, safe improvement actions."""
