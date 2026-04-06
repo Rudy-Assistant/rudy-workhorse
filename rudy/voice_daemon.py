@@ -42,6 +42,12 @@ except ImportError:
 
 log = logging.getLogger("voice_daemon")
 
+try:
+    from rudy.voice_health import VoiceHealthMonitor
+    _HAS_HEALTH = True
+except ImportError:
+    _HAS_HEALTH = False
+
 # -------------------------------------------------------------------
 # Configuration
 # -------------------------------------------------------------------
@@ -374,6 +380,15 @@ class VoiceDaemon:
         self._running = False
         self._audio_queue = queue.Queue()
         self._state = "idle"  # idle, listening, processing
+        # Health monitor integration (S134)
+        self._health_monitor = None
+        if _HAS_HEALTH:
+            try:
+                self._health_monitor = VoiceHealthMonitor(
+                    self.tts, self.config
+                )
+            except Exception as e:
+                log.warning("[Daemon] Health monitor init failed: %s", e)
         self._stats = {
             "commands_processed": 0,
             "wake_detections": 0,
@@ -524,6 +539,15 @@ class VoiceDaemon:
 
         self.calibrate()
 
+        # Health announcement and check-in scheduler (S134)
+        if self._health_monitor:
+            try:
+                self._health_monitor.startup_announcement()
+                self._health_monitor.start_checkins()
+                self._health_monitor.start_periodic_monitoring()
+            except Exception as e:
+                log.warning("[Daemon] Health startup failed: %s", e)
+
         while self._running:
             try:
                 self.state = "idle"
@@ -540,6 +564,9 @@ class VoiceDaemon:
 
                 if wake in text:
                     self._stats["wake_detections"] += 1
+                    # Acknowledge check-in on voice activity (S134)
+                    if self._health_monitor:
+                        self._health_monitor.on_voice_activity()
                     _emit("wake_word", {"text": text})
                     log.info("[Daemon] Wake word detected: %s", text)
 
@@ -559,6 +586,9 @@ class VoiceDaemon:
                 _emit("error", {"msg": str(e)})
                 time.sleep(2)
 
+        # Stop health monitor (S134)
+        if self._health_monitor:
+            self._health_monitor.stop_checkins()
         self.state = "stopped"
         _emit("stopped", {"stats": self._stats})
         log.info("[Daemon] Stopped. Stats: %s", self._stats)

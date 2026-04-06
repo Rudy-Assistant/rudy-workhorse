@@ -181,14 +181,15 @@ Every Robin feature: PERCEIVE -> REASON -> ACT -> VERIFY. No hardcoded coords. N
 | **gh CLI** | v2.88.1, authenticated as Rudy-Assistant |
 | **PAT** | Classic PAT (ghp_), expires 2026-06-27 |
 
-## Current Sprint (Session 133)
+## Current Sprint (Session 134)
 
-1. **Andrew-Readiness Phase 1 (NEW -- S133)**: ADR-020 filed.
-   Robin scores 39.7% Andrew-readiness. voice_daemon.py created
-   with energy VAD, faster-whisper STT, Ollama intent routing,
-   pyttsx3 voice response, Andrew Console. PR #258 open.
-2. **PR #257 merged (S133)**: Episode 006 The Outer Walls. CI 5/5
-   green. Merge SHA 38cbfe8.
+1. **Andrew-Readiness Phase 1 (S133-134)**: ADR-020 filed (S133).
+   PR #258 merged (S134, merge SHA edd783b). voice_daemon.py +
+   voice_health.py: graceful degradation announcements, service
+   health monitoring, periodic check-in scheduler for Andrew safety.
+   Andrew-readiness advancing from 39.7% toward 60% target.
+2. **PR #258 merged (S134)**: voice daemon + ADR-020. CI 5/5 green.
+   Merge SHA edd783b. Code reviewed at boot.
 3. **R-007 Vicki Vale Episodes 001-006 DONE**: PRs #247-#257 merged.
    Vicki Vale lens improvement deferred until Robin reaches
    Andrew-readiness (Batman directive S133).
@@ -198,7 +199,7 @@ Every Robin feature: PERCEIVE -> REASON -> ACT -> VERIFY. No hardcoded coords. N
 6. **Stealth mode partial (S116)**: Script ready at
    rudy-data/helpers/s123_stealth_update.ps1. Needs Admin elevation.
 7. Robin GREEN (PID 8860, sentinel PID 26052). Killswitch inactive.
-8. Skill gate executed (S133): Top skills: engineering:code-review,
-   engineering:standup, operations:status-report.
+8. Skill gate executed (S134): Top skills: engineering:code-review,
+   engineering:debug, engineering:testing-strategy.
    engineering:code-review invoked at boot.
  
