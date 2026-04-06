@@ -181,29 +181,27 @@ Every Robin feature: PERCEIVE -> REASON -> ACT -> VERIFY. No hardcoded coords. N
 | **gh CLI** | v2.88.1, authenticated as Rudy-Assistant |
 | **PAT** | Classic PAT (ghp_), expires 2026-06-27 |
 
-## Current Sprint (Session 139)
+## Current Sprint (Session 141)
 
-1. **Andrew-Readiness Phase 2 Step 7 COMPLETE (S139)**:
-   PR #262 merged (S139, merge SHA 4a6db0a). HA bridge,
-   voice daemon integration, sentinel health check all landed.
-   Phase 2 Steps 5-7 complete. Phase 3 redefined (S138).
-2. **PR #262 merged (S139)**: Home Assistant bridge.
-   CI 5/5 green. Merge SHA 4a6db0a. Code reviewed at boot.
-3. **PR #263 created (S139)**: Morning routine HA integration +
-   ADR-020 Phase 3 Amendment. CI pending.
-4. **Phase 3 redefined (S138)**: "Robin Self-Sufficiency" --
-   delegation enforcement + OpenSpace evolution. Caregiver
-   features struck from Andrew-readiness scoring.
-4. **R-007 Vicki Vale Episodes 001-006 DONE**: PRs #247-#257 merged.
-   Vicki Vale lens improvement deferred until Robin reaches
-   Andrew-readiness (Batman directive S133).
-5. **Killswitch INACTIVE**: Deactivated by Batman S116 away mode.
-   Robin autonomous behavior restored.
-6. **Session loop LEGACY (S116)**: Halted since S52. R-006 deprecated.
-7. **Stealth mode partial (S116)**: Script ready at
-   rudy-data/helpers/s123_stealth_update.ps1. Needs Admin elevation.
+1. **Andrew-Readiness Phase 3 Steps 8-10 COMPLETE (S139-S141)**:
+   - Step 8: DelegationGate (PR #265, merged S140)
+   - Step 9: SkillLearner (PR #266, merged S141)
+   - Step 10: Sentinel integration (PR #268, merged S141)
+   Full delegation-aware skill learning pipeline now live in
+   Sentinel scan cycle.
+2. **PRs merged this sprint**: #263 (morning routine HA), #264
+   (CLAUDE.md S139), #265 (delegation gate), #266 (skill learner),
+   #267 (sprint+roadmap S140), #268 (sentinel integration S141).
+3. **R-009 Andrew-Readiness**: Phase 3 Steps 8-10 DONE.
+   Next: End-to-end skill learning test with real delegation data.
+4. **R-006 Skills Evolution (OpenSpace)**: ACTIVE. Skill learner
+   deployed. Pipeline: DelegationGate -> SkillLearner -> OpenSpace.
+5. **R-007 Vicki Vale Episodes 001-006 DONE**: PRs #247-#257 merged.
+   Lens improvement deferred (Batman directive S133).
+6. **Killswitch INACTIVE**: Deactivated by Batman S116.
+7. **Session loop LEGACY (S116)**: Halted since S52.
 8. Robin GREEN (PID 8860, sentinel PID 26052). Killswitch inactive.
-9. Skill gate executed (S139): Top skills: engineering:code-review,
-   engineering:standup, operations:status-report.
-   engineering:code-review invoked at boot.
+9. Skill gate executed (S141): Top skills: engineering:code-review,
+   engineering:testing-strategy, engineering:architecture.
+   engineering:code-review invoked at boot (PR #266 review).
  
