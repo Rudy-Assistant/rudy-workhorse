@@ -48,6 +48,12 @@ try:
 except ImportError:
     _HAS_HEALTH = False
 
+try:
+    from rudy.morning_routine import MorningRoutine
+    _HAS_MORNING = True
+except ImportError:
+    _HAS_MORNING = False
+
 # -------------------------------------------------------------------
 # Configuration
 # -------------------------------------------------------------------
@@ -389,6 +395,15 @@ class VoiceDaemon:
                 )
             except Exception as e:
                 log.warning("[Daemon] Health monitor init failed: %s", e)
+        # Morning routine integration (S135)
+        self._morning_routine = None
+        if _HAS_MORNING:
+            try:
+                self._morning_routine = MorningRoutine(
+                    self.tts, self.config
+                )
+            except Exception as e:
+                log.warning("[Daemon] Morning routine init failed: %s", e)
         self._stats = {
             "commands_processed": 0,
             "wake_detections": 0,
@@ -548,6 +563,17 @@ class VoiceDaemon:
             except Exception as e:
                 log.warning("[Daemon] Health startup failed: %s", e)
 
+        # Morning routine scheduler (S135)
+        if self._morning_routine:
+            try:
+                briefing_time = self.config.get(
+                    "morning_briefing_time", "07:30"
+                )
+                hour, minute = map(int, briefing_time.split(":"))
+                self._morning_routine.schedule(hour=hour, minute=minute)
+            except Exception as e:
+                log.warning("[Daemon] Morning routine start failed: %s", e)
+
         while self._running:
             try:
                 self.state = "idle"
@@ -589,6 +615,9 @@ class VoiceDaemon:
         # Stop health monitor (S134)
         if self._health_monitor:
             self._health_monitor.stop_checkins()
+        # Stop morning routine (S135)
+        if self._morning_routine:
+            self._morning_routine.stop()
         self.state = "stopped"
         _emit("stopped", {"stats": self._stats})
         log.info("[Daemon] Stopped. Stats: %s", self._stats)
