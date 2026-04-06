@@ -18,7 +18,7 @@ Integration:
     - alfred_delegation_gate.py (reads delegation-metrics.json)
     - sentinel_proposals.py (complements command-based proposals)
     - rudy.paths (canonical paths)
-    - OpenSpace skill engine (C:\\Users\\ccimi\\OpenSpace)
+    - OpenSpace skill engine (OPENSPACE_DIR from rudy.paths)
 
 Session 140: Phase 3 Step 9 of Andrew-Readiness (ADR-020).
 """
