@@ -26,6 +26,7 @@ Session 140: Phase 3 Step 9 of Andrew-Readiness (ADR-020).
 import json
 import logging
 import os
+import re
 import time
 from collections import defaultdict
 from datetime import datetime, timedelta
@@ -148,8 +149,17 @@ def _read_delegation_log(cutoff: datetime) -> list[dict]:
 
 
 def _read_completed_delegations(cutoff: datetime) -> list[dict]:
-    """Read completed delegation items from Robin inbox."""
-    from rudy.paths import ROBIN_INBOX_V2
+    """Read completed delegation items from Robin inbox.
+
+    F-S141-003(c): ROBIN_INBOX_V2 import is wrapped in try/except so
+    a missing path constant on older rudy.paths doesn't crash the
+    entire learning cycle.
+    """
+    try:
+        from rudy.paths import ROBIN_INBOX_V2
+    except ImportError:
+        log.debug("ROBIN_INBOX_V2 not available in rudy.paths")
+        return []
 
     events = []
     if not ROBIN_INBOX_V2.exists():
@@ -347,7 +357,10 @@ def _generate_via_ollama(prompt: str) -> list[dict]:
             data=payload,
             headers={"Content-Type": "application/json"},
         )
-        resp = urllib.request.urlopen(req, timeout=90)
+        # F-S141-003(b): Cap below run_learning_cycle 30s budget.
+        # Leave headroom for collect/cluster/validate/deploy stages.
+        ollama_timeout = float(os.environ.get("OLLAMA_TIMEOUT", "20"))
+        resp = urllib.request.urlopen(req, timeout=ollama_timeout)
         result = json.loads(resp.read())
         response_text = result.get("response", "")
         return _extract_json_array(response_text)
@@ -453,12 +466,19 @@ def _get_active_sentinel_proposals() -> list[dict]:
 
 
 def _text_similarity(a: str, b: str) -> float:
-    """Simple word-overlap similarity between two strings."""
+    """Word-overlap (Jaccard) similarity between two strings.
+
+    F-S141-003(d): Require a minimum word count on BOTH sides to
+    avoid false positives where two-word strings sharing one word
+    score 0.5+ and trigger spurious overlap rejection.
+    """
     if not a or not b:
         return 0.0
     words_a = set(a.lower().split())
     words_b = set(b.lower().split())
     if not words_a or not words_b:
+        return 0.0
+    if len(words_a) < 4 or len(words_b) < 4:
         return 0.0
     intersection = words_a & words_b
     union = words_a | words_b
@@ -709,15 +729,21 @@ def run_learning_cycle(
 # Helpers
 # -------------------------------------------------------------------
 
+_SESSION_PREFIX_RE = re.compile(r'^s\d+:\s*', re.IGNORECASE)
+
+
 def _normalize_operation(op: str) -> str:
-    """Normalize an operation string for clustering."""
+    """Normalize an operation string for clustering.
+
+    Strips any "sN:" session prefix (regex, not hardcoded), and the
+    "session " literal, then truncates. Fix for F-S141-003(a).
+    """
     if not op:
         return ""
     op = op.strip().lower()
-    # Remove timestamps, PIDs, session refs
-    for prefix in ["s139:", "s140:", "s138:", "session "]:
-        if op.startswith(prefix):
-            op = op[len(prefix):].strip()
+    op = _SESSION_PREFIX_RE.sub("", op)
+    if op.startswith("session "):
+        op = op[len("session "):].strip()
     return op[:100]
 
 
