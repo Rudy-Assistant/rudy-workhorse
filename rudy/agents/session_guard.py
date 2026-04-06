@@ -203,10 +203,22 @@ def enforce_delegation(repo_root: Path, current_session: int) -> None:
       (b) A file rudy-data/s{N}_robin_offline.flag exists (Robin verified
           offline this session — must be created intentionally).
     """
+    # F-S189-002: verify directive files actually exist on disk and are
+    # non-empty. Also scan an alternate rudy-data tree at ~/rudy-data/ to
+    # catch the dual-tree silent-failure path that bit S188.
     coord = repo_root / DIRECTIVES_DIR
-    directive_glob = list(coord.glob(f"robin-directive-S{current_session}-*.md")) if coord.exists() else []
+    candidates: list[Path] = []
+    if coord.exists():
+        candidates.extend(coord.glob(f"robin-directive-S{current_session}-*.md"))
+    alt_coord = Path.home() / "rudy-data" / "coordination"
+    if alt_coord.exists() and alt_coord.resolve() != coord.resolve():
+        candidates.extend(alt_coord.glob(f"robin-directive-S{current_session}-*.md"))
+    directive_files = [
+        p for p in candidates
+        if p.exists() and p.is_file() and p.stat().st_size > 0
+    ]
     offline_flag = repo_root / "rudy-data" / f"s{current_session}_robin_offline.flag"
-    if directive_glob or offline_flag.exists():
+    if directive_files or offline_flag.exists():
         return
     raise SessionGuardViolation(
         f"[session_guard:delegation] Session {current_session} created no "
