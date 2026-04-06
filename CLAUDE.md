@@ -181,25 +181,29 @@ Every Robin feature: PERCEIVE -> REASON -> ACT -> VERIFY. No hardcoded coords. N
 | **gh CLI** | v2.88.1, authenticated as Rudy-Assistant |
 | **PAT** | Classic PAT (ghp_), expires 2026-06-27 |
 
-## Current Sprint (Session 135)
+## Current Sprint (Session 136)
 
-1. **Andrew-Readiness Phase 1 COMPLETE, Phase 2 started (S135)**:
-   PR #259 merged (S135, merge SHA f302620). Phase 1 Steps 1-3
-   done: voice_daemon.py, voice_health.py, graceful degradation,
-   check-in scheduler. Step 4 (email) blocked on account recovery.
-   Phase 2 Step 5 (Morning Robin routine) in progress.
-2. **PR #259 merged (S135)**: voice health monitor + Andrew check-ins.
-   CI 5/5 green. Merge SHA f302620. Code reviewed at boot.
-3. **R-007 Vicki Vale Episodes 001-006 DONE**: PRs #247-#257 merged.
+1. **Andrew-Readiness Phase 2 advancing (S136)**:
+   PR #260 merged (S136, merge SHA 3cb5791). Phase 2 Step 5
+   (Morning Robin) complete. Step 6 (Sentinel proposal pipeline)
+   created this session: sentinel_proposals.py + sentinel.py
+   integration. PR #261 open, CI pending.
+2. **PR #260 merged (S136)**: Morning Robin routine + daemon
+   integration. CI 5/5 green. Merge SHA 3cb5791.
+   Code reviewed at boot (engineering:code-review).
+3. **PR #261 created (S136)**: Sentinel proposal pipeline.
+   Command-pattern observer, Ollama proposals, voice feedback.
+   ADR-020 Step 6. CI pending at handoff.
+4. **R-007 Vicki Vale Episodes 001-006 DONE**: PRs #247-#257 merged.
    Vicki Vale lens improvement deferred until Robin reaches
    Andrew-readiness (Batman directive S133).
-4. **Killswitch INACTIVE**: Deactivated by Batman S116 away mode.
+5. **Killswitch INACTIVE**: Deactivated by Batman S116 away mode.
    Robin autonomous behavior restored.
-5. **Session loop LEGACY (S116)**: Halted since S52. R-006 deprecated.
-6. **Stealth mode partial (S116)**: Script ready at
+6. **Session loop LEGACY (S116)**: Halted since S52. R-006 deprecated.
+7. **Stealth mode partial (S116)**: Script ready at
    rudy-data/helpers/s123_stealth_update.ps1. Needs Admin elevation.
-7. Robin GREEN (PID 8860, sentinel PID 26052). Killswitch inactive.
-8. Skill gate executed (S135): Top skills: engineering:code-review,
-   engineering:debug, engineering:testing-strategy.
+8. Robin GREEN (PID 8860, sentinel PID 26052). Killswitch inactive.
+9. Skill gate executed (S136): Top skills: engineering:code-review,
+   engineering:standup, operations:status-report.
    engineering:code-review invoked at boot.
  
