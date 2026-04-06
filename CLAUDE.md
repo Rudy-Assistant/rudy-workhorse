@@ -181,24 +181,24 @@ Every Robin feature: PERCEIVE -> REASON -> ACT -> VERIFY. No hardcoded coords. N
 | **gh CLI** | v2.88.1, authenticated as Rudy-Assistant |
 | **PAT** | Classic PAT (ghp_), expires 2026-06-27 |
 
-## Current Sprint (Session 131)
+## Current Sprint (Session 132)
 
-1. **R-007 Vicki Vale Episodes 001-005 DONE**: Narrative skill built
+1. **R-007 Vicki Vale Episodes 001-006 DONE**: Narrative skill built
    (S127). Episodes: 001 The Lock (S125), 002 The Awakening (S41-52),
    003 The Reform (S52-66), 004 The Nervous System (S67-72),
-   005 The Governance Wars (S73-80).
-   PRs #247, #248, #253, #254, #255 merged. PR #256 open (Ep 005).
-2. **PR #255 merged (S131)**: Episode 004 The Nervous System. CI 5/5
-   green. Merge SHA 4aaa347.
-3. **PR #256 created (S131)**: Episode 005 The Governance Wars (S73-80).
-   ~2450 words. CI pending at creation.
+   005 The Governance Wars (S73-80), 006 The Outer Walls (S81-90).
+   PRs #247, #248, #253, #254, #255, #256 merged. PR pending (Ep 006).
+2. **PR #256 merged (S132)**: Episode 005 The Governance Wars. CI 5/5
+   green. Merge SHA f3d47de.
+3. **Episode 006 created (S132)**: The Outer Walls (S81-90).
+   ~2890 words. Branch s132/episode-006-outer-walls, PR pending.
 4. **Killswitch INACTIVE**: Deactivated by Batman S116 away mode.
    Robin autonomous behavior restored.
 5. **Session loop LEGACY (S116)**: Halted since S52. R-006 deprecated.
 6. **Stealth mode partial (S116)**: Script ready at
    rudy-data/helpers/s123_stealth_update.ps1. Needs Admin elevation.
 7. Robin GREEN (PID 8860, sentinel PID 26052). Killswitch inactive.
-8. Skill gate executed (S131): Top skills: engineering:code-review,
+8. Skill gate executed (S132): Top skills: engineering:code-review,
    engineering:standup, operations:status-report.
    engineering:code-review invoked at boot.
  
