@@ -139,6 +139,11 @@ class Sentinel(AgentBase):
         if not self._time_ok():
             return self._finalize(state)
 
+        # === Skill Learning Pipeline (ADR-020 Step 10, S141) ===
+        self._scan_skill_learning(state)
+        if not self._time_ok():
+            return self._finalize(state)
+
         # === Home Assistant Health Check (ADR-020 Step 7, S137) ===
         self._check_home_assistant(state)
         if not self._time_ok():
@@ -850,6 +855,51 @@ class Sentinel(AgentBase):
             self._observe("command_proposals", f"Proposal module not available: {exc}")
         except Exception as exc:
             self._observe("command_proposals", f"Proposal cycle error: {exc}")
+
+    def _scan_skill_learning(self, state):
+        """Run the delegation-aware skill learning pipeline (ADR-020 Step 10, S141).
+
+        Observes delegation patterns from Alfred's DelegationGate,
+        clusters recurring operations, and proposes OpenSpace Skills
+        that Robin can learn and execute proactively.
+        Complements sentinel_proposals.py (command-based) and
+        sentinel_learning.py (ActivityWatch-based) pipelines.
+        """
+        try:
+            from rudy.robin_skill_learner import run_learning_cycle
+
+            remaining = self.MAX_RUNTIME - (time.time() - self.start)
+            if remaining < 5:
+                return
+
+            result = run_learning_cycle(
+                session_number=state.get("run_count", 0),
+                max_runtime_secs=min(remaining - 2, 20),
+            )
+
+            events = result.get("events_collected", 0)
+            patterns = result.get("patterns_found", 0)
+            proposals = result.get("proposals_generated", 0)
+            deployed = len(result.get("skills_deployed", []))
+
+            if events > 0:
+                self._observe(
+                    "skill_learning",
+                    f"Skill learning: {events} events, {patterns} patterns, "
+                    f"{proposals} proposals, {deployed} deployed"
+                    + (" (full)" if result.get("full_analysis") else " (quick)"),
+                    actionable=deployed > 0,
+                )
+            elif result.get("result") == "no_delegation_events":
+                self._observe(
+                    "skill_learning",
+                    "No delegation events -- skill learning idle",
+                )
+
+        except ImportError as exc:
+            self._observe("skill_learning", f"Skill learner not available: {exc}")
+        except Exception as exc:
+            self._observe("skill_learning", f"Skill learning error: {exc}")
 
     def _check_home_assistant(self, state):
         """Lightweight HA connectivity check (ADR-020 Step 7, S137).
