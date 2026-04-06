@@ -1,4 +1,4 @@
-# Batcave System Reference (Hot Cache)
+﻿# Batcave System Reference (Hot Cache)
 
 > Full context: `memory/`, `docs/`, `vault/`, `registry.json`
 > Protocol details: `vault/Protocols/` | Agent defs: `.claude/agents/`
@@ -83,7 +83,29 @@ Christopher M. Cimino (ccimino2@gmail.com). Attorney -- California State Bar #28
 
 ## HARD RULES -- Session Discipline
 
-1. **At session start**: Read `CLAUDE.md` first (S22). Then `vault/Protocols/alfred-session-boot.md` (S72). Then check `rudy-data/coordination/session-loop-config.json` for automated loops.
+### Structural Session Guard (HARD RULE -- S187, MECHANICAL)
+
+**Three gates run automatically. None can be skipped by remembering.**
+Module: `rudy/agents/session_guard.py`. Waivers: `vault/Protocols/carry-waivers.json`.
+
+1. **Carry gate (boot + handoff):** Any finding carried more than 2 sessions
+   without an open PR or a Batman waiver HALTS the session. Resolve by
+   PR'ing the fix, reverting the WIP, or adding a waiver entry.
+2. **Work-floor gate (handoff):** Handoff write is REFUSED if context is
+   below 50`%`. Alfred must do real work, not draft early.
+3. **Delegation gate (handoff):** Handoff write is REFUSED unless the
+   session created either a Robin directive at
+   `rudy-data/coordination/robin-directive-S{N}-*.md` OR a Robin-offline
+   flag at `rudy-data/s{N}_robin_offline.flag`. No silent skips.
+
+Boot:  `python -m rudy.agents.session_guard boot`
+Handoff: `python -m rudy.agents.session_guard handoff <ctx_pct> <session>`
+
+Built S187 after 23 sessions of carrying F-S167-001. The fix is to make
+the bad path mechanically unreachable.
+
+
+1. **At session start (BOOT MANIFEST v2 -- S150)**: Follow `vault/Protocols/alfred-session-boot.md` BOOT MANIFEST section EXACTLY: one ToolSearch select call, Get-Content for all .md reads (NEVER DC `read_file`), read compressed handoff only (skip `-FULL` archives). Then read `CLAUDE.md` (S22). Then check `rudy-data/coordination/session-loop-config.json` for automated loops.
 2. **Before writing ANY new Python file**: Check `registry.json`, `docs/lucius-registry.md`, Cowork skills (30+), MCP connectors, rudy/ modules (31+), installed packages (100+), scheduled tasks (24).
 3. **Before building custom**: Search MCP registry, check pip packages, review capability index. >50 lines for something generic = you missed an existing tool.
 4. **All handoffs MUST instruct next session to read CLAUDE.md** (S22).
@@ -127,7 +149,7 @@ Clean up spawned processes before session end: `cleanup_session_processes()`.
 
 | Bug | Workaround |
 |-----|-----------|
-| **DC read_file returns metadata-only** (LG-S34-003) | `Get-Content "path" -Raw` via `start_process` |
+| **DC read_file returns metadata-only** (LG-S34-003) | **DEFAULT for .md: skip DC entirely, use `Get-Content "path" -Raw` via Windows-MCP Shell** (S150) |
 | **CMD mangles Python -c quotes** | Write `.py` to `rudy-data/` and execute |
 | **DC stdout swallowed** (LG-S63-001) | Log to JSON file, read with `Get-Content` |
 | **PowerShell drops network I/O scripts** (LG-S64-001) | Use `shell: "cmd"` for git push, API calls |
