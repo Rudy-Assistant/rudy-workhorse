@@ -44,6 +44,12 @@ try:
 except ImportError:
     _HAS_HEALTH = False
 
+try:
+    from rudy.home_assistant_bridge import HomeAssistantBridge
+    _HAS_HA = True
+except ImportError:
+    _HAS_HA = False
+
 log = logging.getLogger("morning_routine")
 
 
@@ -166,6 +172,15 @@ class MorningRoutine:
                 self.health_checker = ServiceHealthChecker()
             except Exception:
                 pass
+        self._ha_bridge = None
+        if _HAS_HA:
+            try:
+                bridge = HomeAssistantBridge()
+                conn = bridge.connect()
+                if conn.get("connected"):
+                    self._ha_bridge = bridge
+            except Exception:
+                pass
         self._schedule_timer = None
         self._running = False
 
@@ -206,7 +221,21 @@ class MorningRoutine:
         else:
             segments.append("I wasn't able to check my systems.")
 
-        # 4. Reminders
+        # 4. Home status (via HA bridge, S138)
+        if self._ha_bridge:
+            try:
+                from rudy.home_assistant_bridge import (
+                    get_home_summary_for_briefing,
+                )
+                home_text = get_home_summary_for_briefing(
+                    bridge=self._ha_bridge
+                )
+                if home_text:
+                    segments.append(home_text)
+            except Exception as e:
+                log.warning("[Morning] HA summary error: %s", e)
+
+        # 5. Reminders
         today_reminders = self.reminders.get_today()
         if today_reminders:
             if len(today_reminders) == 1:
@@ -224,7 +253,7 @@ class MorningRoutine:
         else:
             segments.append("You have no reminders for today.")
 
-        # 5. Closing
+        # 6. Closing
         segments.append(
             f"That's your briefing, {self.user_name}. "
             f"Just say 'hey Rudy' if you need anything."
