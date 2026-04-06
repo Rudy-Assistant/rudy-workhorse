@@ -90,16 +90,28 @@ def _extract_priorities(handoff_path: Path) -> list[str]:
     priorities: list[str] = []
     in_priority = False
     for line in text.splitlines():
-        if "priority" in line.lower() and "next session" in line.lower():
+        lower = line.lower()
+        # F-S167-001 fix (S169): accept any heading containing
+        # "priority"/"priorities" (e.g. "## Priorities for S169"),
+        # not just "...next session". Previous matcher missed the
+        # compressed v2 handoff format used since S150.
+        if line.lstrip().startswith("#") and (
+            "priority" in lower or "priorities" in lower
+        ):
             in_priority = True
             continue
         if in_priority:
-            if line.startswith("#") or (line.strip() == "" and priorities):
+            if line.startswith("#"):
                 if priorities:
                     break
+                else:
+                    continue
             stripped = line.strip()
-            if stripped and (stripped[0].isdigit() or stripped.startswith("-")):
+            if stripped and (stripped[0].isdigit() or stripped.startswith("-") or stripped.startswith("*")):
                 priorities.append(stripped)
+            elif not stripped and priorities:
+                # blank line after we've collected items -> end of section
+                break
     return priorities
 
 
