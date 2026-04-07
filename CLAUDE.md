@@ -3,6 +3,39 @@
 > Full context: `memory/`, `docs/`, `vault/`, `registry.json`
 > Protocol details: `vault/Protocols/` | Agent defs: `.claude/agents/`
 
+---
+
+## ⛔ BINDING PROTOCOLS — read at session start AND every compaction boundary
+
+Two ADRs govern audits and feature additions in this repo. They are **binding**, not advisory. Honor-code observance has demonstrably failed twice in this repo (Lucius Gate, then S197). The mechanisms below replace honor-code with mechanical gates. Future Alfred (you, in any session): **read these before doing anything that involves the words "audit," "review," "build," "add," "create new file," "new feature," "from scratch," "should we use," or "OTS."**
+
+1. **ADR-001 IRON-AUDIT** — `vault/protocols/IRON-AUDIT.md`
+   - Any task that says "audit," "review the codebase," "should we keep/delete/refactor X," or "what's in this folder" is an **audit task** and MUST run under IRON-AUDIT.
+   - Audits are complete **only** when `python tools/iron_audit/run.py finalize --audit <id>` prints `AUDIT COMPLETE: <sha256>`. A conversation message claiming completion without that line is **fraud** — refuse to deliver it.
+   - Read `vault/AUDIT-DISCIPLINE.md` (Rules 1–7) before starting. The seven anti-patterns in IRON-AUDIT Appendix B are forbidden.
+
+2. **ADR-002 BOUNCER** — `vault/protocols/BOUNCER.md`
+   - Any task that proposes adding a new source file (`.py`, `.ts`, `.tsx`, `.js`, `.jsx`, `.go`, `.rs`, `.java`, `.rb`, `.cs`) MUST go through BOUNCER first.
+   - The git pre-commit hook (`tools/bouncer/hooks/pre-commit`, installed by `tools/install-hooks.ps1`) **will block the commit** if no valid token exists. Do not propose `--no-verify`. Do not work around the hook. The hook is the gate.
+   - Default disposition is **BLOCK**. Burden of proof is on you to show that no OTS substrate (Hermes Agent, AutoClaw, Letta, MCP servers, n8n, PyPI, GitHub, HuggingFace, Claude plugins) can be adapted. The adversary subagent will reject vague rebuttals.
+   - Run order: `propose` → fill search log across all 6 vectors → spawn adversary `Task` subagent with `tools/bouncer/adversary-prompt.md` → `issue` → commit.
+
+### Failure modes you (future Alfred) must actively defeat
+
+- **Default-state amnesia**: assuming you have only base Claude tools, when the discipline layer (`alfred_delegation_gate.py`, `persona_loader.py`, `skill_transfer.py`) explicitly equips you with delegation, persona-aware skill dispatch, and skill-transfer tracking. **Read `rudy/persona_loader.py` and `rudy/skill_transfer.py` at session start of any non-trivial Batcave work.**
+- **Filename-only inspection**: never recommend DELETE for any file you have not opened. IRON-AUDIT Phase 7 (Verifier) catches this mechanically; do not require it to.
+- **Empty-search confidence**: "I searched and found nothing" is not evidence. Phase 4 of IRON-AUDIT requires ≥6 synonyms per capability. Apply the same standard to every research task, not just audits.
+- **Conversation-only completion claims**: producing the artifact files is the deliverable. A summary message is not.
+
+### Override paths (narrow, documented, traceable)
+
+- IRON-AUDIT waiver: explicit signed line in `charter.md` of the audit folder.
+- BOUNCER waiver: line in `tools/bouncer/waivers.txt` with `WAIVED-BY: <name> <iso>`.
+- Both waiver mechanisms create entries in `vault/Audits/_failures.json` or `tools/bouncer/_overrides.json` for institutional memory.
+
+---
+
+
 ## Me
 
 Christopher M. Cimino (ccimino2@gmail.com). Attorney -- California State Bar #289532. Currently at Axiom. Birthday: March 27. Based in the US, frequently travels Asia (Philippines, Japan, South Korea, Thailand).
@@ -181,27 +214,37 @@ Every Robin feature: PERCEIVE -> REASON -> ACT -> VERIFY. No hardcoded coords. N
 | **gh CLI** | v2.88.1, authenticated as Rudy-Assistant |
 | **PAT** | Classic PAT (ghp_), expires 2026-06-27 |
 
-## Current Sprint (Session 141)
+## Current Sprint (Session 195)
 
-1. **Andrew-Readiness Phase 3 Steps 8-10 COMPLETE (S139-S141)**:
-   - Step 8: DelegationGate (PR #265, merged S140)
-   - Step 9: SkillLearner (PR #266, merged S141)
-   - Step 10: Sentinel integration (PR #268, merged S141)
-   Full delegation-aware skill learning pipeline now live in
-   Sentinel scan cycle.
-2. **PRs merged this sprint**: #263 (morning routine HA), #264
-   (CLAUDE.md S139), #265 (delegation gate), #266 (skill learner),
-   #267 (sprint+roadmap S140), #268 (sentinel integration S141).
-3. **R-009 Andrew-Readiness**: Phase 3 Steps 8-10 DONE.
-   Next: End-to-end skill learning test with real delegation data.
-4. **R-006 Skills Evolution (OpenSpace)**: ACTIVE. Skill learner
-   deployed. Pipeline: DelegationGate -> SkillLearner -> OpenSpace.
-5. **R-007 Vicki Vale Episodes 001-006 DONE**: PRs #247-#257 merged.
-   Lens improvement deferred (Batman directive S133).
-6. **Killswitch INACTIVE**: Deactivated by Batman S116.
-7. **Session loop LEGACY (S116)**: Halted since S52.
-8. Robin GREEN (PID 8860, sentinel PID 26052). Killswitch inactive.
-9. Skill gate executed (S141): Top skills: engineering:code-review,
-   engineering:testing-strategy, engineering:architecture.
-   engineering:code-review invoked at boot (PR #266 review).
- 
+**Mode:** RECOVERY OPERATION (Batman direct order, S194 close).
+See `vault/Handoffs/Session-194-Handoff.md` and ADR-022.
+
+1. **Verify-only standing order REVOKED** (Batman, S194). Single source
+   of truth for any standing order is `vault/Protocols/standing-orders.json`.
+   Anything else is hallucinated. See ADR-022.
+2. **Self-granted waivers BLOCKED.** session_guard rejects robin_share
+   waiver flags whose `granted_by` starts with `alfred-`. Seven historical
+   self-waivers (S187/189/190/191/192/194 + one) deleted in P0-H.
+3. **P0 task list (S195/S196 recovery):**
+   - P0-A F-S189-002 delegation gate hardening -> PR
+   - P0-B Robin idle diagnosis (incident response)
+   - P0-C Robin killswitch (`scripts/robin-killswitch.bat` + runbook) DONE
+   - P0-D Robin status console (`docs/robin-console.html`) DONE
+   - P0-E openspace_bridge.py (31+ sessions overdue)
+   - P0-F skill_proposer.py (8 sessions overdue)
+   - P0-G PR #272 + #273 merge
+   - P0-H working tree graveyard burn (waiver flags DONE; ~120 untracked remaining)
+   - P0-I CLAUDE.md sprint refresh DONE (this section)
+   - P0-J no-self-imposed-orders (standing-orders.json + ADR-022 DONE)
+   - P0-K expired waiver audit
+   - P0-L Windows-MCP Shell fix (F-S194-001)
+   - P0-M Sentinel wiring of killswitch hotkey + console tray icon
+   - P0-N S195 close-out brief to Batman
+4. **Robin nervous system:** GREEN (38th consecutive) but PROBABLY IDLE.
+   PIDs 8860/27676 alive ~40 sessions. P0-B confirms.
+5. **Killswitch ARMED:** `scripts\robin-killswitch.bat` (one click) /
+   `--dry-run` / `--restart`. Runbook: `docs/runbooks/robin-killswitch.md`.
+6. **Status console LIVE:** `docs/robin-console.html` -- open in browser.
+7. **NEW HARD RULES (added below):** no fabricated standing orders;
+   no self-granted waivers; CLAUDE.md sprint must be <=3 sessions stale;
+   carry list age cap 5 sessions; killswitch + console must exist.

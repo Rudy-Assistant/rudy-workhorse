@@ -1,0 +1,11 @@
+# BOUNCER waivers (ADR-002 Appendix E).
+#
+# Format (one per line):
+#   <repo-relative-path> | <one-line reason> | WAIVED-BY: <name> <iso-timestamp>
+#
+# Use sparingly. Every waiver is a documented exception, and every waiver should
+# be followed up with a real BOUNCER token within 7 days (or the file should
+# be deleted).
+#
+# Example:
+#   rudy/hotfix_credentials.py | P0 incident; deferred OTS search to next session | WAIVED-BY: Chris 2026-04-06T15:00:00+00:00

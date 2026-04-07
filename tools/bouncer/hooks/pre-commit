@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# BOUNCER pre-commit hook (ADR-002).
+# Rejects any commit that adds source files without a valid BOUNCER token,
+# a waiver line in tools/bouncer/waivers.txt, or an exempt.txt match.
+#
+# Installed by: tools/install-hooks.ps1 (Windows) or tools/install-hooks.sh (Linux/WSL).
+
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+BOUNCER="$REPO_ROOT/tools/bouncer/bouncer.py"
+
+if [ ! -f "$BOUNCER" ]; then
+  echo "warn: bouncer.py not found at $BOUNCER; skipping (this is a bug — re-install hooks)"
+  exit 0
+fi
+
+# Only added files; modifications and deletions are not BOUNCER's concern.
+ADDED_FILES=$(git diff --cached --name-only --diff-filter=A || true)
+
+if [ -z "$ADDED_FILES" ]; then
+  exit 0
+fi
+
+PYTHON_BIN="${PYTHON:-python}"
+if ! command -v "$PYTHON_BIN" >/dev/null 2>&1; then
+  PYTHON_BIN="python3"
+fi
+
+EXIT_CODE=0
+while IFS= read -r f; do
+  [ -z "$f" ] && continue
+  if ! "$PYTHON_BIN" "$BOUNCER" check "$f"; then
+    EXIT_CODE=1
+  fi
+done <<< "$ADDED_FILES"
+
+if [ "$EXIT_CODE" -ne 0 ]; then
+  echo ""
+  echo "BOUNCER blocked this commit. See above for which files and how to clear them."
+  echo "Do NOT use --no-verify; see ADR-002 Appendix E for the override path."
+  exit 1
+fi
+
+exit 0

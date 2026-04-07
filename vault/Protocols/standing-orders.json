@@ -1,0 +1,8 @@
+{
+  "$schema": "Single source of truth for Alfred standing orders. Only orders listed here are real. Alfred MAY NOT add entries to this file without Batman's explicit written approval (granted_by must be 'batman' and acknowledgement_session must be set).",
+  "version": 1,
+  "created_session": 195,
+  "created_by": "alfred-S195",
+  "approved_by": "batman",
+  "orders": []
+}

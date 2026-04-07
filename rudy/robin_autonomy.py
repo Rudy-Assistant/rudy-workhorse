@@ -542,11 +542,8 @@ class SituationalAwareness:
     def _open_pull_requests(self) -> dict:
         """Check GitHub for open PRs (uses API, tolerates failure)."""
         try:
-            secrets_file = RUDY_DATA / "robin-secrets.json"
-            if not secrets_file.exists():
-                return {"count": 0, "note": "no secrets file"}
-            secrets = json.loads(secrets_file.read_text(encoding="utf-8"))
-            pat = secrets.get("github_pat", "")
+            from rudy.credential_vault import read_github_pat
+            pat = read_github_pat()
             if not pat:
                 return {"count": 0, "note": "no PAT"}
             import urllib.request
@@ -792,13 +789,8 @@ pr_review, finding_fix, health_check"""
 
         try:
             import urllib.request
-            model = "qwen2.5:7b"
-            try:
-                secrets_file = RUDY_DATA / "robin-secrets.json"
-                with open(secrets_file) as f:
-                    model = json.load(f).get("ollama_model", model)
-            except Exception:
-                pass
+            from rudy.credential_vault import read_ollama_model
+            model = read_ollama_model()
 
             data = json.dumps({
                 "model": model, "prompt": prompt, "stream": False,
@@ -1162,6 +1154,21 @@ class AutonomyEngine:
         return result
 
     def _run_agent(self, prompt, agent_factory=None):
+        # S199: route through alfred_delegation_gate for observability.
+        # Observe-only -- gate currently records metrics, does not block.
+        # Closes the F-S198-C gap (robin_autonomy bypassing the gate).
+        try:
+            from rudy.alfred_delegation_gate import get_gate
+            gate = get_gate()
+            decision = gate.evaluate(prompt[:200])
+            log.info(
+                "[Autonomy] gate: %s -> %s (%s)",
+                decision.category.value,
+                decision.disposition.value,
+                decision.reason,
+            )
+        except Exception as e:
+            log.debug("[Autonomy] delegation gate unavailable: %s", e)
         if agent_factory:
             try:
                 agent = agent_factory()
@@ -1188,9 +1195,8 @@ class AutonomyEngine:
     @staticmethod
     def _get_model():
         try:
-            secrets_file = RUDY_DATA / "robin-secrets.json"
-            with open(secrets_file) as f:
-                return json.load(f).get("ollama_model", "qwen2.5:7b")
+            from rudy.credential_vault import read_ollama_model
+            return read_ollama_model()
         except Exception:
             return "qwen2.5:7b"
 
