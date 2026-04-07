@@ -6,6 +6,10 @@ REM
 REM Session 34 fix: verify we're on the right branch before starting.
 REM This prevents running stale code from main when work is on a feature branch.
 
+REM S212 fix: honor robin-pause.flag (Batman directive, S211 paused Robin
+REM but BridgeRunner boot trigger would revive it; this is the 2-line guard).
+if exist C:\Users\ccimi\rudy-workhorse\rudy-data\robin-pause.flag exit /b 0
+
 cd /d C:\Users\ccimi\rudy-workhorse
 
 REM Session 36 fix (LG-S33-003): ensure git/node/python in PATH
